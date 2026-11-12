@@ -2,8 +2,11 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type {
   AlertDto,
+  AlertDtoCoordinator,
   AttributionResponse,
   AuditResponse,
+  ChooseRecoveryResponse,
+  RecoveryOptionsResponse,
   CustomerAlertDto,
   DisruptionDto,
   EtaExplanationCoordinator,
@@ -31,6 +34,7 @@ import { KpiStrip } from './control-tower/KpiStrip';
 import { ShipmentList } from './control-tower/ShipmentList';
 import { filterShipments } from './control-tower/listFilters';
 import { RecoveryQuickSection } from './recovery/RecoveryQuickSection';
+import { RecoveryPanel } from './recovery/RecoveryPanel';
 import ShipmentDetailPage from './shipment/ShipmentDetailPage';
 import SimulationPage from './simulation/SimulationPage';
 
@@ -57,6 +61,11 @@ interface Fixture {
   customerAlerts: ListResponse<CustomerAlertDto>;
   arrivedDetail: { shipment: ShipmentDetail };
   arrivedAttribution: AttributionResponse;
+  heroOptions: RecoveryOptionsResponse;
+  chooseResponse: ChooseRecoveryResponse;
+  optionsAfterChoose: RecoveryOptionsResponse;
+  alertsAfterChoose: ListResponse<AlertDto>;
+  customerAlertsAfterChoose: ListResponse<CustomerAlertDto>;
 }
 const fx = JSON.parse(readFileSync(new URL('../test/fixtures/api-11-20.json', import.meta.url), 'utf8')) as Fixture;
 const LIVE = { status: 'live', sort: 'risk' } as const;
@@ -68,8 +77,8 @@ function KpiHarness() {
   return <KpiStrip shipments={shipments} level="ALL" onLevel={() => undefined} onShowAlerts={() => undefined} />;
 }
 
-describe('Control tower KPI strip (real #14/#26 data; #36 not built yet)', () => {
-  it('counts come from the API list and alerts; the dashboard cards say Unavailable instead of inventing numbers', () => {
+describe('Control tower KPI strip (real #14/#26/#36 data)', () => {
+  it('when #36 fails, the dashboard cards say Unavailable instead of inventing numbers', () => {
     const atRisk = coordinatorItems.filter((s) => s.riskLevel === 'AT_RISK').length;
     const html = text(
       renderWithData(<KpiHarness />, {
@@ -113,13 +122,19 @@ describe('Shipment list (#14)', () => {
 });
 
 describe('Alerts panel (#26) and activity feed (#37)', () => {
-  it('each alert shows the shipment, status, first-at-risk time and reason; without recovery the action is "View shipment"', () => {
+  it('each alert shows the shipment, status, first-at-risk time, reason and the Suggested action; "View options" opens recovery', () => {
     const html = text(renderWithData(<AlertsPanel onViewOptions={() => undefined} />, { data: [[qk.alerts({ status: 'active' }), fx.alerts], [qk.alerts({ status: 'RESOLVED', limit: 5 }), { items: [] }]] }));
     expect(html).toContain('SHP-1042 · Open');
     expect(html).toContain('At risk · top factor at opening: breakdown');
     expect(html).toMatch(/at risk since Thu 11:10/);
-    expect(html).toContain('View shipment');
-    expect(html).not.toContain('View options');
+    expect(html).toContain('Suggested: Replacement truck');
+    expect(html).toContain('View options');
+  });
+
+  it('after the choice the alert stays open as "Action chosen" with the chosen recovery (approved lifecycle)', () => {
+    const html = text(renderWithData(<AlertsPanel onViewOptions={() => undefined} />, { data: [[qk.alerts({ status: 'active' }), fx.alertsAfterChoose], [qk.alerts({ status: 'RESOLVED', limit: 5 }), { items: [] }]] }));
+    expect(html).toContain('SHP-1042 · Action chosen');
+    expect(html).toContain('Action chosen: Replacement truck');
   });
 
   it('activity feed shows real audit actions with shipment codes', () => {
@@ -170,7 +185,8 @@ describe('Shipment detail page (#15, #18, #34, #16)', () => {
     expect(html).toContain('Medium');
     expect(html).toContain('Driver report: breakdown'); // attribution row label from #34
     expect(html).toContain('Live — rows become final at arrival');
-    expect(html).toContain('Recovery options are not available yet');
+    expect(html).toContain('Recovery'); // section present; options are rendered by RecoveryQuickSection (tested below)
+    expect(html).not.toContain('Recovery options are not available yet');
     expect(html).toContain('Driver reported: breakdown'); // timeline
     expect(html).not.toContain('identity check failed');
   });
@@ -190,11 +206,48 @@ describe('Shipment detail page (#15, #18, #34, #16)', () => {
   });
 });
 
-describe('Recovery (M8 not built): an explicit notice, never invented options', () => {
-  it('RecoveryQuickSection shows the not-available text outside mock mode and makes no options call', () => {
-    const html = text(renderWithData(<RecoveryQuickSection shipmentId="shp_1042" />));
-    expect(html).toContain('Recovery options are not available yet');
-    expect(html).not.toContain('Compare all options');
+describe('Recovery (#29, #30) from real API responses', () => {
+  const activeHero: [readonly unknown[], unknown] = [qk.alerts({ status: 'active', shipmentId: 'shp_1042' }), { items: fx.alerts.items.filter((a) => (a as AlertDtoCoordinator).shipment.id === 'shp_1042') }];
+
+  it('full panel: the rule, Suggested first, ETA, meets-promise, fictional cost, constraints, infeasible reasons shown disabled', () => {
+    const html = renderWithData(<RecoveryPanel shipmentId="shp_1042" />, { data: [[qk.recoveryOptions('shp_1042'), fx.heroOptions], activeHero] });
+    const t = text(html);
+    expect(t).toContain(fx.heroOptions.suggestionRule);
+    expect(t.indexOf('Replacement truck TRK-11 from Khopoli yard')).toBeLessThan(t.indexOf('Notify customer only'));
+    expect(t).toContain('Estimate from fictional rate card');
+    expect(t).toContain('TRK-11 at Khopoli yard, 20 km by road');
+    expect(t).toContain('Not available: The truck is stationary.');
+    expect(t).toContain('CO₂e — method under verification');
+    expect(t).toMatch(/₹\s?6,100/);
+  });
+
+  it('quick section shows only the Suggested card plus "Compare all options"', () => {
+    const t = text(renderWithData(<RecoveryQuickSection shipmentId="shp_1042" />, { data: [[qk.recoveryOptions('shp_1042'), fx.heroOptions], activeHero] }));
+    expect(t).toContain('Compare all options');
+    expect(t).toContain('Replacement truck TRK-11 from Khopoli yard');
+    expect(t).not.toContain('Notify customer only');
+  });
+
+  it('after the decision: the chosen card is marked and no option can be chosen again', () => {
+    const chosen = fx.optionsAfterChoose.options.find((o) => o.status === 'CHOSEN');
+    expect(chosen?.kind).toBe('REPLACEMENT_TRUCK');
+    const html = renderWithData(<RecoveryPanel shipmentId="shp_1042" />, { data: [[qk.recoveryOptions('shp_1042'), fx.optionsAfterChoose], [qk.alerts({ status: 'active', shipmentId: 'shp_1042' }), fx.alertsAfterChoose]] });
+    expect(html).not.toMatch(/>Choose</);
+    expect(text(html)).toMatch(/Chosen/);
+  });
+
+  it('the choose response carries the realised ETA (= pipeline ETA, RC-4), driver change and customer notice', () => {
+    const r = fx.chooseResponse;
+    expect(r.option.newEtaAt).toBe(r.eta.predictedArrivalAt);
+    expect(r.driverChange).toEqual({ fromDriverName: 'Ramesh', toDriverName: 'Suresh', toTruckCode: 'TRK-11' });
+    expect(r.alert?.status).toBe('ACTION_CHOSEN');
+    expect(r.customerNotified).toBe(true);
+  });
+
+  it('customer view of the decision: plain words, no truck, driver, cost or party', () => {
+    const k = fx.customerAlertsAfterChoose.items[0]!;
+    expect(k.action).toEqual({ label: 'CONFIRMED', kind: 'REPLACEMENT_TRUCK', text: 'Plant X arranged a replacement truck. New estimate 17:50.' });
+    expect(JSON.stringify(fx.customerAlertsAfterChoose)).not.toMatch(/TRK-|Suresh|Ramesh|Khopoli|extraCostInr|TRANSPORTER/);
   });
 });
 

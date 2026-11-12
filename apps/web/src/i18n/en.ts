@@ -7,6 +7,7 @@ import type {
   RecoveryKind,
   RiskLevel,
   CustomerResponse,
+  DriverReasonCode,
   Role,
 } from '../api/contract';
 
@@ -82,6 +83,33 @@ export const customerResponseLabel: Record<CustomerResponse, string> = {
   ACCEPT_PROPOSAL: 'Accepted proposal',
   PREFER_TO_WAIT: 'Prefers to wait',
   REQUEST_CALL: 'Requested a call',
+};
+
+/** Driver reason chips (UI plan §12.2): plain words for the driver, mapped to the shared reason codes. */
+export const driverChipLabel: Record<DriverReasonCode, string> = {
+  BREAKDOWN: 'Breakdown',
+  PLANT_GATE_WAIT: 'Waiting at plant gate',
+  TRAFFIC: 'Traffic jam',
+  ROAD_CLOSED: 'Road closed',
+  HEAVY_RAIN: 'Heavy rain',
+  DOCUMENTS: 'Documents / checkpost',
+  UNLOADING_WAIT: 'Waiting to unload',
+  OTHER: 'Other',
+};
+
+/** Driver next-step button text (UI plan §12.1). Only the four driver milestones are tappable. */
+export const nextStepAction: Partial<Record<Milestone, string>> = {
+  AT_GATE: 'Report at plant gate',
+  GATE_OUT: 'Mark gate out',
+  ARRIVED: 'Confirm arrival',
+  DELIVERED: 'Confirm unloading complete',
+};
+
+/** Customer response buttons (UI plan §11.1, AC-M4.6). */
+export const customerResponseAction: Record<CustomerResponse, string> = {
+  ACCEPT_PROPOSAL: 'Accept proposal',
+  PREFER_TO_WAIT: 'Prefer to wait',
+  REQUEST_CALL: 'Request a call',
 };
 
 export const roleLabel: Record<Role, string> = {

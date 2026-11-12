@@ -2,7 +2,7 @@
 
 Living document maintained by the backend (branch `backend`). It lists **only what is implemented and tested**. The full target contract is `06_API_SPEC.md`; types live in `packages/shared`.
 
-Last updated: 2026-11-12 — **Combined Milestone 1 (M7: disruptions, alerts, notifications; control tower on real APIs)**.
+Last updated: 2026-11-12 — **M8 (recovery engine)**.
 
 ---
 
@@ -72,6 +72,8 @@ Status per code: `VALIDATION_ERROR` 400 · `UNAUTHENTICATED` 401 · `FORBIDDEN`/
 | GET | `/api/shipments/:shipmentId/timeline` (#16) | Coordinator, Customer (own, filtered) | Implemented + tested |
 | GET | `/api/alerts` (#26), `/api/alerts/:alertId` (#27) | Coordinator, Customer (own) | Implemented + tested |
 | POST | `/api/alerts/:alertId/customer-response` (#28) | Customer (own) | Implemented + tested (NEW_WINDOW branch in M8) |
+| GET | `/api/shipments/:shipmentId/recovery-options` (#29) | Coordinator | Implemented + tested |
+| POST | `/api/shipments/:shipmentId/recovery-options/:optionId/choose` (#30) | Coordinator | Implemented + tested |
 | GET | `/api/notifications` (#31) · POST `/:id/read` (#32) · POST `/read-all` (#33) | Coordinator, Customer | Implemented + tested |
 | GET | `/api/audit` (#37) | Coordinator | Implemented + tested |
 | GET | `/api/reference` (#38) | Coordinator | Implemented + tested |
@@ -81,6 +83,28 @@ Status per code: `VALIDATION_ERROR` 400 · `UNAUTHENTICATED` 401 · `FORBIDDEN`/
 | POST | `/api/driver-reports/:reportId/review` (#25) | Coordinator | Implemented + tested |
 | GET | `/api/shipments/:shipmentId/attribution` (#34) | Coordinator | Implemented + tested |
 | POST | `/api/shipments/:shipmentId/attribution/overrides` (#35) | Coordinator | Implemented + tested |
+| GET | `/api/orders` (#12) | Coordinator, Customer (own) | Implemented + tested (M9) |
+| GET | `/api/orders/:orderId` (#13) | Coordinator, Customer (own) | Implemented + tested (M9) |
+| POST | `/api/shipments/:shipmentId/milestones` (#17) | Driver (own), Coordinator (override, note) | Implemented + tested (M9) |
+| GET | `/api/shipments/:shipmentId/replay` (#19) | Coordinator | Implemented + tested (M9, read-only) |
+| GET | `/api/driver/trip` (#21) | Driver | Implemented + tested (M9) |
+| GET | `/api/analytics/dashboard` (#36) | Coordinator | Implemented + tested (M10, read-only) |
+
+### Analytics (M10) — what the SPA does
+- **#36** `?period=7d|30d|60d` (default 30d) `&laneId=&transporterId=`; unknown fields → 400, unknown ids → 404, non-coordinators → 403. Every section comes from one filtered set (arrivals in the window ending at the last settled sim time), so render all charts from one response. `null` percentages / medians mean "nothing to measure" — show "—", never 0. `causesByParty` is always five parties in fixed order. `weeklyTrend` includes empty weeks (Monday 00:00 IST). Drill-down: #14 with `status=all&arrivedFrom=filter.from&arrivedTo=filter.to` plus the same lane/transporter.
+
+### Portals, milestone taps and replay (M9) — what the SPA does
+- **#12** `{ items: OrderSummary[] }` (`status=open|delivered|all`, default open; `customerId` coordinator only; `limit` ≤ 200). **#13** returns `OrderSummary & { shipments }` **unwrapped** (API §7.2); shipments in the caller's view. The customer order cards take ETA/plain status from #14 (customer view).
+- **#17** body `{ milestone, note? }`. Drivers: AT_GATE / GATE_OUT / ARRIVED / DELIVERED on their own shipment (note optional). Coordinators: the same next step on a manual shipment with `note` 5–280 (audited as `milestone.override`). Errors: 409 `INVALID_TRANSITION` with the plain reason to show ("Truck is 85 km from the destination.", "Receiving opens at 08:00.", "Unloading finishes at 18:50."), 409 `ALREADY_DONE` for a passed milestone, 404 for another driver's shipment, 403 for customers. Response: driver → `DriverTripShipment`; coordinator → `ShipmentListItemCoordinator`; plus `milestones`. `arrivedAt`/`deliveredAt` are the gate/unloading times, never the tap time.
+- **#19** read-only stored snapshots (ascending) with positions on each snapshot's route, the coordinator timeline, `firstAtRiskAt` and `leadTimeMinutes` (G6: 11:10, 410 min).
+- **#21** `{ items, recentHandovers }`; `instruction` only for the replacement driver during the transfer; hand-overs for the previous driver for 12 sim-hours. Drivers have no notifications (audience is coordinator/customer).
+
+### Recovery (M8) — what the SPA does
+- **#29** `{ shipmentId, optionSetId, generatedAt, suggestionRule, options[] }` — `optionSetId: null` when the shipment is On track or has arrived. Five kinds always present when a set exists; infeasible kinds carry `infeasibleReason` (show disabled). Exactly one `isSuggested` (or none). `co2eDeltaKg` is null ("CO₂e — method under verification"). A set that contains a `CHOSEN` option stays current until arrival → show the decision, no further choice.
+- **#30** body `{ optionSetId, confirm: true, note? }` (no other fields). The option is re-evaluated at the decision minute; the response's `option.newEtaAt` equals `eta.predictedArrivalAt` (it may differ from the card shown earlier — the dialog says so). Errors: `409 STALE_OPTIONS` (`details.currentOptionSetId`; refetch #29), `409 ALREADY_DONE` (a decision exists), `409 INVALID_TRANSITION` (infeasible option).
+- **Alerts:** coordinator alerts have `proposedOption` (Suggested at opening) and `chosenOption`; after a choice the alert is `ACTION_CHOSEN` and **stays active until the shipment arrives** (approved rule), even at Watch. Customer alerts have `action` (`PROPOSED` / `CONFIRMED`, plain text) and `canRespond`.
+- **NEW_WINDOW:** choosing it sets the option `AWAITING_CUSTOMER` (no customer PLAN_UPDATED yet); the customer's `ACCEPT_PROPOSAL` (#28) applies exactly `newWindowEnd` as the promise and override (`renegotiated: true`); if the coordinator chose another option meanwhile, the window offer is gone.
+- **Hand-over:** replacement truck switches `truckCode` and the driver (Ramesh → Suresh for the hero); the original truck goes to maintenance.
 
 ### Control tower, disruptions and alerts (Combined Milestone 1) — what the SPA does
 - **Lists and detail:** #14 (`status=live&sort=risk` for the tower; filters `riskLevel` repeated, `laneId`, `transporterId`, `customerId` coordinator only, `arrivedFrom/To`, `onTime`, `q` ≤ 32, `sort`, `limit` ≤ 200, unknown params → 400), #15 detail, #16 timeline. Customer views never contain driver identity, parties, factor codes or scores.
@@ -188,7 +212,7 @@ Log in with these accounts through `/api/auth/login` (Milestone 3). Right after 
 
 ## 7. Known incomplete functionality
 
-Implemented: #1–#11, #14–#16, #18, #20, #22–#28, #31–#35, #37, #38 and `/api/health`. Not yet implemented: orders (#12, #13), milestone taps over HTTP (#17), replay (#19), driver trip (#21), recovery options and choose (#29, #30), the NEW_WINDOW branch of #28, analytics dashboard (#36). Next: Combined Milestone 2 (recovery), after approval.
+Implemented: #1–#38 and `/api/health` (all planned endpoints). Next: the separate UI modernization phase, after approval.
 
 ## 8. Contract change log
 
@@ -197,6 +221,9 @@ Implemented: #1–#11, #14–#16, #18, #20, #22–#28, #31–#35, #37, #38 and `
 | 2026-11-12 | Initial publish: enums, base types, `HealthResponse`, `SimStateDto`, `SyncResponse` | — |
 | 2026-11-12 | Added `Segment`, `GeoJSONLineString`, `GeometrySource`, `PLANT`, `DISPLAY_TIME_ZONE`, `RISK_THRESHOLDS`, `SMALL_FLEET_MAX` | No |
 | 2026-11-12 | Added `SimClockRequest`, `SimClockResponse`, `SimResetRequest`, `SimResetResponse` (as specified in API §5); #4–#6 implemented | No |
+| 2026-11-12 | M10: published `DashboardQuery`, `DashboardResponse` (as API §13; `period` typed as `DashboardPeriod`), `DASHBOARD_PERIODS` (`api/analytics.ts`); #36 implemented | No |
+| 2026-11-12 | M9: published `OrderSummary`, `OrderDetail`, `OrderListQuery`, `RecordMilestoneRequest`, `RecordMilestoneResponse`, `ReplaySnapshot`, `ReplayResponse`, `DriverTripResponse` (moved from the web's `pending.ts`, identical; `api/orders.ts`); #12, #13, #17, #19, #21 implemented; a tap on a passed milestone now returns 409 ALREADY_DONE (was INVALID_TRANSITION in the service) | No (types); behaviour: error code for repeated taps |
+| 2026-11-12 | M8: published `RecoveryOptionsResponse`, `ChooseRecoveryRequest`, `ChooseRecoveryResponse` (moved from the web's `pending.ts`, identical); #29/#30 and the #28 NEW_WINDOW branch implemented; alerts now carry `proposedOption`/`chosenOption` and customer `action`; ACTION_CHOSEN alerts stay active until arrival | No (fields were already in the contract; values change from null) |
 | 2026-11-12 | Combined M1: published shipments, alerts, notifications, disruptions, map, audit, reference DTOs (moved from the web's `pending.ts`, identical); `GeoJSONLineString.x_source?` added (optional) | No |
 | 2026-11-12 | Added driver-report, driver-trip and attribution types (API §2.2, §9, §12); #22–#25, #34, #35 implemented; attribution final at arrival (L1); ETA bars follow the ledger party | No |
 | 2026-11-12 | Added `Factor`, `FactorPhase`, `FACTOR_PHASES`, `PartyMinutes`, `EtaExplanationCoordinator`, `EtaSummaryCustomer`, `EtaResponse`, `EngineRulesResponse`, `RULE_VERSION` (as specified in API §2 and §8); #18 and #20 implemented; manual hero truck now refreshes `lastUpdateAt` via simulated GPS (O-14) | No |

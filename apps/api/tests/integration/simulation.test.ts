@@ -249,7 +249,7 @@ describe('driver milestones on the manual hero (L6) and autopilot delivery', () 
     const s = service();
     await s.reset(COORD);
     await expect(s.recordMilestone('shp_1042', 'ARRIVED', RAMESH)).rejects.toMatchObject({ code: 'INVALID_TRANSITION', message: expect.stringMatching(/km from the destination/) });
-    await expect(s.recordMilestone('shp_1042', 'LOADING', RAMESH)).rejects.toMatchObject({ code: 'INVALID_TRANSITION' });
+    await expect(s.recordMilestone('shp_1042', 'LOADING', RAMESH)).rejects.toMatchObject({ code: 'ALREADY_DONE' }); // M9: a passed milestone is ALREADY_DONE (API §7.6)
     await expect(s.recordMilestone('shp_1043', 'ARRIVED', SYSTEM)).rejects.toMatchObject({ message: "This shipment's milestones are recorded by the simulation." });
     await expect(s.recordMilestone('shp_does_not_exist', 'ARRIVED', RAMESH)).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });

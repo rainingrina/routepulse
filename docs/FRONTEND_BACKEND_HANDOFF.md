@@ -43,6 +43,12 @@ Imported from `@routepulse/shared` (published by Dev A): all enum lists/unions, 
 
 **Update 2026-11-12 (Combined Milestone 1):** the control tower, quick panel, alerts, activity feed, notification bell, map and simulation dock now run on the real API. New: shipment detail page (`/shipments/:id`), Simulation page (`/simulation`). Moved to `@routepulse/shared`: every shipments/alerts/notifications/disruptions/map/audit/reference DTO. Still in `pending.ts`: orders, milestone record, replay, driver trip response, recovery options/choose, dashboard. Answers to §5: Q1 confirmed (backend behaves so); Q2 confirmed — `data` keys `milestone`, `reason`, `label`, `response`, `shipmentCode` are written; Q4 confirmed (`worker-src 'self' blob:`); Q6 confirmed (`live` includes ARRIVED). Fixed: the map region collapsed to 0 px (MapView). `RECOVERY_AVAILABLE` (features/recovery/availability.ts) hides recovery actions until #29/#30 exist.
 
+**Update 2026-11-12 (M8):** recovery is live on the real API — `RECOVERY_AVAILABLE` is `true`; #29/#30 and their types come from `@routepulse/shared` (removed from `pending.ts`). The confirm dialog notes that the estimate is recalculated at the decision minute. Still in `pending.ts`: orders, milestone record, replay, driver trip response, dashboard.
+
+**Update 2026-11-12 (M9):** `OrderSummary`, `OrderDetail`, `OrderListQuery`, `RecordMilestoneRequest/Response`, `ReplaySnapshot`, `ReplayResponse`, `DriverTripResponse` now come from `@routepulse/shared` (removed from `pending.ts`); only the dashboard DTOs (#36, M10) remain pending. New screens on the real API: customer `/orders`, `/orders/:id`, `/notifications`; driver `/trip`, `/trip/report`; coordinator `/shipments/:id/replay` and `/reports`. New hooks in `api/hooks/portal.ts`; `map/MiniMap.tsx` for small maps (legend starts collapsed); `NotificationList` takes `linkFor`. #13 is consumed unwrapped (API §7.2). The in-browser mock still answers #17/#19 with "not available in mock mode" (development only).
+
+**Update 2026-11-12 (M10):** `DashboardQuery`/`DashboardResponse` come from `@routepulse/shared`; `api/contract/pending.ts` is deleted — every API type is now published. `/dashboard` is built on the real #36 (filters in the URL, Chart/Table toggles, drill-down via #14), the planned-screen placeholder component is removed, and the Control Tower's #36 cards show real values from the same cached `['dashboard', {period: '30d'}]` query. The in-browser mock still answers #36 with "not available in mock mode" (development only).
+
 ## 4. Endpoints the frontend calls today
 
 | # | Endpoint | Used by | Query key |
@@ -63,8 +69,18 @@ Imported from `@routepulse/shared` (published by Dev A): all enum lists/unions, 
 | 29 | `GET /api/shipments/:id/recovery-options` | Recovery panel | `['recoveryOptions', id]` |
 | 30 | `POST …/recovery-options/:optionId/choose` | Confirm dialog (`optionSetId`, `confirm: true`, optional `note`) | — |
 | 31–33 | Notifications list / read / read-all | Bell popover | `['notifications']` |
-| 36 | `GET /api/analytics/dashboard?period=30d` | KPI "On-time (30 d)", "Median warning lead" | `['dashboard', filters]` |
+| 36 | `GET /api/analytics/dashboard?period=…&laneId=…&transporterId=…` | Dashboard page; Control Tower KPI "On-time (30 d)", "Median warning lead" (`period=30d`) | `['dashboard', filters]` |
 | 37 | `GET /api/audit?limit=50` | Activity feed (L7) | `['audit', filters]` |
+| 12 | `GET /api/orders?status=open|delivered` | Customer orders | `['orders', filters]` |
+| 13 | `GET /api/orders/:id` | Customer order detail | `['order', id]` |
+| 14 | `GET /api/shipments?status=live|delivered&sort=promise` / `status=all` | Customer order cards / notification links | `['shipments', filters]` |
+| 17 | `POST /api/shipments/:id/milestones` | Driver next-step confirm | — (invalidates world state) |
+| 19 | `GET /api/shipments/:id/replay` | Replay page | `['replay', id]` |
+| 21 | `GET /api/driver/trip` | Driver trip, report page | `['trip']` |
+| 22 | `POST /api/driver-reports/classify` | Report page (debounced 400 ms) | — |
+| 23 | `POST /api/shipments/:id/driver-reports` | Report page Send | — |
+| 25 | `POST /api/driver-reports/:id/review` | Report queue Confirm / Change | — |
+| 28 | `POST /api/alerts/:id/customer-response` | Customer alert banner | — |
 
 ## 5. Assumptions and questions for Dev A
 
@@ -102,11 +118,18 @@ Imported from `@routepulse/shared` (published by Dev A): all enum lists/unions, 
 | §8.3 marker interpolation over 1 s | Markers jump to each new position | Task 10.4 not started |
 | §6.6 toast "SHP-1042 is at risk — View options" | One-time row highlight + `aria-live` announcement; no toast component yet | Kept the dependency set minimal; toast to follow |
 | §6.4 dock "Advance to…" time picker | Not in the dock yet ("+1 h" is) | Simulation page is Phase 5 |
-| §7 Shipment detail, §10 replay, §11 customer, §12 driver, §13 dashboard, §14 reports/simulation pages | Routes exist and show an honest "Not built yet" screen | Later phases |
+| §13 drill-down "list via #14" | Opens in a dialog over the dashboard (same window and filters), rows link to the shipment page | Keeps the filter context |
+| §13 "value labels on bars" for the 100 % stacked party chart | Minutes on hover and in the Table view; overall shares in the card's definition line | Labels on thin stacked segments overlap |
+| §10 replay map | Shows the lane's routes and the snapshot position; it does not zoom to the route | Kept the shared map component unchanged |
+| §10 event markers "on the x axis" | Focusable event chips under the scrubber (jump to the snapshot in force) | Recharts markers are not keyboard-focusable |
+| §11.3 text from `templateKey` + `params` via i18n | Server `text` shown (plain words) | Only English is enabled (L10) |
+| §14 attribution tab with overrides (#35) | Not built | Not in the M9 scope |
 
 ## 8. Change log
 
 | Date | Change |
 |---|---|
+| 2026-11-12 | M10: dashboard page on the real #36; Control Tower #36 cards live; `pending.ts` removed. |
+| 2026-11-12 | M9: customer portal, driver portal, replay page and driver-report queue on the real API; M9 DTOs imported from `@routepulse/shared`. |
 | 2026-11-12 | Merged backend Milestones 2–3: auth and geometry types now imported from `@routepulse/shared`. |
 | 2026-11-12 | Created. Phases 1–2: client, services, sync, layouts, role guard, login, control tower, map, alerts, activity, quick panel, recovery cards and choose flow. |

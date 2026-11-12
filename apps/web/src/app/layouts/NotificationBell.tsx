@@ -9,6 +9,7 @@ import { Button } from '../../components/primitives/Button';
 import { cn } from '../../components/cn';
 import { Bell, Inbox, ICON_STROKE } from '../../components/icons';
 import { formatDayTime } from '../../i18n/format';
+import type { NotificationDto } from '../../api/contract';
 
 /** Coordinator notification centre (#31–#33). Unread count comes from /api/sync. */
 export function NotificationBell() {
@@ -39,13 +40,25 @@ export function NotificationBell() {
   );
 }
 
-export function NotificationList({ onNavigate }: { onNavigate: () => void }) {
+/**
+ * Notification list (#31–#33). `linkFor` decides where an item leads: the coordinator default is the
+ * shipment page; the customer portal passes its own order link (or null for no navigation).
+ */
+export function NotificationList({
+  onNavigate,
+  linkFor = (n) => (n.shipmentId ? `/shipments/${encodeURIComponent(n.shipmentId)}` : null),
+  className,
+}: {
+  onNavigate: () => void;
+  linkFor?: (n: NotificationDto) => string | null;
+  className?: string;
+}) {
   const list = useNotifications();
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
   const navigate = useNavigate();
   return (
-    <div className="flex max-h-[70vh] flex-col">
+    <div className={cn('flex flex-col', className ?? 'max-h-[70vh]')}>
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <h2 className="text-h3 text-text">Notifications</h2>
         <Button
@@ -81,9 +94,10 @@ export function NotificationList({ onNavigate }: { onNavigate: () => void }) {
                   )}
                   onClick={() => {
                     if (!n.readAt) markRead.mutate(n.id);
-                    if (n.shipmentId) {
+                    const to = linkFor(n);
+                    if (to) {
                       onNavigate();
-                      void navigate(`/shipments/${encodeURIComponent(n.shipmentId)}`);
+                      void navigate(to);
                     }
                   }}
                 >

@@ -111,7 +111,13 @@ export function stopCauseOf(
   const match = reports
     .filter((x) => toS(x.simTime) + x.appliedMinutes * 60 === end)
     .sort((a, b) => a.simTime.getTime() - b.simTime.getTime() || (a.id < b.id ? -1 : 1))[0];
-  return match ? { sourceKey: `RPT:${match.id}`, party: match.party, createdS: toS(match.simTime) } : null;
+  // A recovery (replacement truck) shortens the stop: the remaining stop keeps the original cause
+  // (engine doc §8, "Load transfer"), i.e. the latest report made before the new stop end.
+  const fallback = match
+    ? undefined
+    : reports.filter((x) => toS(x.simTime) <= end).sort((a, b) => b.simTime.getTime() - a.simTime.getTime() || (a.id < b.id ? 1 : -1))[0];
+  const r = match ?? fallback;
+  return r ? { sourceKey: `RPT:${r.id}`, party: r.party, createdS: toS(r.simTime) } : null;
 }
 
 export async function loadDisruptions(db: Db, afterS: number): Promise<SimDisruption[]> {

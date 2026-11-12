@@ -83,7 +83,7 @@ export async function listShipments(db: Db, user: AuthUser, f: ShipmentListFilte
   return rows.map((r) => (user.role === 'COORDINATOR' ? toListItemCoordinator(r) : toListItemCustomer(r, nowS)));
 }
 
-async function actorNames(db: Db, ids: readonly (string | null)[]): Promise<Map<string, { id: string; name: string; role: AuthUser['role'] }>> {
+export async function actorNames(db: Db, ids: readonly (string | null)[]): Promise<Map<string, { id: string; name: string; role: AuthUser['role'] }>> {
   const unique = [...new Set(ids.filter((x): x is string => x !== null))];
   if (unique.length === 0) return new Map();
   const users = await db.user.findMany({ where: { id: { in: unique } }, select: { id: true, name: true, role: true } });

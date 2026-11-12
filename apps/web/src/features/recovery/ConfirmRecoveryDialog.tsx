@@ -89,6 +89,9 @@ export function ConfirmRecoveryDialog({
           {half ? ` ± ${half} min` : ''}.”
         </p>
       )}
+      <p className="mt-2 text-small text-text-muted">
+        The estimate is recalculated at the simulation minute you confirm; the confirmed result is shown after you choose.
+      </p>
       <label className="mt-4 flex flex-col gap-1.5">
         <span className="text-small text-text-secondary">Note (optional)</span>
         <textarea

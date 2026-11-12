@@ -52,6 +52,13 @@ export {
   Megaphone,
   Sparkles,
   FileText,
+  ChevronLeft,
+  MapPin,
+  Phone,
+  Send,
+  ArrowRightLeft,
+  Hourglass,
+  Diamond,
   type LucideIcon,
 } from 'lucide-react';
 

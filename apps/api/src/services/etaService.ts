@@ -1,8 +1,10 @@
 import type { SnapshotTrigger } from '@routepulse/shared';
 import { explainEta, projectWorld, type DisruptionInfo, type EtaResult, type ReportInfo } from '../engines/eta.js';
+import type { SimDisruption, SimShipment } from '../engines/simulate.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import { isFactorArray } from '../guards/factors.js';
 import { evaluateAlerts } from './alertService.js';
+import { refreshOptionSets } from './recoveryService.js';
 import { SIM_CONFIG, fromS, loadDisruptions, loadLiveShipments, toS, type Db, type StaticWorld } from '../sim/world.js';
 
 /**
@@ -27,8 +29,19 @@ export interface RecalcContext {
 const SNAPSHOT_EVERY_S = 30 * 60;
 const SNAPSHOT_ETA_MOVE_MIN = 5;
 
-/** Computes the ETA explanation of every live shipment at simTimeS. Read-only. */
-export async function computeEtas(db: Db, world: StaticWorld, simTimeS: number): Promise<Map<string, EtaResult>> {
+/** Everything the ETA engine needs at one simulation time (read-only). */
+export interface EtaContext {
+  nowS: number;
+  world: StaticWorld;
+  disruptions: SimDisruption[];
+  live: SimShipment[];
+  plannedArrival: Map<string, number>;
+  disruptionInfo: Map<string, DisruptionInfo>;
+  reportInfo: Map<string, ReportInfo>;
+  pending: Map<string, number>;
+}
+
+export async function loadEtaContext(db: Db, world: StaticWorld, simTimeS: number): Promise<EtaContext> {
   const disruptions = await loadDisruptions(db, simTimeS);
   const live = await loadLiveShipments(db, world, disruptions);
   const ids = live.map((s) => s.id);
@@ -37,30 +50,60 @@ export async function computeEtas(db: Db, world: StaticWorld, simTimeS: number):
     db.disruption.findMany({ select: { id: true, kind: true, label: true, party: true, reasonCode: true, segmentCodes: true, slowdownPct: true, startsAt: true, endsAt: true, endedEarlyAt: true } }),
     db.driverReport.findMany({ where: { shipmentId: { in: ids } }, select: { id: true, shipmentId: true, reason: true, party: true, status: true } }),
   ]);
-  const plannedArrival = new Map(plans.map((p) => [p.id, toS(p.plannedArrivalAt)]));
   const disruptionInfo = new Map<string, DisruptionInfo>(
     allDisruptions.map((d) => [
       d.id,
       { id: d.id, kind: d.kind, label: d.label, party: d.party, reason: d.reasonCode, segmentCodes: d.segmentCodes, slowdownPct: d.slowdownPct, startS: toS(d.startsAt), endS: toS(d.endedEarlyAt ?? d.endsAt) },
     ]),
   );
-  const reportInfo = new Map<string, ReportInfo>(reports.map((r) => [r.id, { id: r.id, reason: r.reason, party: r.party, status: r.status }]));
   const pending = new Map<string, number>();
   for (const r of reports) if (r.status === 'PENDING_REVIEW') pending.set(r.shipmentId, (pending.get(r.shipmentId) ?? 0) + 1);
+  return {
+    nowS: simTimeS,
+    world,
+    disruptions,
+    live,
+    plannedArrival: new Map(plans.map((p) => [p.id, toS(p.plannedArrivalAt)])),
+    disruptionInfo,
+    reportInfo: new Map<string, ReportInfo>(reports.map((r) => [r.id, { id: r.id, reason: r.reason, party: r.party, status: r.status }])),
+    pending,
+  };
+}
 
-  const projected = projectWorld({ shipments: live, routes: world.routes, disruptions, config: SIM_CONFIG, nowS: simTimeS });
+/**
+ * ETA explanations for `ids` in a (possibly modified) copy of the world: the ONE projection path,
+ * used by the pipeline and by recovery options (architecture §10.7: options are projectEta on a
+ * modified copy of the context). `extra` adds planned arrivals for shipments not in the database yet
+ * (a SPLIT child). Shipments that cannot be projected (no truck) are absent.
+ */
+export function explainIn(
+  ctx: EtaContext,
+  ships: readonly SimShipment[],
+  ids: readonly string[],
+  opts: { disruptions?: readonly SimDisruption[]; plannedArrival?: ReadonlyMap<string, number> } = {},
+): Map<string, EtaResult> {
+  const disruptions = opts.disruptions ?? ctx.disruptions;
+  const projected = projectWorld({ shipments: ships, routes: ctx.world.routes, disruptions, config: SIM_CONFIG, nowS: ctx.nowS });
   const out = new Map<string, EtaResult>();
-  for (const sh of live) {
+  for (const id of ids) {
+    const sh = ships.find((x) => x.id === id);
+    if (!sh) continue;
     const end = sh.arrivedS !== null ? sh : projected.get(sh.id);
-    const route = world.routes.get(sh.routeId);
-    const planned = plannedArrival.get(sh.id);
-    if (!end || !route || planned === undefined) continue; // e.g. no truck yet: no ETA (stays null)
+    const route = ctx.world.routes.get(sh.routeId);
+    const planned = opts.plannedArrival?.get(sh.id) ?? ctx.plannedArrival.get(sh.id);
+    if (!end || !route || planned === undefined) continue;
     out.set(
       sh.id,
-      explainEta({ now: sh, projected: end, route, plannedArrivalS: planned, nowS: simTimeS, pendingReports: pending.get(sh.id) ?? 0, disruptions: disruptionInfo, reports: reportInfo }),
+      explainEta({ now: sh, projected: end, route, plannedArrivalS: planned, nowS: ctx.nowS, pendingReports: ctx.pending.get(sh.id) ?? 0, disruptions: ctx.disruptionInfo, reports: ctx.reportInfo }),
     );
   }
   return out;
+}
+
+/** Computes the ETA explanation of every live shipment at simTimeS. Read-only. */
+export async function computeEtas(db: Db, world: StaticWorld, simTimeS: number): Promise<Map<string, EtaResult>> {
+  const ctx = await loadEtaContext(db, world, simTimeS);
+  return explainIn(ctx, ctx.live, ctx.live.map((s) => s.id));
 }
 
 const TRIGGER_FOR_SNAPSHOT: Record<RecalcTrigger, SnapshotTrigger> = {
@@ -84,8 +127,10 @@ const TRIGGER_FOR_SNAPSHOT: Record<RecalcTrigger, SnapshotTrigger> = {
  * Returns true when something material changed (worldVersion must be bumped).
  */
 export async function recalculate(tx: Prisma.TransactionClient, ctx: RecalcContext): Promise<boolean> {
-  const results = await computeEtas(tx, ctx.world, ctx.simTimeS);
+  const etaCtx = await loadEtaContext(tx, ctx.world, ctx.simTimeS);
+  const results = explainIn(etaCtx, etaCtx.live, etaCtx.live.map((s) => s.id));
   if (results.size === 0) return false;
+  const touched = new Set<string>([...(ctx.actionShipmentIds ?? []), ...(ctx.eventShipmentIds ?? [])]);
   const ids = [...results.keys()];
   const [cached, lastSnaps] = await Promise.all([
     tx.shipment.findMany({
@@ -126,6 +171,7 @@ export async function recalculate(tx: Prisma.TransactionClient, ctx: RecalcConte
       });
     }
     if (changed) material = true;
+    if (changedAny) touched.add(id);
 
     // Snapshot rule.
     const prev = last.get(id);
@@ -176,6 +222,8 @@ export async function recalculate(tx: Prisma.TransactionClient, ctx: RecalcConte
     });
     material = true;
   }
+  // Recovery options (ES → RS) before alerts, so a newly opened alert can name the Suggested option.
+  if (await refreshOptionSets(tx, etaCtx, results, touched)) material = true;
   // Alerts and notifications from the same authoritative results (architecture §6.3: ES → AS).
   if (await evaluateAlerts(tx, ctx.simTimeS, results)) material = true;
   return material;

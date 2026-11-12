@@ -6,7 +6,7 @@ import { Card, CardHeader, ConfidenceChip, EmptyState, KeyValue, PartyChip, Skel
 import { ErrorState } from '../../components/display/feedback';
 import { EtaDisplay } from '../../components/display/EtaDisplay';
 import { StatusBadge, statusForShipment } from '../../components/display/StatusBadge';
-import { ArrowLeft, Clock, ICON_STROKE } from '../../components/icons';
+import { ArrowLeft, Clock, History, ICON_STROKE } from '../../components/icons';
 import { milestoneLabel, partyLabel, t } from '../../i18n/en';
 import { formatDayTime, formatDuration, formatTime, formatTimeRelative } from '../../i18n/format';
 import { RecoveryQuickSection } from '../recovery/RecoveryQuickSection';
@@ -55,6 +55,11 @@ export default function ShipmentDetailPage() {
           <h1 className="text-h1 text-text code-label">{s.code}</h1>
           {status ? <StatusBadge status={status} /> : null}
           <span className="text-small text-text-muted">{milestoneLabel[s.currentMilestone]}</span>
+          <span className="flex-1" />
+          <Link to={`/shipments/${encodeURIComponent(s.id)}/replay`} className="inline-flex items-center gap-1 text-body text-primary hover:underline">
+            <History aria-hidden className="size-4" strokeWidth={ICON_STROKE} />
+            Replay
+          </Link>
         </div>
         <p className="text-body text-text-secondary">
           {s.customer.name}, {s.customer.city} · {s.lane.name} · order {s.orderCode}

@@ -1,3 +1,6 @@
+import { isAbsolute } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 /**
  * Environment configuration, validated by hand at startup (no schema library, decision D9).
  * The process fails fast with a clear message when a required value is missing or invalid.
@@ -15,7 +18,15 @@ export interface AppConfig {
   logLevel: LogLevel;
   /** Needed by the demo reset (re-seeds demo accounts). Optional otherwise. */
   seedDemoPassword: string | null;
+  /**
+   * Folder with the offline basemap (`western-india.pmtiles`, created by `npm run basemap:fetch`),
+   * served same-origin at /tiles (architecture §16). The app runs without it (fallback style).
+   */
+  basemapDir: string;
 }
+
+/** Default basemap folder: apps/api/static/basemap (outside Git; see .gitignore). */
+export const DEFAULT_BASEMAP_DIR = fileURLToPath(new URL('../../static/basemap', import.meta.url));
 
 export class ConfigError extends Error {
   constructor(public readonly problems: string[]) {
@@ -67,6 +78,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     problems.push('SEED_DEMO_PASSWORD must be at least 12 characters when set');
   }
 
+  const basemapRaw = env['BASEMAP_DIR'];
+  if (basemapRaw !== undefined && basemapRaw.length > 0 && !isAbsolute(basemapRaw)) {
+    problems.push('BASEMAP_DIR must be an absolute path when set');
+  }
+
   if (problems.length > 0) throw new ConfigError(problems);
 
   return {
@@ -77,5 +93,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     demoMode: demoRaw === 'true',
     logLevel,
     seedDemoPassword: seedRaw && seedRaw.length > 0 ? seedRaw : null,
+    basemapDir: basemapRaw && basemapRaw.length > 0 ? basemapRaw : DEFAULT_BASEMAP_DIR,
   };
 }

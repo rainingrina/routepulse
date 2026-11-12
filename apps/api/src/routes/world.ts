@@ -3,6 +3,9 @@ import {
   CUSTOMER_RESPONSES,
   RISK_LEVELS,
   type AlertDto,
+  type AlertDtoCoordinator,
+  type ChooseRecoveryResponse,
+  type RecoveryOptionsResponse,
   type AuditResponse,
   type CreateDisruptionRequest,
   type CreateDisruptionResponse,
@@ -27,6 +30,12 @@ import type { PrismaClient } from '../db/prisma.js';
 import { notFound } from '../errors/domainError.js';
 import { ALERT_SELECT, toAlertCoordinator, toAlertCustomer } from '../serializers/alert.js';
 import { respondToAlert } from '../services/alertService.js';
+import { SUGGESTION_RULE } from '../config/recovery.js';
+import { OPTION_SELECT, toOptionDto } from '../serializers/recovery.js';
+import { SHIPMENT_LIST_SELECT, toListItemCoordinator } from '../serializers/shipment.js';
+import { toEtaCoordinator } from '../serializers/eta.js';
+import { computeEtas, loadEtaContext } from '../services/etaService.js';
+import { KIND_ORDER, acceptNewWindow, chooseOption, isNewWindowDecision } from '../services/recoveryService.js';
 import { createDisruption, endDisruption, getDisruptionDto, impactOf, listDisruptions } from '../services/disruptionService.js';
 import { listNotifications, markAllRead, markRead } from '../services/notificationService.js';
 import { getAudit, getMapLayers, getPositions, getReference, getShipmentDetail, getTimeline, listShipments } from '../services/readService.js';
@@ -190,11 +199,76 @@ export function worldRouter(sim: SimulationService, prisma: PrismaClient, config
     v.assertValid();
     const user = authUser(req);
     if (!user.customerId) throw notFound();
-    const alertId = await sim.commitAction((tx, atS) =>
-      respondToAlert(tx, atS, { alertId: id as string, customerId: user.customerId as string, response: response as (typeof CUSTOMER_RESPONSES)[number], actor: { userId: user.id, role: user.role } }),
-    );
+    const actor = { userId: user.id, role: user.role };
+    let alertId = id as string;
+    if (response === 'ACCEPT_PROPOSAL' && (await isNewWindowDecision(prisma, alertId))) {
+      // L4: accepting a NEW_WINDOW proposal changes the promise → the single pipeline recalculates.
+      await sim.applyChange('RECOVERY', async (tx, atS) => {
+        const shipmentId = await acceptNewWindow(tx, atS, { alertId, customerId: user.customerId as string, actor });
+        return { result: shipmentId, shipmentIds: [shipmentId] };
+      });
+    } else {
+      alertId = await sim.commitAction((tx, atS) =>
+        respondToAlert(tx, atS, { alertId, customerId: user.customerId as string, response: response as (typeof CUSTOMER_RESPONSES)[number], actor }),
+      );
+    }
     const row = await prisma.alert.findUniqueOrThrow({ where: { id: alertId }, select: ALERT_SELECT });
     const out: { alert: CustomerAlertDto } = { alert: toAlertCustomer(row) };
+    res.json(out);
+  });
+
+  // ───────── #29 recovery options, #30 choose ─────────
+  router.get('/shipments/:shipmentId/recovery-options', requireRole('COORDINATOR'), async (req, res) => {
+    const v = new Validator();
+    const id = v.pathId(req.params.shipmentId, 'shipmentId');
+    v.assertValid();
+    const sh = await prisma.shipment.findUnique({ where: { id: id as string }, select: { id: true, currentOptionSetId: true } });
+    if (!sh) throw notFound();
+    const options = sh.currentOptionSetId ? await prisma.recoveryOption.findMany({ where: { optionSetId: sh.currentOptionSetId }, select: { ...OPTION_SELECT, createdAtSim: true } }) : [];
+    options.sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind));
+    const out: RecoveryOptionsResponse = {
+      shipmentId: sh.id,
+      optionSetId: sh.currentOptionSetId,
+      generatedAt: options[0] ? options[0].createdAtSim.toISOString() : null,
+      suggestionRule: SUGGESTION_RULE,
+      options: options.map(toOptionDto),
+    };
+    res.json(out);
+  });
+
+  router.post('/shipments/:shipmentId/recovery-options/:optionId/choose', requireRole('COORDINATOR'), async (req, res) => {
+    const v = new Validator();
+    const shipmentId = v.pathId(req.params.shipmentId, 'shipmentId');
+    const optionId = v.string({ optionId: req.params.optionId }, 'optionId', { min: 1, max: 128 });
+    const body = v.object(req.body, 'body', ['optionSetId', 'confirm', 'note']);
+    const optionSetId = v.string(body, 'optionSetId', { min: 1, max: 128 });
+    v.literalTrue(body, 'confirm');
+    const note = v.string(body, 'note', { min: 1, max: 280, trim: true, optional: true });
+    v.assertValid();
+    const user = authUser(req);
+    const { result } = await sim.applyChange('RECOVERY', async (tx, actionS, world) => {
+      const ctx = await loadEtaContext(tx, world, actionS);
+      const r = await chooseOption(tx, ctx, { shipmentId: shipmentId as string, optionId: optionId as string, optionSetId: optionSetId as string, note, actor: { userId: user.id, role: user.role } });
+      return { result: r, shipmentIds: [shipmentId as string, ...(r.childShipmentId ? [r.childShipmentId] : [])] };
+    });
+    const out: ChooseRecoveryResponse = await sim.readSettled(async (db, w, s) => {
+      const option = await db.recoveryOption.findUniqueOrThrow({ where: { id: result.optionId }, select: OPTION_SELECT });
+      const alertRow = await db.alert.findFirst({ where: { shipmentId: shipmentId as string }, orderBy: [{ openedAt: 'desc' }, { id: 'desc' }], select: ALERT_SELECT });
+      const [alert] = alertRow ? await toAlertDtos(db as PrismaClient, 'COORDINATOR', [alertRow]) : [null];
+      const row = await db.shipment.findUniqueOrThrow({ where: { id: shipmentId as string }, select: SHIPMENT_LIST_SELECT });
+      const child = result.childShipmentId ? await db.shipment.findUniqueOrThrow({ where: { id: result.childShipmentId }, select: SHIPMENT_LIST_SELECT }) : null;
+      const eta = (await computeEtas(db, w, s)).get(shipmentId as string);
+      if (!eta) throw notFound();
+      return {
+        option: toOptionDto(option),
+        alert: (alert as AlertDtoCoordinator | null) ?? null,
+        shipment: toListItemCoordinator(row),
+        eta: toEtaCoordinator(eta),
+        childShipment: child ? toListItemCoordinator(child) : null,
+        driverChange: result.driverChange,
+        customerNotified: result.customerNotified,
+      };
+    });
     res.json(out);
   });
 

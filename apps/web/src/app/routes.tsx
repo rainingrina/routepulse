@@ -3,12 +3,19 @@ import { createBrowserRouter, type RouteObject } from 'react-router';
 import { RoleGuard, HomeRedirect } from './RoleGuard';
 import { RouteErrorBoundary, NotFoundPage } from './RouteErrorBoundary';
 import { AuthLayout, CoordinatorLayout, CustomerLayout, DriverLayout } from './layouts/layouts';
-import { PlannedScreen } from './PlannedScreen';
 
 const LoginPage = lazy(() => import('../features/auth/LoginPage'));
 const ControlTowerPage = lazy(() => import('../features/control-tower/ControlTowerPage'));
 const ShipmentDetailPage = lazy(() => import('../features/shipment/ShipmentDetailPage'));
 const SimulationPage = lazy(() => import('../features/simulation/SimulationPage'));
+const ReplayPage = lazy(() => import('../features/replay/ReplayPage'));
+const DashboardPage = lazy(() => import('../features/dashboard/DashboardPage'));
+const ReportsPage = lazy(() => import('../features/reports/ReportsPage'));
+const OrdersPage = lazy(() => import('../features/customer/OrdersPage'));
+const OrderDetailPage = lazy(() => import('../features/customer/OrderDetailPage'));
+const NotificationsPage = lazy(() => import('../features/customer/NotificationsPage'));
+const TripPage = lazy(() => import('../features/driver/TripPage'));
+const ReportProblemPage = lazy(() => import('../features/driver/ReportProblemPage'));
 
 /** Three route trees + login (UI plan §3, architecture §5.1). Each tree has its own error boundary. */
 export const routes: RouteObject[] = [
@@ -29,9 +36,9 @@ export const routes: RouteObject[] = [
     children: [
       { path: 'control-tower', element: <ControlTowerPage /> },
       { path: 'shipments/:id', element: <ShipmentDetailPage /> },
-      { path: 'shipments/:id/replay', element: <PlannedScreen title="Replay" task="11.6" /> },
-      { path: 'dashboard', element: <PlannedScreen title="Dashboard" task="14.2" /> },
-      { path: 'reports', element: <PlannedScreen title="Driver reports" task="11.8" /> },
+      { path: 'shipments/:id/replay', element: <ReplayPage /> },
+      { path: 'dashboard', element: <DashboardPage /> },
+      { path: 'reports', element: <ReportsPage /> },
       { path: 'simulation', element: <SimulationPage /> },
     ],
   },
@@ -43,9 +50,9 @@ export const routes: RouteObject[] = [
     ),
     errorElement: <RouteErrorBoundary />,
     children: [
-      { path: 'orders', element: <PlannedScreen title="Orders" task="12.1" /> },
-      { path: 'orders/:id', element: <PlannedScreen title="Order detail" task="12.2" /> },
-      { path: 'notifications', element: <PlannedScreen title="Notifications" task="12.3" /> },
+      { path: 'orders', element: <OrdersPage /> },
+      { path: 'orders/:id', element: <OrderDetailPage /> },
+      { path: 'notifications', element: <NotificationsPage /> },
     ],
   },
   {
@@ -56,8 +63,8 @@ export const routes: RouteObject[] = [
     ),
     errorElement: <RouteErrorBoundary />,
     children: [
-      { path: 'trip', element: <PlannedScreen title="Trip" task="13.1" /> },
-      { path: 'trip/report', element: <PlannedScreen title="Report a problem" task="13.2" /> },
+      { path: 'trip', element: <TripPage /> },
+      { path: 'trip/report', element: <ReportProblemPage /> },
     ],
   },
   { path: '*', element: <NotFoundPage /> },

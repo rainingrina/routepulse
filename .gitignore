@@ -18,3 +18,5 @@ apps/api/src/generated/
 
 # OS / editor
 .DS_Store
+
+.playwright-mcp/

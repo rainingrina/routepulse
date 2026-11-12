@@ -80,7 +80,7 @@ Demo accounts (password = your `SEED_DEMO_PASSWORD`):
 
 More accounts: `planning/10_SEED_DATA.md` §2 and `planning/09_BACKEND_HANDOFF.md` §5a.
 
-**Current integration status (2026-11-12, Combined Milestone 1).** The API implements #1–#11, #14–#16, #18, #20, #22–#28, #31–#35, #37, #38. With the real API the coordinator can use the control tower (KPIs, risk-sorted list, map with positions, alerts, activity, notifications), the shipment detail page (ETA four terms, factors, attribution, activity) and the Simulation page (inject/end disruptions). Not built yet: the dashboard (#36; its two KPI cards say "Unavailable"), recovery options (#29/#30; the UI says "not available yet"), orders (#12/#13), milestone taps over HTTP (#17), replay (#19), driver trip (#21), and the customer and driver screens ("Not built yet" pages). To see the complete scripted UI without the API, run the **development mock**:
+**Current integration status (2026-11-12, Combined Milestone 1).** The API implements #1–#11, #14–#16, #18, #20, #22–#28, #31–#35, #37, #38. With the real API the coordinator can use the control tower (KPIs, risk-sorted list, map with positions, alerts, activity, notifications), the shipment detail page (ETA four terms, factors, attribution, activity) and the Simulation page (inject/end disruptions). **M8:** recovery options (#29) and choose (#30) are live in the quick panel, alerts and shipment detail. Not built yet: the dashboard (#36; its two KPI cards say "Unavailable"), orders (#12/#13), milestone taps over HTTP (#17), replay (#19), driver trip (#21), and the customer and driver screens ("Not built yet" pages). To see the complete scripted UI without the API, run the **development mock**:
 
 ```bash
 npm run dev:web:mock    # http://localhost:5173, in-browser fictional fixtures, any password; banner says "mock"
@@ -97,21 +97,21 @@ The mock is excluded from production builds.
 | Command (repo root) | What it tests | PostgreSQL | Seed needed | Changes data | Success looks like |
 |---|---|---|---|---|---|
 | `npm run typecheck` | `tsc` for `packages/shared`, `apps/api`, `apps/web` (strict) | no | no | no | three `tsc -p tsconfig.json` runs with no errors |
-| `npm test` | typecheck, then **all API tests**, then **all web tests** | yes (`TEST_DATABASE_URL`) | no (tests reseed the test DB themselves) | only the **test** database | `Tests 299 passed (299)` (API) and `Tests 88 passed (88)` (web) |
-| `npm test -w @routepulse/api` | API unit + integration tests (Vitest; files run one at a time) | yes | no | test DB only | `Test Files 19 passed (19)` · `Tests 299 passed (299)` |
-| `npx vitest run tests/unit` (in `apps/api`) | API pure-engine unit tests only (simulation, ETA, risk, attribution, classifier, validation, session) | the global setup still migrates the test DB, so it must be reachable | no | test DB migrations only | `Test Files 10 passed (10)` · `Tests 134 passed (134)` |
-| `npx vitest run tests/integration` (in `apps/api`) | Real Express app on an ephemeral port + real test DB: auth, scoping, simulation, ETA, attribution, shipments/map/audit, disruptions, alerts and notifications, reproducibility (R1–R8), golden checkpoints | yes | no (each file resets) | test DB | `Test Files 9 passed (9)` · `Tests 165 passed (165)` |
-| `npm test -w @routepulse/web` | Web unit + component tests (API client, retry/session rules, role guard, formatting, badges, filters, mock fixture identities; control tower, shipment detail, simulation page, notifications and recovery notice rendered from **real API responses** in `apps/web/src/test/fixtures/api-11-20.json`) | no | no | no | `Test Files 8 passed (8)` · `Tests 88 passed (88)` |
+| `npm test` | typecheck, then **all API tests**, then **all web tests** | yes (`TEST_DATABASE_URL`) | no (tests reseed the test DB themselves) | only the **test** database | `Tests 359 passed (359)` (API) and `Tests 121 passed (121)` (web) |
+| `npm test -w @routepulse/api` | API unit + integration tests (Vitest; files run one at a time; 30 s per-test timeout) | yes | no | test DB only | `Test Files 24 passed (24)` · `Tests 359 passed (359)` |
+| `npx vitest run tests/unit` (in `apps/api`) | API pure-engine unit tests only (simulation, ETA, risk, attribution, recovery, analytics, classifier, validation, session) | the global setup still migrates the test DB, so it must be reachable | no | test DB migrations only | `Test Files 12 passed (12)` · `Tests 154 passed (154)` |
+| `npx vitest run tests/integration` (in `apps/api`) | Real Express app on an ephemeral port + real test DB: auth, scoping, simulation, ETA, attribution, shipments/map/audit, disruptions, alerts and notifications, recovery, portals (orders, milestone taps, replay/G6, driver trip), analytics (#36), reproducibility (R1–R8), golden checkpoints | yes | no (each file resets) | test DB | `Test Files 12 passed (12)` · `Tests 205 passed (205)` |
+| `npm test -w @routepulse/web` | Web unit + component tests (API client, retry/session rules, role guard, formatting, badges, filters, mock fixture identities; control tower, shipment detail, simulation page, notifications, recovery, customer orders/order detail/notifications, driver trip/report, report queue, replay and the dashboard rendered from **real API responses** in `apps/web/src/test/fixtures/api-11-20.json`) | no | no | no | `Test Files 10 passed (10)` · `Tests 121 passed (121)` |
 | `npm run typecheck -w @routepulse/web` | Web types only | no | no | no | no output after the `tsc` line |
 | `cd apps/api && npx prisma validate` | Prisma schema validity | no | no | no | `The schema at prisma/schema.prisma is valid` |
 | `npm run build:web` | Web typecheck + production bundle | no | no | writes `apps/web/dist` | `✓ built in …` (a "chunks larger than 500 kB" warning is currently expected) |
 
-Not automated yet: browser end-to-end tests (the Combined Milestone 1 browser walkthrough was run manually with Playwright; see PROGRESS 15.4 notes). The golden hero test (architecture §20.3) is partly implemented (G0, G1, G2 incl. alerts and notifications, G3 response part, G4) inside the API integration suite.
+Not automated yet: browser end-to-end tests (the Combined Milestone 1 browser walkthrough was run manually with Playwright; see PROGRESS 15.4 notes). The golden hero test (architecture §20.3) G0–G8 runs inside the API integration suite (G6 replay since M9).
 
 **Override variables without editing `.env`:** values already set in the shell win over `apps/api/.env` (Node `--env-file` / `process.loadEnvFile` do not override), e.g.
 `DATABASE_URL=postgresql://$USER@localhost:5432/routepulse_dev TEST_DATABASE_URL=postgresql://$USER@localhost:5432/routepulse_test npm test`.
 
-**Fixture refresh:** `apps/web/src/test/fixtures/api-11-20.json` holds real API responses (reset → 10:30 rain → 11:10 report → 11:20). Regenerate it from the running API if the contract changes.
+**Fixture refresh:** `apps/web/src/test/fixtures/api-11-20.json` holds real API responses (reset → 10:30 rain → 11:10 report → 11:20; the M9 keys continue → 11:25 replacement truck chosen → report confirmed → 18:05 arrival tapped). Regenerate it from the running API if the contract changes.
 
 Test database safety: `apps/api/vitest.config.ts` refuses to run if `TEST_DATABASE_URL` is missing or equals `DATABASE_URL`, and the global setup refuses a database whose URL does not contain `test`.
 
@@ -140,3 +140,33 @@ Test database safety: `apps/api/vitest.config.ts` refuses to run if `TEST_DATABA
 | CORS errors | Should not occur: there is no cross-origin call in development (Vite proxy). If you see one, you are calling the API on another origin |
 | Simulation shows "Clock paused after a long gap" | The laptop slept while the clock was running; press Play again (long-gap guard) |
 | Docker: "failed to connect to the docker API" | Start Docker Desktop; or use a local PostgreSQL instead |
+
+## F. Verifying M8 (recovery) by hand
+
+1. Start the API and web (§C), sign in as the coordinator, **Reset demo** (Thu 10:25).
+2. Simulation page → Heavy rain on `KHP-LNV-GHAT`, 65 %, 480 min. SHP-1042 turns Watch; its quick panel shows **Reroute via RT-PUNE-B** as Suggested.
+3. Advance to 11:10 (dock "+1 h" or `POST /api/sim/clock {"action":"ADVANCE_TO",…}`), sign in as `driver.ramesh@ghatline.test` in another browser profile and report "tyre puncture near Lonavala" (or `POST /api/shipments/shp_1042/driver-reports`). SHP-1042 turns At risk; the alert shows **Suggested: Replacement truck**; options: replacement TRK-11 17:35 ₹6,100, reroute disabled (stationary), new window until 19:30.
+4. Advance to 11:25 → **View options** → choose the replacement truck → confirm. Expected: new estimate **17:50**, Watch, driver Ramesh → Suresh (TRK-11), customer notified; the alert stays **Action chosen**.
+5. Advance past 17:50 and record ARRIVED as Suresh (or the coordinator via the service): the alert resolves at arrival; attribution shows GATE 40 / HIST 20 / DISR 120 / RPT 90.
+
+## G. Verifying M9 (portals, replay, milestone taps) by hand
+
+Use the test database or a dev database you may reset. Passwords are `SEED_DEMO_PASSWORD` from your `.env`.
+
+1. **Customer** (`buyer@kestrel.test`): after the M8 steps 1–3 (rain 10:30, report 11:10) open `/orders`. Expected: "Your orders", red banner "Order ORD-7781 is at risk of missing Thu 18:00", "Vehicle breakdown on the route", "Proposed — Plant X team confirming: a replacement truck, new estimate 17:35." and three buttons. Press **Request a call** → "Thanks — Plant X will confirm shortly. Your response: Requested a call." Open ORD-7781: plain ETA card ("Rule-based estimate"), milestones without names, map, transporter name, no driver name, no party names.
+2. **Driver** (`driver.ramesh@ghatline.test`, phone width 360 px): `/trip` shows SHP-1042, next step "Arrived at customer" with **Confirm arrival** disabled and "NN km to destination". **Report a problem** → type "heavy traffic jam near toll plaza" → "Suggested: Traffic jam — matched: traffic, jam. Is this right?" → **Yes** → **1 h** → **Send report** → "Plant X has been informed."
+3. **Coordinator** `/reports`: the traffic report shows highlighted keywords; **Change reason / party** → preset "Other · Unattributed" + note → **Save review**; **Confirm** the breakdown; the Confirmed tab lists both with the reviewer.
+4. Advance to 11:25 and choose the replacement truck (M8 step 4). **Suresh** (`driver.suresh@ghatline.test`) `/trip`: "Collect load from TRK-07 near Khopoli–Lonavala ghat — transfer until 12:40." **Ramesh**: "Load handed over to TRK-11 (Suresh) at 11:25. Your trip for SHP-1042 has ended." and "No trip assigned right now."
+5. Coordinator → SHP-1042 → **Replay**: "First at risk 11:10 · 6 h 50 m before promise", read-only banner, chart with the dashed promise line and the red diamond at 11:10; ←/→ / Home / End move the slider; **Play replay** steps one snapshot per second (disabled with reduced motion).
+6. Advance past 17:50 (e.g. 18:05): Suresh's next step reads "At Kestrel Moulders's gate — confirm arrival" → **Confirm arrival** → confirm. The recorded arrival is the gate time (17:49), not 18:05. The next step becomes "Confirm unloading complete" (blocked until unloading finishes); repeating ARRIVED through the API returns 409 ALREADY_DONE "This milestone is already recorded."
+
+## H. Verifying M10 (analytics dashboard) by hand
+
+1. Reset the demo (coordinator) and follow M8 steps 1–3 (rain 10:30, report 11:10), then open **Dashboard**. Default **30 d**: the window line reads "Tue 11:20 – Thu 11:20 · by arrival at the receiving gate" (when the clock is at Thu 11:20). Seven KPI cards; hover On time / Median warning lead / Proactive notice / Recovered for the definition.
+2. The Control Tower's **On-time (30 d)** and **Median warning lead** cards show the same two numbers as the dashboard's 30 d view (no longer "Unavailable").
+3. Choose **Lane → Plant X → Pune** and **60 d**: the URL becomes `?laneId=lane_pune&period=60d` and every card and chart changes together. Switch any chart card to **Table** to read the values.
+4. In the transporter table select a transporter: the dialog lists exactly "Arrived" shipments for that transporter, lane and window; count the on-time rows — the share equals "Raw on-time". "Gap" = fair − raw; small fleets (≤ 10 trucks) carry a "Small fleet" chip.
+5. Pick a lane / transporter / 7 d combination with no arrivals: "No deliveries match these filters" with **Clear filters**.
+6. Live arrival (AC-M5.7): continue the hero run (M8 step 4, then arrival) and refresh the dashboard: the 7 d view for Pune / Ghatline counts one more arrival, on time.
+7. Customer or driver accounts cannot open `/dashboard` (role guard) and `GET /api/analytics/dashboard` returns 403 for them.
+

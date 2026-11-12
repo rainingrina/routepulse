@@ -18,6 +18,8 @@ import { simRouter } from './routes/sim.js';
 import { etaRouter } from './routes/eta.js';
 import { reportsRouter } from './routes/reports.js';
 import { worldRouter } from './routes/world.js';
+import { portalRouter } from './routes/portal.js';
+import { analyticsRouter } from './routes/analytics.js';
 
 export interface AppDeps {
   config: AppConfig;
@@ -70,6 +72,24 @@ export function createApp({ config, prisma, logger, now = Date.now, loginRateLim
   );
 
   app.use('/api', jsonOnly, express.json({ limit: '100kb' }));
+  // Offline basemap (architecture §16, O-11): the regional PMTiles file is served same-origin with
+  // HTTP Range support (MapLibre's pmtiles protocol reads it in byte ranges). Public OSM-derived data,
+  // so no session is needed; a missing file is a plain 404 and the SPA falls back to its land-only style.
+  app.use(
+    '/tiles',
+    express.static(config.basemapDir, {
+      acceptRanges: true,
+      index: false,
+      dotfiles: 'ignore',
+      maxAge: '1h',
+      setHeaders: (res, path) => {
+        if (path.endsWith('.pmtiles')) res.setHeader('Content-Type', 'application/vnd.pmtiles');
+      },
+    }),
+  );
+  app.use('/tiles', (_req, res) => {
+    res.status(404).type('text/plain').send('Basemap not installed. Run `npm run basemap:fetch` (see docs/DEVELOPMENT_AND_TESTING.md).');
+  });
   app.use('/api', sessionMiddleware({ config, prisma, revoked, now }));
 
   // Public endpoints.
@@ -83,6 +103,8 @@ export function createApp({ config, prisma, logger, now = Date.now, loginRateLim
   app.use('/api', etaRouter(sim));
   app.use('/api', reportsRouter(sim, prisma));
   app.use('/api', worldRouter(sim, prisma, config));
+  app.use('/api', portalRouter(sim, prisma));
+  app.use('/api', analyticsRouter(sim));
   // (Further protected routers are mounted here in later milestones, each with requireRole + scope policies.)
   app.use('/api', apiNotFound);
 

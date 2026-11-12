@@ -6,8 +6,17 @@ import { ChevronDown, Layers, ICON_STROKE } from '../components/icons';
 
 /** Collapsible legend, bottom-left (UI plan §6.4). Basemap note is explicit: offline land only for now. */
 /** `illustrativeRoutes`: at least one route line is hand-traced demo geometry (`x_source: HAND_TRACED_DEMO`). */
-export function MapLegend({ showDisruptions, illustrativeRoutes = false }: { showDisruptions: boolean; illustrativeRoutes?: boolean }) {
-  const [open, setOpen] = useState(true);
+export function MapLegend({
+  showDisruptions,
+  illustrativeRoutes = false,
+  initiallyOpen = true,
+}: {
+  showDisruptions: boolean;
+  illustrativeRoutes?: boolean;
+  /** Small maps (portals, replay) start collapsed so the legend does not cover the route. */
+  initiallyOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(initiallyOpen);
   return (
     <div className="absolute bottom-3 left-3 z-10 max-w-[240px] rounded-lg border border-border bg-surface/95 text-small shadow-sm">
       <button

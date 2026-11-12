@@ -349,12 +349,12 @@ describe('Phase C/D/E — G2: alerts and notifications on the hero', () => {
   it('#26/#27: coordinator view with summary; customer view in plain words (no codes, parties, driver)', async () => {
     const c = await get<ListResponse<AlertDtoCoordinator>>('/api/alerts', 'meera');
     const a = c.body.items.find((x) => x.shipment.id === 'shp_1042');
-    expect(a).toMatchObject({ view: 'coordinator', status: 'OPEN', topFactor: 'RPT', topReason: 'BREAKDOWN', shipment: { code: 'SHP-1042', customerName: 'Kestrel Moulders' }, proposedOption: null });
+    expect(a).toMatchObject({ view: 'coordinator', status: 'OPEN', topFactor: 'RPT', topReason: 'BREAKDOWN', shipment: { code: 'SHP-1042', customerName: 'Kestrel Moulders' }, proposedOption: { kind: 'REPLACEMENT_TRUCK', isSuggested: true } }); // M8: the Suggested option at opening
     expect(a?.summary).toBe('At risk · top factor at opening: breakdown');
     const k = await get<ListResponse<CustomerAlertDto>>('/api/alerts', 'kestrel');
     // The rain also put other Kestrel (Pune) shipments at risk — real engine output; all are Kestrel's own.
     expect(k.body.items.every((x) => ['SHP-1039', 'SHP-1041', 'SHP-1042', 'SHP-1046'].includes(x.shipmentCode))).toBe(true);
-    expect(k.body.items.find((x) => x.shipmentId === 'shp_1042')).toMatchObject({ view: 'customer', status: 'OPEN', orderCode: 'ORD-7781', plainReason: 'Vehicle breakdown on the route', action: null, canRespond: true, predictedArrivalAt: FRI(8, 0).toISOString() });
+    expect(k.body.items.find((x) => x.shipmentId === 'shp_1042')).toMatchObject({ view: 'customer', status: 'OPEN', orderCode: 'ORD-7781', plainReason: 'Vehicle breakdown on the route', action: { label: 'PROPOSED', kind: 'REPLACEMENT_TRUCK' }, canRespond: true, predictedArrivalAt: FRI(8, 0).toISOString() });
     for (const key of FORBIDDEN) expect(keysDeep(k.body)).not.toContain(key);
     expect((await get<ListResponse<CustomerAlertDto>>('/api/alerts', 'osprey')).body.items).toEqual([]);
     expect((await get(`/api/alerts/${a?.id}`, 'osprey')).status).toBe(404);

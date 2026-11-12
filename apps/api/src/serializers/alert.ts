@@ -1,7 +1,10 @@
 import type { AlertDtoCoordinator, CustomerAlertDto, NotificationDto, ReasonCode } from '@routepulse/shared';
 import { LEVEL_TEXT, REASON_PLAIN, REASON_SHORT } from '../engines/eta.js';
 import type { Prisma } from '../generated/prisma/client.js';
+import { OPTION_SELECT, toOptionDto, type OptionRow } from './recovery.js';
 import { alertSummary } from './shipment.js';
+import { plainRecovery } from '../services/recoveryService.js';
+import { hhmm } from '../engines/eta.js';
 
 /** Alert and notification serializers (API §2.2, §10, §11). Customers get plain words only. */
 
@@ -16,6 +19,9 @@ export const ALERT_SELECT = {
   customerResponse: true,
   customerRespondedAt: true,
   chosenByUserId: true,
+  proposedOptionId: true,
+  chosenOptionId: true,
+  options: { select: OPTION_SELECT },
   shipment: {
     select: {
       id: true,
@@ -46,13 +52,45 @@ export function toAlertCoordinator(a: AlertRow, chosenBy: { id: string; name: st
     shipment: { id: a.shipment.id, code: a.shipment.code, customerName: a.shipment.order.customer.name, laneName: a.shipment.lane.name },
     resolvedAt: a.resolvedAt ? a.resolvedAt.toISOString() : null,
     summary,
-    proposedOption: null, // recovery options are generated from Milestone 8
-    chosenOption: null,
+    proposedOption: optionOf(a, a.proposedOptionId),
+    chosenOption: optionOf(a, a.chosenOptionId),
     chosenBy,
     chosenAt: a.chosenAt ? a.chosenAt.toISOString() : null,
     customerResponse: a.customerResponse,
     customerRespondedAt: a.customerRespondedAt ? a.customerRespondedAt.toISOString() : null,
   };
+}
+
+function optionRow(a: AlertRow, id: string | null): OptionRow | null {
+  return id ? (a.options.find((o) => o.id === id) ?? null) : null;
+}
+function optionOf(a: AlertRow, id: string | null) {
+  const o = optionRow(a, id);
+  return o ? toOptionDto(o) : null;
+}
+
+/**
+ * Customer-facing action line (spec §5.5): the proposal at opening ("Proposed — Plant X team
+ * confirming"), a NEW_WINDOW awaiting acceptance, or the confirmed action. Plain words only.
+ * null → the UI says "Plant X team is reviewing options".
+ */
+function customerAction(a: AlertRow): CustomerAlertDto['action'] {
+  const chosen = optionRow(a, a.chosenOptionId);
+  if (chosen && chosen.status === 'AWAITING_CUSTOMER') {
+    const p = chosen.params as Record<string, unknown>;
+    const end = typeof p['newWindowEndS'] === 'number' ? hhmm(p['newWindowEndS']) : '';
+    return { label: 'PROPOSED', kind: 'NEW_WINDOW', text: `New arrival window until ${end} — accept to confirm.` };
+  }
+  if (chosen && chosen.status === 'CHOSEN') {
+    const eta = chosen.newEtaAt ? ` New estimate ${hhmm(Math.floor(chosen.newEtaAt.getTime() / 1000))}.` : '';
+    return { label: 'CONFIRMED', kind: chosen.kind, text: `Plant X arranged ${plainRecovery(chosen.kind)}.${eta}` };
+  }
+  const proposed = optionRow(a, a.proposedOptionId);
+  if (a.status === 'OPEN' && proposed) {
+    const eta = proposed.newEtaAt ? `, new estimate ${hhmm(Math.floor(proposed.newEtaAt.getTime() / 1000))}` : '';
+    return { label: 'PROPOSED', kind: proposed.kind, text: `Proposed — Plant X team confirming: ${plainRecovery(proposed.kind)}${eta}.` };
+  }
+  return null;
 }
 
 export function plainReasonOf(reason: ReasonCode | null): string {
@@ -80,10 +118,12 @@ export function toAlertCustomer(a: AlertRow): CustomerAlertDto {
     etaHighAt: (s.etaHighAt ?? s.etaAt ?? s.promisedBy).toISOString(),
     promisedBy: s.promisedBy.toISOString(),
     plainReason: plainReasonOf(a.topReason),
-    action: null,
+    action: customerAction(a),
     customerResponse: a.customerResponse,
     customerRespondedAt: a.customerRespondedAt ? a.customerRespondedAt.toISOString() : null,
-    canRespond: a.status === 'OPEN' || (a.status === 'ACTION_CHOSEN' && a.customerResponse === null),
+    canRespond:
+      a.status === 'OPEN' ||
+      (a.status === 'ACTION_CHOSEN' && (a.customerResponse === null || optionRow(a, a.chosenOptionId)?.status === 'AWAITING_CUSTOMER')),
   };
 }
 

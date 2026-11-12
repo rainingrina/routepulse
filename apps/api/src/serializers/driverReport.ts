@@ -28,8 +28,8 @@ export function toDriverReportDto(r: ReportRow): DriverReportDto {
   };
 }
 
-/** DriverTripShipment (API §9) for the driver's own shipment. `instruction` arrives with recovery (Milestone 7). */
-export function toDriverTripShipment(f: Awaited<ReturnType<typeof driverTripFacts>>): DriverTripShipment {
+/** DriverTripShipment (API §9) for the driver's own shipment. `instruction` is derived (portalService.tripInstruction). */
+export function toDriverTripShipment(f: Awaited<ReturnType<typeof driverTripFacts>>, instruction: string | null = null): DriverTripShipment {
   const c = f.row.order.customer;
   return {
     view: 'driver',
@@ -45,7 +45,7 @@ export function toDriverTripShipment(f: Awaited<ReturnType<typeof driverTripFact
     etaAt: f.row.etaAt ? f.row.etaAt.toISOString() : null,
     promisedBy: f.row.promisedBy.toISOString(),
     stopped: f.stopped,
-    instruction: null,
+    instruction,
     openReports: f.row.reports.map((x) => ({ id: x.id, reason: x.reason, status: x.status, simTime: x.simTime.toISOString() })),
   };
 }

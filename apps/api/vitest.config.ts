@@ -17,6 +17,9 @@ export default defineConfig({
     globalSetup: ['tests/setup/globalSetup.ts'],
     // Integration tests share one database: run files one at a time.
     fileParallelism: false,
+    // Some integration tests advance the simulation ~20 sim-hours through the real pipeline and take
+    // 3–7 s on a busy machine; the 5 s default timed out and cascaded into the next tests (M9).
+    testTimeout: 30_000,
     env: {
       NODE_ENV: 'test',
       LOG_LEVEL: 'silent',
