@@ -6,6 +6,11 @@ Entries below describe the backend (branch `backend`) and frontend (branch `fron
 
 ## [Unreleased]
 
+### Fixed (test bootstrap, 2026-11-12)
+- API test bootstrap now works on Windows: `globalSetup` invokes the installed Prisma CLI through `process.execPath` instead of the extensionless `node_modules/.bin/prisma` wrapper, and validates/prints the target database name before migrating.
+- Vitest pins its root to `apps/api` and loads `.env` from that directory, so test discovery and database guards no longer depend on the caller's working directory.
+- Verified on Windows: shared/API/web typecheck passed; API 24 files / 359 tests and web 10 files / 121 tests passed (480 total). The Docker stack was revalidated without rebuilding images; no runtime code changed.
+
 ### Added (Frontend Phases 1–2)
 - **Frontend Phases 1–2 (foundation + control tower), branch `frontend`:**
   - `apps/web` (`@routepulse/web`) added to the npm workspace: React 19, Vite 8, strict TypeScript 5.9, Tailwind CSS 4, Radix UI, TanStack Query, React Router, MapLibre GL JS, lucide-react, Recharts (installed, not yet used); Vitest 4. All from the L9 approved list. Root configuration unchanged.

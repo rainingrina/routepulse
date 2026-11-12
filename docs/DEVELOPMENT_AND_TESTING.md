@@ -1,6 +1,6 @@
 # RoutePulse — development and testing guide
 
-How to install, run and test RoutePulse locally. Every command below exists in the repository's `package.json` files and was executed on 2026-11-12 on macOS (Apple silicon) unless marked **not verified**. All data is fictional (Plant X).
+How to install, run and test RoutePulse locally. Every command below exists in the repository's `package.json` files and was executed on 2026-11-12 on macOS (Apple silicon) unless marked **not verified**. The typecheck, test, Prisma-generate and web-build commands in §D were also re-verified on Windows 11 with PowerShell 5.1. All data is fictional (Plant X).
 
 ---
 
@@ -11,7 +11,7 @@ How to install, run and test RoutePulse locally. Every command below exists in t
 | Node.js | ≥ 20.19 (`engines` in `package.json`); verified with **25.9.0** | Uses `process.loadEnvFile` and `--env-file` |
 | npm | Verified with **11.12.1** | npm workspaces: `apps/api`, `apps/web`, `packages/shared` |
 | PostgreSQL | **17** (verified with Homebrew PostgreSQL 17.10) | Two databases: `routepulse_dev` and `routepulse_test` |
-| Docker (optional) | Any recent Docker Desktop | Only to run PostgreSQL via `docker-compose.yml`. **Not verified** on this machine (Docker daemon not running) |
+| Docker (optional) | Any recent Docker Desktop | Base Compose file runs PostgreSQL; the local override runs the built API and web images. Stack verified 2026-11-12 on Windows |
 
 No other services are needed: no Redis, no external APIs, no map tiles at runtime.
 
@@ -44,7 +44,7 @@ createdb routepulse_dev
 createdb routepulse_test
 ```
 
-With Docker instead (**not verified**): `docker compose up -d` starts `postgres:17` on port 5432 with user/password `routepulse` and creates both databases (`docker/postgres-init.sql`).
+With Docker instead: `docker compose up -d` starts `postgres:17` on port 5432 with user/password `routepulse` and creates both databases (`docker/postgres-init.sql`). The optional local override (`docker compose -f docker-compose.yml -f docker-compose.local.yml up -d`) runs locally built `routepulse-api:local` and `routepulse-web:local` images on `127.0.0.1:4001` and `127.0.0.1:8081`; it requires the external `lyb-hackathon_default` network. Docker startup does **not** run migrations or seed: on a fresh volume, run `npm run db:deploy -w @routepulse/api` and `npm run seed` once against the Compose database. Verified 2026-11-12 on Windows: all three RoutePulse containers healthy.
 
 Database schema, client and demo data:
 
@@ -88,7 +88,7 @@ npm run dev:web:mock    # http://localhost:5173, in-browser fictional fixtures, 
 
 The mock is excluded from production builds.
 
-**One-command start:** not available. Docker Compose only provides PostgreSQL; the API and web app are started with the two commands above.
+**One-command start:** the base `docker compose up -d` starts PostgreSQL only. With locally built images and the external network, `docker compose -f docker-compose.yml -f docker-compose.local.yml up -d` also starts the API and web app; migrations and seeding remain manual prerequisites. For development, the two commands above remain the default.
 
 **Production build of the web app:** `npm run build:web` → `apps/web/dist`. The API does not serve the built SPA yet; use `npm run preview -w @routepulse/web` (Vite preview, **no API proxy**) only to inspect the build.
 
@@ -115,12 +115,16 @@ Not automated yet: browser end-to-end tests (the Combined Milestone 1 browser wa
 
 Test database safety: `apps/api/vitest.config.ts` refuses to run if `TEST_DATABASE_URL` is missing or equals `DATABASE_URL`, and the global setup refuses a database whose URL does not contain `test`.
 
+Cross-platform bootstrap: Vitest pins its root to `apps/api` and loads `.env` from that directory. The global setup parses `TEST_DATABASE_URL`, prints the target database and host, then runs the installed Prisma CLI through `process.execPath` (`node_modules/prisma/build/index.js`), which works on Windows and Linux.
+
 ## E. Troubleshooting
 
 | Symptom | Cause and fix |
 |---|---|
 | `Invalid environment configuration:` followed by a list of variables when starting the API | `apps/api/.env` missing or incomplete — copy `.env.example` and fill every required variable (§B) |
 | `TEST_DATABASE_URL is not set` / `must differ from DATABASE_URL` / `Refusing to migrate a database that does not look like a test database` | Set a separate `routepulse_test` URL in `apps/api/.env` |
+| `spawnSync ... node_modules\.bin\prisma ENOENT` | The old bootstrap used the Unix Prisma wrapper. The current setup invokes Prisma through Node; run `npm install`, then `npm run db:generate` and `npm test` again |
+| `No test files found` | Run commands from the repository root or through the workspace scripts. Vitest's root is pinned to `apps/api`; confirm `apps/api/tests/**/*.test.ts` exists |
 | `P1010: User was denied access on the database` (tests or migrations) | The URL's user does not exist on this server — typically the Docker Compose user `routepulse` used against a local Homebrew PostgreSQL. Use `postgresql://<your-os-username>@localhost:5432/…` (the username is required for Prisma), or start Docker Compose |
 | `ECONNREFUSED 127.0.0.1:5432`, `P1001` | PostgreSQL not running: `brew services start postgresql@17` (Homebrew) or `docker compose up -d`; check with `pg_isready` |
 | `database "routepulse_dev" does not exist` | `createdb routepulse_dev` (and `routepulse_test`) |
