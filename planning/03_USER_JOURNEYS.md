@@ -1,6 +1,6 @@
 # 03 — User journeys: RoutePulse
 
-Version 0.1, 2026-11-12. Status: **draft for team review.**
+Version 0.2, 2026-11-12. Status: **approved; revision 0.2 aligns the hero scenario with the locked decisions L1–L10** (`04_TECH_ARCHITECTURE.md` §0): promise measured at arrival at the receiving gate (L1), demo reset at Thu 10:25 paused (L2), arrival confirmation separated from physical arrival (L6). Hero values below were recomputed with the engine rules in `08_ETA_AND_RISK_ENGINE.md` §10; no acceptance criterion was removed.
 Companion to `planning/02_PRODUCT_SPEC.md`. Section references like §5.6 point to the spec. AC-IDs point to spec §6.
 
 All people, companies, trucks and orders below are **fictional**. City names are real geography only. Times are **simulation time**. Minute values are **indicative [A]**; the final values are fixed in the seed so that the demo is repeatable.
@@ -42,24 +42,25 @@ J2–J6 are one continuous **hero scenario** on shipment **SHP-1042**.
 |---|---|
 | Order | ORD-7781, Kestrel Moulders, Pune · 22 t: 14 t PX-PP 110 + 8 t PX-HD 520 (fictional grades) |
 | Transporter / truck | Ghatline Carriers · TRK-07 · driver Ramesh |
-| Promise | Delivered by **Thu 18:00** · Kestrel receiving hours 08:00–18:00 |
+| Promise | Arrival at Kestrel's receiving gate by **Thu 18:00** · Kestrel receiving hours 08:00–18:00 · unloading 60 min (seed default) |
 | Route | Plant X → expressway → ghat section → Pune. Alternate route exists (longer, avoids ghat). |
-| Baseline transit | ~4 h 30 min (lane median from history) |
+| Baseline transit | 270 min (primary route baseline) · planned departure 08:50 → planned arrival 13:20 |
 
 Indicative timeline (simulation time):
 | Time | Event | ETA | Slack | Level |
 |---|---|---|---|---|
-| 08:50 | Gate queue: 2 trucks ahead → GATE +40 min (Plant) | — | — | On track |
+| 08:50 | Gate queue: truck reported at the gate on time (08:10, planned), all bays busy; loading runs 08:50–09:30 → GATE +40 min (Plant) | — | — | On track |
 | 09:30 | Gate out | 14:20 (incl. HIST +20, Transporter) | 220 min | On track |
 | 10:30 | **Simulator:** heavy rain on ghat section, DISR +120 min (External) | 16:20 | 100 min | **Watch** |
-| 11:10 | **Driver report:** "tyre puncture near Lonavala" → Breakdown +180 min (Transporter) | 19:20 → arrives after 18:00 close → waits to Fri 08:00 (WIN, knock-on) | < 0 | **At risk** |
-| 11:12 | Coordinator alert + customer alert with proposed action | | | |
+| 11:10 | **Driver report:** "tyre puncture near Lonavala" → Breakdown +180 min (Transporter) | Road arrival 19:20 → after the 18:00 close → receiving ETA **Fri 08:00** (WIN +760 min, knock-on) | −840 min | **At risk** |
+| 11:10 | Coordinator alert + customer alert with proposed action (same recalculation as the report) | | | |
 | 11:20 | Arjun taps **Accept proposal** | | | |
-| 11:25 | Meera confirms **Replacement truck** (TRK-11, Ghatline, free at Khopoli): transfer ~90 min | 17:50 | 10 min | Watch |
-| 17:45 | Delivered | | +15 min early | Delivered on time |
+| 11:25 | Meera confirms **Replacement truck** (TRK-11, Ghatline, free at Khopoli): 30 min to reach the truck + 45 min transfer → moving again 12:40, so the load is stopped ~90 min in total (11:10–12:40) | 17:50 | 10 min | Watch |
+| 17:50 | Physical arrival at Kestrel's gate (inside the receiving window); the replacement driver confirms **Arrived** — `arrivedAt` = 17:50 (physical arrival, not the tap time) | — | — | **Arrived on time** (10 min before the promise) |
+| 18:50 | **Delivered** after 60 min unloading — finishes after the 18:00 close, which is allowed because arrival was inside the window (L1) | — | — | Delivered |
 
 Warning lead time for the replay (X1): 18:00 − 11:10 = **6 h 50 min** before the promise.
-Whether Breakdown counts against Ghatline: the shipment was delivered on time, so nothing counts. The historical seed shows Ghatline's raw vs. fair on-time gap on the dashboard (J7).
+Whether Breakdown counts against Ghatline: the shipment arrived on time, so nothing counts. The historical seed shows Ghatline's raw vs. fair on-time gap on the dashboard (J7).
 
 ---
 
@@ -71,7 +72,7 @@ Whether Breakdown counts against Ghatline: the shipment was delivered on time, s
 
 | Step | Meera does | RoutePulse shows / does | AC |
 |---|---|---|---|
-| 1 | Logs in with coordinator account | Control tower home: map + shipment list sorted by risk score; "Simulation time Thu 08:45" label | AC-M1.1 |
+| 1 | Logs in with coordinator account | Control tower home: map + shipment list sorted by risk score; "Simulation time Thu 10:25" label (demo reset state, L2) | AC-M1.1 |
 | 2 | Scans the list | Each row: shipment, customer, lane, milestone, ETA ± range, level (colour + icon + label), confidence | AC-M3.1, AC-M2.3, AC-A11Y.1 |
 | 3 | Clicks SHP-1042 | Side panel: 8 milestones (current highlighted), ETA waterfall, factor list with minutes, party, reason | AC-M2.4, AC-M3.2, AC-M3.3, AC-X2.1 |
 | 4 | Hovers the GATE bar | "2 trucks ahead at Gate 1 · ~20 min each · +40 min · Plant" | AC-M3.3 |
@@ -130,9 +131,9 @@ Coordinator side:
 |---|---|---|---|
 | 1 | — | In-app alert: "Order ORD-7781 is at risk of missing Thu 18:00." | AC-M4.2 |
 | 2 | Opens alert | New estimate (with range); reason in plain words: "Vehicle breakdown on the route and heavy rain on the ghat section". No driver name, no internal codes. | AC-M1.6, AC-M4.2 |
-| 3 | Reads proposed action | "Proposed — Plant X team confirming: replacement truck from Khopoli. Expected arrival ~17:50 Thu." | AC-M4.2 |
+| 3 | Reads proposed action | "Proposed — Plant X team confirming: replacement truck from Khopoli. Expected arrival ~17:35 Thu." (the engine's preview at 11:10; confirmed at 11:25 it becomes 17:50 — see step 5) | AC-M4.2 |
 | 4 | Taps **Accept proposal** | "Thanks — Plant X will confirm shortly." | AC-M4.6 |
-| 5 | Later receives update | "Plant X confirmed: replacement truck. New estimate 17:50 ± 25 min." | AC-M4.5 |
+| 5 | Later receives update | "Plant X confirmed: replacement truck. New estimate 17:50 ± 20 min." (range per spec §5.4: 5% of 385 min to arrival, rounded to 5) | AC-M4.5 |
 
 **Success:** Arjun knows ~7 hours before the promise and can plan his line, instead of finding out at 18:00.
 **Edge states:** Arjun taps **Request a call** → coordinator sees "Customer requests a call"; Arjun tries to open another customer's order by URL → refused (AC-M1.4); shipment returns to On track → info message.
@@ -146,7 +147,7 @@ Coordinator side:
 | Step | Meera does | RoutePulse shows / does | AC |
 |---|---|---|---|
 | 1 | Opens the alert | Recovery cards, side by side | AC-M4.1, AC-M4.3 |
-| 2 | Compares | **Replacement truck** (Suggested): ETA 17:50, meets promise ✓, saves ~14 h vs Notify only, est. ₹ cost (fictional rate card). **Split shipment**: urgent 8 t on a new truck from the plant via the alternate route (avoids the ghat), loading + transit puts it at ~18:40 ✗, rest Fri 08:00, higher ₹ — shown so the judge sees why it is not suggested. **Agree new window**: needs customer to accept 19:30 receiving, ₹0, never auto-suggested. **Reroute**: shown disabled — "Truck is stationary (breakdown)". **Notify only**: arrives Fri 08:00 ✗. | AC-M4.3, AC-M4.4, AC-X3.1 |
+| 2 | Compares | **Replacement truck** (Suggested): ETA 17:50, meets promise ✓, saves ~14 h vs Notify only, est. ₹ cost (fictional rate card). **Split shipment**: urgent 8 t on a new truck from the plant via the alternate route (avoids the ghat), loading + transit puts it after 18:00 ✗ (exact time computed by the engine from the seeded alternate route and fixed by the golden test), rest Fri 08:00, higher ₹ — shown so the judge sees why it is not suggested. **Agree new window**: needs the customer to accept a 19:30 window for this shipment only (L4); with it, the 19:20 road arrival is inside the window and meets the new promise; ₹0; never auto-suggested. **Reroute**: shown disabled — "Truck is stationary (breakdown)". **Notify only**: arrives Fri 08:00 ✗. | AC-M4.3, AC-M4.4, AC-X3.1 |
 | 3 | Reads the rule | "Suggested = meets current promise at lowest estimated cost." | AC-M4.4 |
 | 4 | Sees Arjun's response | "Customer accepted the proposal at 11:20" | AC-M4.6 |
 | 5 | Chooses Replacement truck → Confirm | Plan updated (TRK-11 assigned); ETA recalculates to 17:50; level Watch; customer update sent; audit log records the choice and the alternatives shown | AC-M4.5, AC-M4.8 |
@@ -164,7 +165,7 @@ CO₂e: if [G-CO2] has passed, each card also shows "CO₂e vs Notify only: +x k
 
 | Step | Meera does | RoutePulse shows / does | AC |
 |---|---|---|---|
-| 1 | Opens **Replay** on SHP-1042 | Chart: predicted ETA (with range band) vs promised-time line across the day. Event markers: gate out, rain, breakdown report, alerts, recovery, delivery. | AC-X1.1 |
+| 1 | Opens **Replay** on SHP-1042 | Chart: predicted ETA (with range band) vs promised-time line across the day. Event markers: gate out, rain, breakdown report, alerts, recovery, physical arrival, arrived, delivered. | AC-X1.1 |
 | 2 | Drags scrubber to 10:30 | Map shows truck before the ghat; level Watch; waterfall shows DISR appearing | AC-X1.2 |
 | 3 | Drags to 11:10 | Marker **"First at risk · 6 h 50 min before promise"**; waterfall shows RPT and WIN bars | AC-X1.1, AC-X1.2 |
 | 4 | Drags to 11:25 | ETA drops back under the promise line after the recovery action | AC-X1.2 |
@@ -191,13 +192,16 @@ CO₂e: if [G-CO2] has passed, each card also shows "CO₂e vs Notify only: +x k
 ---
 
 ### J8 — Delivery and close-out
-**Trigger:** the replacement truck arrives in Pune.
+**Trigger:** the replacement truck physically reaches Kestrel's receiving gate at 17:50.
+The driver window has switched to the replacement driver's account (architecture decision D3).
 
 | Step | Actor | RoutePulse shows / does | AC |
 |---|---|---|---|
-| 1 | Driver taps **Arrived**, then **Delivered** | Milestones update; skipping a step is refused with a reason | AC-M2.5, AC-M2.6 |
-| 2 | Customer | "Delivered 17:45 — on time" | AC-M2.5 |
-| 3 | Coordinator | Shipment moves to delivered; dashboard includes it after refresh | AC-M5.7 |
+| 1 | Simulation | Records physical arrival 17:50; the driver screen enables **Arrived** | AC-M2.5 |
+| 2 | Replacement driver taps **Arrived** | `arrivedAt` = 17:50 (the physical arrival time; a slow tap never changes the ETA or on-time result, L6); on time | AC-M2.5 |
+| 3 | Replacement driver taps **Delivered** after unloading completes (18:50) | Milestones update; tapping Delivered before Arrived, or before unloading completes, is refused with a reason | AC-M2.5, AC-M2.6 |
+| 4 | Customer | "Arrived 17:50 — on time · Delivered 18:50" | AC-M2.5 |
+| 5 | Coordinator | Shipment shows Arrived on time, then Delivered; dashboard includes it after refresh | AC-M5.7 |
 
 ---
 
@@ -206,22 +210,22 @@ CO₂e: if [G-CO2] has passed, each card also shows "CO₂e vs Notify only: +x k
 
 | Step | Presenter does | RoutePulse does | AC |
 |---|---|---|---|
-| 1 | Coordinator → Simulation → **Reset demo** → confirm | Restores seed: clock Thu 08:45, all events, reports, choices and alerts cleared | AC-X4.3 |
+| 1 | Coordinator → Simulation → **Reset demo** → confirm | Re-seeds, runs the hero pre-script through the real simulation engine, stops at **Thu 10:25, paused**; all demo-time events, reports, choices and alerts cleared (L2) | AC-X4.3 |
 | 2 | Repeats the hero run | Same ETAs and levels as last time | AC-M3.7 |
 
 ---
 
 ## 5. Live demo run-sheet (~4 minutes)
 
-Set-up: three browser windows side by side — coordinator (large), customer (medium), driver (phone-size, 360 px). All logged in. Demo reset done. Clock paused at Thu 08:45. No network needed.
+Set-up: three browser windows side by side — coordinator (large), customer (medium), driver (phone-size, 360 px). All logged in. Demo reset done: clock paused at **Thu 10:25** (L2). The presenter uses **Advance to** before each timed step so every run is identical. No network needed.
 
 | Time | Window | What we show | Line we say (draft) | Criterion it serves |
 |---|---|---|---|---|
 | 0:00–0:25 | Coordinator | Control tower: map, 12 shipments, levels with icons. Click SHP-1042 → waterfall. | "Every shipment has an ETA you can read: each bar is a reason, in minutes." | M2, M3, UX |
-| 0:25–0:55 | Coordinator | Simulation → heavy rain on ghat. "3 affected · 1 Watch". | "One event, and the whole network re-scores." | X4, Innovation |
-| 0:55–1:25 | Driver | Report a problem → type "tyre puncture near Lonavala" → Suggested: Breakdown → Yes. | "Two taps or one sentence. No phone call." | M1, F2, F3, Inclusion |
-| 1:25–1:50 | Customer | At-risk alert with plain reason + proposed action → Accept. | "Arjun knows at 11:10, not at 18:00." | M4, user value |
-| 1:50–2:40 | Coordinator | Confirm breakdown reason. Recovery cards: Suggested replacement truck, Split, disabled Reroute with reason, Notify only. Confirm. | "Every option shows time and cost. The rule for 'Suggested' is on the card. A person decides." | M4, X3, Responsible AI |
+| 0:25–0:55 | Coordinator | Advance to 10:30 → Simulation → heavy rain on ghat. "3 affected · 1 Watch". | "One event, and the whole network re-scores." | X4, Innovation |
+| 0:55–1:25 | Driver | (Coordinator: Advance to 11:10.) Report a problem → type "tyre puncture near Lonavala" → Suggested: Breakdown → Yes. | "Two taps or one sentence. No phone call." | M1, F2, F3, Inclusion |
+| 1:25–1:50 | Customer | At-risk alert with plain reason + proposed action → (Coordinator: Advance to 11:20) → Accept. | "Arjun knows at 11:10, not at 18:00." | M4, user value |
+| 1:50–2:40 | Coordinator | Confirm breakdown reason. Advance to 11:25. Recovery cards: Suggested replacement truck, Split, disabled Reroute with reason, Notify only. Confirm. | "Every option shows time and cost. The rule for 'Suggested' is on the card. A person decides." | M4, X3, Responsible AI |
 | 2:40–3:10 | Coordinator | Replay: drag to 11:10 → "First at risk · 6 h 50 min before promise". | "This is our impact measure: warning lead time." | X1, Impact |
 | 3:10–3:50 | Coordinator | Dashboard → Pune lane → Ghatline raw vs fair on-time. | "Most of this transporter's late minutes were our own gate and the weather. Fair score: transporters are judged on what they control." | M5, F1, Inclusion |
 | 3:50–4:00 | — | Close on dashboard KPIs. | "Rule-based, explainable, and every decision is logged." | Presentation |

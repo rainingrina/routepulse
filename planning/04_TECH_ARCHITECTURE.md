@@ -1,6 +1,6 @@
 # 04 — Technical architecture: RoutePulse
 
-Version 0.2, 2026-11-12. Status: **approved in principle; revision 0.2 for team review.**
+Version 0.3, 2026-11-12. Status: **approved; revision 0.3 records the locked decisions L1–L10** (§0.1).
 Inputs: `02_PRODUCT_SPEC.md` (spec), `03_USER_JOURNEYS.md` (journeys). References like "spec §5.4" and AC-IDs point to those documents. The approved documents are **not** changed here. Where this design needs an interpretation, it is listed in §19.
 
 Companion documents: `05_DATABASE_SCHEMA.md` (schema), `06_API_SPEC.md` (API contracts).
@@ -17,12 +17,28 @@ Labels: **[A]** assumption · **[DECIDED]** team decision, with date · **[OPEN]
 | D1 | Backend framework: **Express v5 with TypeScript**. | 2026-11-12 | §3, §6 |
 | D2 | Demo uses **three separate Chrome cookie jars** (normal profile, Incognito, Guest) for coordinator, customer and driver. | 2026-11-12 | §7.1, §15 |
 | D3 | Replacement-truck scenarios use a **second seeded driver**. The driver window switches to that driver's account to show the hand-over. | 2026-11-12 | §12, schema seed, API §9 |
-| D4 | On-time is measured against the **agreed** delivery promise. Renegotiated deliveries are reported separately. | 2026-11-12 | §10.4, schema `Shipment`, API §13 |
+| D4 | On-time is measured against the **agreed** promise (arrival-based, L1). Renegotiated shipments are reported separately. | 2026-11-12 | §10.4, schema `Shipment`, API §13 |
 | D5 | Route geometry from a **one-time open routing export** before the build. GeoJSON basemap fallback is kept. | 2026-11-12 | §16 |
 | D6 | Transporter history delay (HIST) is **prorated by remaining baseline route time**. | 2026-11-12 | §10.3 |
 | D7 | **Background shipments move automatically** in the deterministic simulation. The **hero shipment is manually controlled**. | 2026-11-12 | §9.3 |
 | D8 | **Shared coordinator notification read state** is accepted for the prototype. | 2026-11-12 | §11 |
 | D9 | **No Zod and no other schema-validation library.** `schema.prisma` is the single source of truth for database models, fields, relations, enums, indexes and constraints. API contracts are plain TypeScript types. Request validation is hand-written. | 2026-11-12 | §1, §4, §8, schema, API |
+
+### 0.1 Locked decisions (decision-lock review, 2026-11-12)
+Labelled D1–D10 in that review; recorded here as **L1–L10** so they do not clash with D1–D9 above.
+
+| # | Decision | Where applied |
+|---|---|---|
+| L1 | **Promise measured at arrival at the customer's receiving gate.** `predictedArrivalAt` = estimated arrival at the receiving gate; `arrivedAt` = actual arrival at the receiving gate; `deliveredAt` = unloading complete; on-time = `arrivedAt ≤ promisedBy`. Receiving-window eligibility is decided by arrival time. Unloading may finish after the window closes if arrival was inside it. ARRIVED and DELIVERED stay separate milestones. | §10.1, §10.4, spec §5.3–5.4, schema `Shipment`, API §13 |
+| L2 | **RESET prepares the demo at Thu 10:25, paused:** deterministic seed, then the hero pre-script executed through the real simulation services, then advance to 10:25. No shortcut simulation. | §9.5, §9.6, journeys J9 |
+| L3 | **Four-term ETA identity:** ETA = Planned + Incurred (I) + Plan change (P) + Expected (E); P = 0 without a reroute. | §10.2 |
+| L4 | **NEW_WINDOW uses a shipment-specific receiving-window override.** Customer default hours and the original promise are never modified. The accepted window is stored on the shipment and applied only to it. ETA, WIN, slack and risk recalculate after acceptance. Preview and execution use the same override; stale options cannot be applied. | §10.1, §12, schema `Shipment`, API §10 |
+| L5 | **Overlaps:** latest-ending stop wins; largest slowdown wins; a stop takes precedence over a slowdown; all disruption events are kept in history; effective delay is booked once; settlement and projection use the same precedence. | §10.5 |
+| L6 | **Arrival confirmation:** physical arrival, driver-confirmed ARRIVED and DELIVERED are separate. Waiting for a manual confirmation never becomes transport delay and never changes the ETA or on-time result after physical arrival. | §9.3, §10.1, §10.5 |
+| L7 | **Activity feed reuses `GET /api/audit`** with its existing filters; no new endpoint. | §17, UI plan §6.5 |
+| L8 | **Relational schema retained;** no conversion of entities to JSON (schema simplification S-1 rejected). | Schema §2.3 |
+| L9 | **Frontend dependencies approved:** React, Vite, TypeScript, Tailwind CSS, Radix UI, TanStack Query, React Router, Recharts, MapLibre GL JS, lucide-react; Inter self-hosted. Not installed during the documentation phase. | §3 |
+| L10 | **Gated features stay disabled:** CO₂e until factors and method are verified (G-CO2); second language until translations are verified (G-LANG). | §12, UI plan |
 
 ---
 
@@ -92,16 +108,18 @@ flowchart LR
 | Layer | Choice | Why | Status |
 |---|---|---|---|
 | Language | TypeScript (strict) everywhere | Approved stack; shared types | Approved |
-| Frontend | React + Vite (SPA) | Approved stack; static build served by the API | React approved; Vite **[A]** |
+| Frontend | React + Vite (SPA) | Approved stack; static build served by the API | **[DECIDED L9]** |
 | Backend runtime | Node.js LTS | Prisma requires a Node backend | Implied by stack |
 | Backend framework | **Express v5** | Smallest familiar option; serves SPA and tiles from the same origin | **[DECIDED D1]** |
 | Request validation | **Hand-written validator helpers** in `apps/api/src/validation` | No schema library (D9) | **[DECIDED D9]** |
 | ORM / DB | Prisma + PostgreSQL; `schema.prisma` is the data-model source of truth | Approved stack | Approved |
-| Server state in UI | TanStack Query | Caching, refetch on `worldVersion`, loading/error states | **[A]** |
-| Routing in UI | React Router | Role-based route trees | **[A]** |
-| UI components | Tailwind CSS + Radix-based components | Accessible primitives | **[A]**, decided in UI/UX planning |
-| Charts | Recharts | Bar/line/stacked charts; our own table toggle | **[A]** |
-| Map | MapLibre GL JS via `react-map-gl/maplibre` + local PMTiles (spike §16.2) | Open source, no key, offline | **[A] [VERIFY]** |
+| Server state in UI | TanStack Query | Caching, refetch on `worldVersion`, loading/error states | **[DECIDED L9]** |
+| Routing in UI | React Router | Role-based route trees | **[DECIDED L9]** |
+| UI components | Tailwind CSS + Radix UI | Accessible primitives | **[DECIDED L9]** |
+| Icons | lucide-react | One outline icon set, tree-shaken | **[DECIDED L9]** |
+| Font | Inter, self-hosted woff2 | Offline | **[DECIDED L9]** |
+| Charts | Recharts | Bar/line/stacked charts; our own table toggle | **[DECIDED L9]** |
+| Map | MapLibre GL JS used directly; local basemap via PMTiles (spike §16.2) or the GeoJSON fallback (§16.3) | Open source, no key, offline | **[DECIDED L9]** (MapLibre) · **[OPEN]** the `pmtiles` browser library is not in the L9 list (§16.2) |
 | Geometry | Turf `along` / `length` (server) | Position from route distance | **[A]** |
 | Auth | bcrypt hashes + signed JWT in an httpOnly cookie | No session table | **[A]** |
 | Tests | Vitest; integration tests call the real Express app on an ephemeral port with Node's built-in `fetch` (no extra HTTP test library) | Few dependencies | **[A]** |
@@ -354,8 +372,8 @@ After `settleTo(b)`:
 | At gate | Queue served first-come by `gateQueuedAt`; when a bay is free, record LOADING (always by SIMULATION — LOADING is a plant activity for every shipment, §19 issue 16). |
 | Loading finished (autopilot) | Record GATE_OUT and IN_TRANSIT. Gate-out is never earlier than `plannedDepartureAt` (the truck waits) — this keeps incurred delay ≥ 0. |
 | Loading finished (manual) | Driver may now tap GATE_OUT; the system records IN_TRANSIT at the same time. |
-| End of route (autopilot) | Record ARRIVED; then DELIVERED after `unloadingMinutes` (source SIMULATION). |
-| End of route (manual) | Truck holds at the destination; driver taps ARRIVED, then DELIVERED. |
+| End of route (autopilot) | Record `physicalArrivalAt` (event PHYSICAL_ARRIVAL); record ARRIVED at the eligible check-in time (§10.1), `arrivedAt` = that time; record DELIVERED at `arrivedAt + unloadingMinutes` (source SIMULATION). |
+| End of route (manual / hero, L6) | Record `physicalArrivalAt` (event PHYSICAL_ARRIVAL); the truck holds at the gate. From the eligible check-in time the driver may tap ARRIVED; `arrivedAt` = the eligible check-in time, **not** the tap time. From `arrivedAt + unloadingMinutes` the driver may tap DELIVERED; `deliveredAt` = `arrivedAt + unloadingMinutes` (+ any confirmed "waiting to unload" minutes), not the tap time. Waiting for a tap books nothing. |
 | Pings (autopilot) | Every `pingIntervalMinutes`, set `lastUpdateAt = b`, unless inside a seeded `silentFrom` period. |
 | Any live shipment | Recalculate ETA/risk (§10); snapshot if the snapshot rule fires (§9.5). |
 
@@ -377,7 +395,7 @@ Speed never exceeds the segment baseline speed (`pace ≤ 1`, slowdown ≥ 0): t
 | `PLAY` | Resume from the current `simTime`; real-time delta starts at the resume moment (no jump). |
 | `SET_SPEED` | While running: first advance `simTime` to now at the old speed, then switch. |
 | `ADVANCE minutes` / `ADVANCE_TO t` | Implicitly pause; process every boundary up to the target in order; `settleTo(target)`; set `simTime = target`; leave paused. `ADVANCE 60` ≡ 12 × `ADVANCE 5`. |
-| `RESET` | Pause; inside the lock: truncate, reseed, run the hero pre-script (§9.6); `simTime = lastSettledAt = demo start`; `speed = 1`; `running = false`; `worldVersion = previous + 1`. |
+| `RESET` | Pause; inside the lock: truncate, reseed (clock at the seed start, Thu 08:00), run the hero pre-script through the normal services (§9.6) and `ADVANCE_TO 10:25`; leave `running = false`, `speed = 1`; `worldVersion = previous + 1` (L2). |
 
 **Material change** (→ `worldVersion += 1`, once per transaction): any `ShipmentEvent`, `RiskSnapshot`, alert/notification/option-set change, change of a shipment's cached `etaAt`, `riskLevel`, `confidence` or `currentMilestone`, disruption start/end, clock control, reset. Pure progress along the route is **not** material (positions have their own 1 s poll).
 
@@ -385,7 +403,12 @@ Speed never exceeds the segment baseline speed (`pace ≤ 1`, slowdown ≥ 0): t
 
 ### 9.6 Seed and demo start
 - The seed is deterministic (fixed-seed PRNG for the 60-day history; fixed ids).
-- **Hero pre-script [OPEN — see §19 issue 18]:** the journeys run-sheet starts paused at 08:45 but injects rain at 10:30 within 25 s of demo time. Proposal: `RESET` runs the seed and then a scripted morning (hero AT_GATE 08:50, LOADING by simulation, GATE_OUT 09:30) up to **10:25**, using the same engine. The result is identical every time and contains real snapshots for the replay.
+- **Hero pre-script [DECIDED L2]:** after seeding (clock Thu 08:00), `RESET` calls the same services the API uses — no shortcut code path:
+  1. `advanceTo(08:10)` → hero driver records AT_GATE (planned gate time; on time).
+  2. All three bays are occupied by seeded background shipments until 08:50, so the simulation records LOADING for SHP-1042 at 08:50 (planned departure); waiting after 08:50 books GATE (PLANT).
+  3. `advanceTo(09:30)` → loading complete → hero driver records GATE_OUT (IN_TRANSIT by system). GATE incurred = 40 min.
+  4. `advanceTo(10:25)` → pause.
+  Background shipments run on autopilot throughout. The resulting state (positions, ledger, snapshots for the replay) is identical after every reset because ids, seed and action times are fixed.
 - Second driver for the hand-over (D3): a seeded driver of the same fictional transporter, default driver of the replacement truck (e.g. TRK-11, parked at a yard near the hero route).
 
 ### 9.7 Concurrency
@@ -400,7 +423,7 @@ All mutations (ticker steps and user actions) run through one in-process mutex, 
 | R4 | `ADVANCE 60` vs 12 × `ADVANCE 5` vs ticker at 60× for 60 real seconds (stopped exactly at the target with `ADVANCE_TO`) | Identical state at the target time |
 | R5 | `SET_SPEED` changes during a run without actions | Identical state at a given sim time as a constant-speed run |
 | R6 | Driver report at 11:10 while running vs while paused | Identical results (action time is the same minute) |
-| R7 | `RESET` twice | Identical database digest; `worldVersion` strictly increased; open sessions still valid |
+| R7 | `RESET` twice | Identical database digest at Thu 10:25 (paused); `worldVersion` strictly increased; open sessions still valid |
 | R8 | Long-gap guard | > 12 boundaries in one tick → exactly 12 processed, clock paused, `simError` set |
 
 Tests drive `simulationService` directly with explicit times; the real-time ticker is a thin wrapper and is not needed for determinism tests.
@@ -410,7 +433,16 @@ Tests drive `simulationService` directly with explicit times; the real-time tick
 ## 10. ETA, delay attribution and the identity
 
 ### 10.1 Definitions
-- **ETA = predicted arrival at the customer** (reporting at the customer's gate). Unloading follows; DELIVERED is recorded after it. **[OPEN — §19 issue 19]** The spec says "Delivered by"; this design measures the promise against arrival, because unloading time is under the customer's control. If the team prefers delivery, add `unloadingMinutes` to every baseline; the identity below still holds.
+- **Arrival terms [DECIDED L1, L4, L6]:**
+  | Term | Meaning |
+  |---|---|
+  | Road arrival (`projectedRoadArrivalAt` / `physicalArrivalAt`) | When the truck reaches the customer's gate (projected / actual) |
+  | Applicable receiving window | The customer's default hours (`Customer.receivingOpenMin`–`receivingCloseMin`, Asia/Kolkata); **or**, after an accepted NEW_WINDOW, additionally any road arrival up to this shipment's `receivingWindowOverrideEndAt` |
+  | Eligible check-in time | The road arrival if it falls inside the applicable window; otherwise the next default opening time after it |
+  | **ETA = `predictedArrivalAt`** | Predicted arrival at the receiving gate = eligible check-in time of the projected road arrival |
+  | `arrivedAt` | Actual arrival at the receiving gate = eligible check-in time of `physicalArrivalAt`; confirmed by the ARRIVED milestone but never set to the tap time (L6) |
+  | `deliveredAt` | `arrivedAt + unloadingMinutes` (+ confirmed "waiting to unload" minutes); may be after the window closes |
+  | On-time | `arrivedAt ≤ promisedBy` |
 - `B(route)` = baseline transit minutes of a route = Σ over segments of `lengthKm ÷ speedKmh × 60`, rounded to whole minutes once per route at seed time (`Route.baselineMinutes`).
 - `plannedDepartureAt` = `plannedGateAt` + standard loading time. `plannedArrivalAt` = `plannedDepartureAt + B(primary route)`. Fixed at planning; never changed by delays.
 - `C` = baseline minutes **consumed** = baseline time of the distance already covered on the current route (minutes, rounded). `R = B(current route) − C` = baseline minutes **remaining**. Computed from the same rounded per-segment table, so `C + R = B(current route)` exactly.
@@ -437,12 +469,13 @@ Proof (departed): `plannedArrival + I + P + E = plannedDep + B_primary + (now �
 2. **Gate (not departed):** projected gate-out = `max(plannedDepartureAt, now + queue wait + remaining loading + congestion minutes)`. Extra = projected gate-out − `max(now, plannedDepartureAt)`. Cause GATE (Plant).
 3. **Transit, segment by segment** from the current position, splitting at disruption window edges in projected time: per piece of baseline time `b` with pace `p` and slowdown `s`, actual time = `b ÷ (p(1−s))`; extra split as HIST = `b(1/p − 1)` (Transporter) and DISR = `b/p × s/(1−s)` (the disruption's party). This decomposition is the same one the settle step uses (§10.5), so expected minutes turn into identical incurred minutes when the future arrives as projected. HIST uses `p` = transporter-lane pace from history — this is the D6 proration: it applies only to remaining baseline time.
 4. **Closures** on the remaining route: if the truck reaches a closed segment before the closure ends → extra = wait until it ends; cause DISR.
-5. **Receiving window (WIN):** if the projected arrival is outside receiving hours → extra = time until the window opens; split across the other causes in proportion to their minutes (I + P + E, excluding WIN); if there are none → UNATTRIBUTED (AC-F1.4).
+5. **Receiving window (WIN):** if the projected road arrival is outside the applicable receiving window (including this shipment's override, L4) → extra = eligible check-in time − road arrival; split across the other causes in proportion to their minutes (I + P + E, excluding WIN); if there are none → UNATTRIBUTED (AC-F1.4).
 
 ### 10.4 Outcome at arrival and delivery [D4]
-- `delayMinutes = max(0, arrivedAt − promisedBy)` (agreed promise); `onTime = arrivedAt ≤ promisedBy`. (Subject to §19 issue 19.)
-- `renegotiated = true` if a NEW_WINDOW option was accepted; the dashboard reports renegotiated deliveries separately and shows on-time against the agreed promise (D4). `originalPromisedBy` is kept.
-- At DELIVERED the ledger becomes FINAL. A GAP row (UNATTRIBUTED) holds `delayMinutes − (rounded attributed minutes beyond the promise)` if they differ — in the simulation this is normally 0; it exists for honesty if data ever disagrees (AC-F1.1).
+- `delayMinutes = max(0, arrivedAt − promisedBy)` (agreed promise); `onTime = arrivedAt ≤ promisedBy` (L1).
+- **After physical arrival the identity is frozen at the eligible check-in time:** WIN is incurred while the truck waits for the window; after that, nothing more is booked, the ETA equals `arrivedAt`, and a late ARRIVED tap cannot change it (L6).
+- `renegotiated = true` if a NEW_WINDOW option was accepted; the dashboard reports renegotiated shipments separately and shows on-time against the agreed promise (D4). `originalPromisedBy` is kept.
+- At ARRIVED the ledger becomes FINAL (nothing after arrival affects the promise). A GAP row (UNATTRIBUTED) holds `delayMinutes − (rounded attributed minutes beyond the promise)` if they differ — in the simulation this is normally 0; it exists for honesty if data ever disagrees (AC-F1.1).
 - **Which minutes count as "delay" for fair attribution:** only the lateness beyond the promise matters for on-time. The but-for rule (spec §5.9) uses the shipment's final attributed minutes: `countsAgainstTransporter = delayMinutes > 0 && delayMinutes − transporterMinutes ≤ 0`, where `transporterMinutes` = final incurred + plan-change minutes attributed to TRANSPORTER.
 
 ### 10.5 Ledger booking during settle (same decomposition as the projection)
@@ -454,10 +487,17 @@ For each settled sub-interval of `Δ` seconds:
 | Not departed, after `plannedDepartureAt`, at gate or loading | Δ | GATE / PLANT_GATE_WAIT (incl. congestion) |
 | Stopped (`stoppedUntil`) | Δ | The stop's source (RPT reason party, or DISR breakdown → TRANSPORTER) |
 | Moving with pace `p`, slowdown `s` | `Δ − Δ·p(1−s)` | DISR `Δ·s`, HIST `Δ(1−s)(1−p)` |
-| Waiting for receiving window | Δ | WIN, split per §10.3 step 5 using the shipment's attribution at that moment |
-| Arrived (unloading) | 0 for the promise (arrival already recorded) | Customer "waiting to unload" reports are recorded for information |
+| Physically arrived, waiting for the receiving window | Δ | WIN, split per §10.3 step 5 using the shipment's attribution at that moment |
+| Physically arrived and eligible, waiting for a manual ARRIVED tap | 0 | — (L6: confirmation lag is recorded in the ARRIVED event data only) |
+| Arrived (unloading) | 0 for the promise | Confirmed "waiting to unload" reports extend `deliveredAt` only |
 
-Check: `Σ ledger seconds = (now − plannedDepartureAt − C) × 60` up to the sub-second rounding of `C`; the displayed minutes are forced to equal `I` exactly by the largest-remainder rounding (§10.2).
+**Overlap precedence [DECIDED L5] — identical in settle (§10.5) and projection (§10.3):**
+1. A stop takes precedence over any slowdown (a stopped truck is not slowed).
+2. Several stops: `stoppedUntil = max(...)`; each Δ is booked to the stop with the **latest end** (tie: earliest created).
+3. Several slowdowns on the same segment: the **largest** `s` applies; DISR is booked to that disruption (tie: earliest created).
+4. Every disruption and report keeps its own events in history (`ShipmentEvent`, `AuditLog`); only the effective (winning) cause receives ledger time, so delay is booked once.
+
+Check: `Σ ledger seconds = (t − plannedDepartureAt − C) × 60` with `t = min(now, eligible check-in time)` (frozen after arrival, L6), up to the sub-second rounding of `C`; the displayed minutes are forced to equal `I` exactly by the largest-remainder rounding (§10.2).
 
 ### 10.6 Identity check across scenarios (each one is a unit test, §20.1)
 Hero numbers are illustrative; the seed fixes the real values.
@@ -471,7 +511,7 @@ Hero numbers are illustrative; the seed fixes the real values.
 | Reroute (recovery) | Moving, before divergence | Coordinator chooses REROUTE | Route changes; C unchanged (shared prefix); P = B_alt − B_primary; E loses the avoided DISR | ✓ — ETA equals the option's `newEtaAt` |
 | Replacement truck | Stopped, RPT remaining 160 | Choose REPLACEMENT_TRUCK | `stoppedUntil = now + travel + transfer` (e.g. 90); E's RPT becomes 90 (label "Load transfer"); driver changes | ✓ — equals option's `newEtaAt` |
 | Split | Parent at risk | Choose SPLIT | New child shipment with its own plan (`plannedDeparture` = now + loading), own C/R/I/E; parent unchanged | ✓ for both |
-| New window | At risk | Customer accepts NEW_WINDOW | `promisedBy` moves; prediction unchanged; slack and level change | ✓ (identity does not involve the promise) |
+| New window | At risk, road arrival 19:20 after the 18:00 close | Customer accepts NEW_WINDOW with window end 19:30 | `promisedBy` = 19:30, `receivingWindowOverrideEndAt` = 19:30; WIN recalculated against the override → 0; ETA = road arrival 19:20 | ✓ — equals the option's `newEtaAt` (same override in preview and execution, L4) |
 
 ### 10.7 Recovery consistency rule
 Recovery options are evaluated by running **the same `projectEta` on a modified copy of the context** (alternate route, new stop time, new child plan, new promise). On choose, the service applies the same modification to the database and runs the normal pipeline. A test asserts that the pipeline's new ETA equals the chosen option's `newEtaAt` at the same `actionTime` (§20.1, RC-4). If feasibility changed between display and choose, the request fails with `409 STALE_OPTIONS` instead of applying a different result.
@@ -497,7 +537,7 @@ stateDiagram-v2
 ```
 - One active alert (OPEN or ACTION_CHOSEN) per shipment (AC-M4.7; partial unique index).
 - On opening: set `firstAtRiskAt` if empty; create coordinator + customer notifications in the same transaction; set `customerNotifiedAt` if empty.
-- Notification triggers as in spec §5.5: AT_RISK / AT_RISK_CUSTOMER, RECOVERY_CONFIRMED / PLAN_UPDATED, REPORT_NEEDS_REVIEW, CUSTOMER_RESPONDED, BACK_ON_TRACK, DELIVERED / DELIVERED_LATE.
+- Notification triggers as in spec §5.5: AT_RISK / AT_RISK_CUSTOMER, RECOVERY_CONFIRMED / PLAN_UPDATED, REPORT_NEEDS_REVIEW, CUSTOMER_RESPONDED, BACK_ON_TRACK, DELIVERED, and ARRIVED_LATE (sent at arrival when `arrivedAt > promisedBy`).
 - Notifications store `templateKey` + `params` + English `text`. The client renders from its dictionary (enables a verified second language later).
 - Proposed action for the customer = the Suggested option at opening; if none meets the promise, the smallest-delay feasible option; if none, "Plant X team is reviewing options".
 - Coordinator notifications have one shared read state (D8).
@@ -513,13 +553,16 @@ stateDiagram-v2
 | REROUTE | Moving; an alternate route of the lane avoids an active disruption; position before the divergence point | Switch route; P updated | extra km × ₹/km |
 | SPLIT | A truck is AVAILABLE at the plant; > 1 order line or > 10 t | Child shipment from the plant with urgent lines; items moved | dispatch fee + km × ₹/km |
 | REPLACEMENT_TRUCK | Stopped by a breakdown; an AVAILABLE truck within the configured radius **with a default driver** | `stoppedUntil = now + travel + transfer`; `truckId` and **`driverUserId` switch to the replacement truck and its driver** (D3); original truck → MAINTENANCE | dispatch fee + km × ₹/km + transfer fee |
-| NEW_WINDOW | Always | Option AWAITING_CUSTOMER; on customer ACCEPT: `promisedBy` moves, `renegotiated = true` | 0 |
+| NEW_WINDOW | Always | Option AWAITING_CUSTOMER; on customer ACCEPT: `promisedBy` and `receivingWindowOverrideEndAt` = the option's `newWindowEnd`, `renegotiated = true`; customer default hours and `originalPromisedBy` untouched (L4) | 0 |
 | NOTIFY_ONLY | Always | Nothing operational | 0 |
 
 - Infeasible kinds are returned with a reason (AC-X3.1).
 - Suggested: among feasible options that meet the current promise, excluding NEW_WINDOW and NOTIFY_ONLY, lowest cost; ties → earliest ETA. If none meets the promise: the smallest-delay feasible option (same exclusions). Rule text returned with the set (AC-M4.4).
 - CO₂e: `null` until `config.co2Factor` is set (G-CO2; AC-S1.1).
 - Choose: requires the current `optionSetId`; else `409 STALE_OPTIONS`.
+- **NEW_WINDOW preview = execution (L4):** the option's `newWindowEnd` is fixed when the option is generated: projected road arrival rounded **up** to the next 30-minute mark, and always later than the current promise (max +48 h). Its `newEtaAt` is computed by `projectEta` with that override applied. On acceptance the service applies exactly the stored `newWindowEnd`; the choose request cannot supply a different value.
+- **Stale acceptance:** an AWAITING_CUSTOMER option is not superseded by routine recalculations. It becomes SUPERSEDED only if the coordinator chooses another option or the alert resolves. A customer ACCEPT for a superseded option → `409 STALE_OPTIONS`; nothing is applied.
+- Acceptance writes a `CUSTOMER_RESPONDED` event and a `RECOVERY_APPLIED` event (with `newWindowEnd`, previous promise and window) plus `AuditLog` rows `alert.customerResponse` and `recovery.apply`.
 - **Hand-over (D3):** the RECOVERY_CHOSEN event stores `previousDriverUserId`. The original driver's trip shows "Load handed over to TRK-11 at 11:25" (API `recentHandovers`); the replacement driver's trip shows the shipment with the instruction "Collect load from TRK-07 near Lonavala". The presenter switches the Guest window to the replacement driver for J8.
 
 ---
@@ -592,7 +635,7 @@ flowchart LR
 ## 16. Map integration
 
 ### 16.1 Design
-- Renderer: MapLibre GL JS via `react-map-gl/maplibre` **[VERIFY]**.
+- Renderer: MapLibre GL JS used directly from one React component (`map/MapView.tsx`). The `react-map-gl` wrapper is **not** in the approved dependency list (L9) and is not used.
 - Data layers from the API: plant + sites, routes (primary solid, alternate dashed), active disruption segments, truck markers (icon + colour + label, AC-M2.3), replay position.
 - **Truck markers and all text labels are HTML markers rendered by React**, not MapLibre symbol layers. This keeps labels independent of map glyph files and makes the fallback simple.
 - Route geometry: one-time open routing export before the build (D5), stored as GeoJSON in the seed; segment boundaries set by hand. No routing or traffic call at runtime.
@@ -602,7 +645,7 @@ flowchart LR
 |---|---|---|
 | 0–15 | Obtain a regional vector-tile extract (Maharashtra, Gujarat, west Madhya Pradesh) as a single `.pmtiles` file, using the PMTiles CLI's extract command against a public OSM-based build (one-time download, before the demo) **[VERIFY tool and licence]** | File ≤ ~150 MB on disk **[A]** |
 | 15–30 | Download a matching basemap style JSON, its glyph PBF ranges for the fonts it uses, and its sprite files; place them under `apps/api/static/` and rewrite all URLs in the style to same-origin paths (`/tiles/…`, `/glyphs/{fontstack}/{range}.pbf`, `/sprites/…`) | `grep` of the style finds no `http` URL |
-| 30–45 | Register the PMTiles protocol in MapLibre; render the map in the SPA from same-origin files | Map renders at zoom 5–12 |
+| 30–45 | Register the PMTiles protocol in MapLibre; render the map in the SPA from same-origin files. **Needs the `pmtiles` browser library, which is not in the approved list (L9): approve it before the spike, or skip straight to the GeoJSON fallback (§16.3), which needs no extra dependency.** | Map renders at zoom 5–12 |
 | 45–60 | **Offline proof:** turn Wi-Fi off, enable the CSP (`connect-src 'self'; img-src 'self' data: blob:`), hard-reload, pan and zoom across all lanes, and inspect the Network panel | Zero requests to any host other than `localhost:4000`; no CSP violations in the console; map fully drawn |
 
 **Go/no-go at minute 60:** if any check fails, switch to the fallback (§16.3) and do not spend more time on tiles.
@@ -621,7 +664,10 @@ flowchart LR
 
 ---
 
-## 17. Reference data
+## 17. Reference data and activity feed
+
+**Activity feed [DECIDED L7]:** the control tower's activity feed reuses `GET /api/audit` (coordinator) with its existing filters (`shipmentId`, `entityType`, `entityId`, `limit`); the client shows domain actions only. No separate activity endpoint.
+
 `GET /api/reference` (coordinator) returns lanes, routes' segment lists, transporters, customers and trucks for dashboard filters and the simulation panel. Added in this revision (API #38) because the dashboard filters and the disruption form need these lists and no other endpoint provided them.
 
 ---
@@ -666,11 +712,18 @@ Status: **Resolved** (by a decision or by design), **Open** (team decision neede
 | 13 | Backend framework | Resolved (D1) | Express v5 |
 | 14 | Route geometry source | Resolved (D5) | One-time export; GeoJSON fallback |
 | 15 | Report reasons' effect on movement | Resolved by design | Every report holds the truck for its applied minutes (§10.5); traffic/rain reports approximated as holds |
-| 16 | Which milestones a driver records | Resolved by design | Driver: AT_GATE, GATE_OUT, ARRIVED, DELIVERED; LOADING always by simulation; IN_TRANSIT by system after GATE_OUT; coordinator any with a note; ARRIVED only within 2 km of the destination |
+| 16 | Which milestones a driver records | Resolved by design + L6 | Driver: AT_GATE, GATE_OUT, ARRIVED, DELIVERED; LOADING always by simulation; IN_TRANSIT by system after GATE_OUT; coordinator any with a note; ARRIVED only after physical arrival and from the eligible check-in time; DELIVERED only after unloading completes |
 | 17 | Rate card, transfer time, radius, loading time unspecified | Resolved by design | API config + facts/assumptions file; fixed by the golden test |
-| 18 | Run-sheet starts paused at 08:45 but needs 10:30 within 25 s | **Open** | Proposal: `RESET` produces a 10:25 start via the hero pre-script (§9.6). Alternative: presenter uses `ADVANCE_TO 10:30` on stage (≈ 2 s). Journeys are not changed until the team decides. |
-| 19 | Promise measured at arrival or at delivery | **Open** | Proposal: arrival (unloading is customer-controlled; WIN rule is about arrival). Alternative: delivery = arrival + unloading in every baseline. Affects `delayMinutes`/`onTime` definitions only; identity unaffected. |
+| 18 | Run-sheet start time | Resolved (L2) | `RESET` → Thu 10:25 paused via the hero pre-script (§9.6); journeys updated |
+| 19 | Promise measured at arrival or at delivery | Resolved (L1) | Arrival at the receiving gate (§10.1) |
 | 20 | Customer's response after an action is already chosen | Resolved by design | Customer may respond while the alert is active; a later response replaces the earlier one only while OPEN (API §10.3) |
+| 21 | Three-term vs four-term identity | Resolved (L3) | Four terms; P = 0 without a reroute |
+| 22 | NEW_WINDOW did not change receiving hours | Resolved (L4) | `Shipment.receivingWindowOverrideEndAt`; preview = execution (§12) |
+| 23 | Overlapping stops and slowdowns | Resolved (L5) | §10.5 precedence |
+| 24 | Waiting for manual ARRIVED confirmation | Resolved (L6) | `physicalArrivalAt`; `arrivedAt` = eligible check-in; no ledger booking for confirmation lag |
+| 25 | Activity feed source | Resolved (L7) | `GET /api/audit` |
+| 26 | Hero replacement "transfer ~90 min" vs engine timing | Resolved by calculation | Total stoppage 11:10–12:40 ≈ 90 min = 15 min before the decision + 30 min travel + 45 min transfer; reproduces ETA 17:50 (engine doc Ex 3) |
+| 27 | `pmtiles` browser library needed for the tiled basemap but not in the L9 dependency list | **Open** | Approve `pmtiles`, or use the GeoJSON fallback basemap (no extra dependency) |
 
 ---
 
@@ -688,7 +741,10 @@ All tests run with `npm test` (Vitest) after `npm run typecheck`. Integration te
 | ET-4 | Settle split invariance: one 5-min settle ≡ 2-min + 3-min settles (distance, carry, ledger seconds) |
 | ET-5 | No catch-up: `pace ≤ 1`, gate-out not before `plannedDepartureAt` → no negative ledger rows |
 | ET-6 | HIST prorated: at 0%, 50%, 100% remaining baseline → full, half, zero expected HIST |
-| ET-7 | WIN: arrival 19:20 with window 08:00–18:00 → WIN to 08:00 next day; split proportional; no other causes → UNATTRIBUTED |
+| ET-7 | WIN: road arrival 19:20 with window 08:00–18:00 → WIN to 08:00 next day; split proportional; no other causes → UNATTRIBUTED |
+| ET-8 | Overlap precedence (L5): stop + slowdown, two stops, two slowdowns — settle and projection book the same cause and the same seconds |
+| ET-9 | Arrival confirmation (L6): physical arrival 17:50, ARRIVED tapped at 18:20 → `arrivedAt` 17:50, `onTime` true, no ledger rows after 17:50, ETA unchanged |
+| ET-10 | Receiving override (L4): with `receivingWindowOverrideEndAt` 19:30, road arrival 19:20 → WIN 0, ETA 19:20; customer default hours unchanged |
 
 **Risk**
 | ID | Test |
@@ -711,7 +767,7 @@ All tests run with `npm test` (Vitest) after `npm run typecheck`. Integration te
 | RC-1 | Feasibility: REROUTE disabled when stopped or past divergence; SPLIT disabled with no free plant truck; REPLACEMENT disabled without a free truck that has a default driver |
 | RC-2 | Suggested rule: never NEW_WINDOW/NOTIFY_ONLY; lowest cost among those meeting the promise; fallback to smallest delay; at most one suggested |
 | RC-3 | CO₂e is `null` on every option while the factor is unset (AC-S1.1) |
-| RC-4 | Consistency: for each kind, the pipeline ETA after choose equals the option's `newEtaAt` at the same action time |
+| RC-4 | Consistency: for each kind, the pipeline ETA after choose (and, for NEW_WINDOW, after customer acceptance) equals the option's `newEtaAt` at the same action time |
 | RC-5 | Replacement switches `truckId` and `driverUserId`; RECOVERY_CHOSEN event has `previousDriverUserId` |
 
 **Classifier**
@@ -745,14 +801,14 @@ Runs against the test DB through the **services** (not the ticker), with explici
 
 | Step | Sim time | Action (through services) | Assert |
 |---|---|---|---|
-| G0 | — | `RESET` (seed + pre-script) | `simTime = demo start`; SHP-1042 IN_TRANSIT; GATE incurred row (Plant); level ON_TRACK |
+| G0 | — | `RESET` (seed + pre-script through the real services) | `simTime` = Thu 10:25, paused; SHP-1042 IN_TRANSIT; GATE incurred 40 min (Plant); ETA 14:20 per engine doc Ex 2; level ON_TRACK |
 | G1 | 10:30 | `ADVANCE_TO 10:30`; create WEATHER_SLOWDOWN on the ghat segment | Impact summary counts; SHP-1042 → WATCH; DISR expected factor present; identity holds |
 | G2 | 11:10 | `ADVANCE_TO 11:10`; driver Ramesh: classify "tyre puncture near Lonavala" → create report with reason BREAKDOWN | Suggested BREAKDOWN; RPT factor PENDING_REVIEW; level AT_RISK; WIN factor present and split; one alert OPEN; coordinator + customer notifications; `firstAtRiskAt = 11:10` |
-| G3 | 11:12 | Coordinator reviews report: BREAKDOWN / TRANSPORTER | Report CONFIRMED; attribution unchanged in party |
-| G4 | 11:20 | Customer responds ACCEPT_PROPOSAL | Alert has response; coordinator notification CUSTOMER_RESPONDED |
+| G3 | 11:20 | `ADVANCE_TO 11:20`; customer responds ACCEPT_PROPOSAL | Alert has response; coordinator notification CUSTOMER_RESPONDED |
+| G4 | 11:20 | Coordinator reviews report: BREAKDOWN / TRANSPORTER (same order as the run-sheet) | Report CONFIRMED; attribution unchanged in party |
 | G5 | 11:25 | Coordinator chooses the Suggested REPLACEMENT_TRUCK option with the current set id | New ETA == option `newEtaAt` (RC-4); level WATCH; driver = replacement driver; Ramesh's trip shows the hand-over; customer PLAN_UPDATED |
 | G6 | — | Replay endpoint for SHP-1042 | `firstAtRiskAt = 11:10`; lead time = promise − 11:10; snapshots at every action time |
-| G7 | arrival | `ADVANCE_TO` projected arrival; replacement driver records ARRIVED then DELIVERED | `onTime = true`; ledger FINAL; no GAP row; dashboard counts include SHP-1042 |
+| G7 | 17:50 / 18:50 | `ADVANCE_TO 17:50` → PHYSICAL_ARRIVAL; replacement driver records ARRIVED; `ADVANCE_TO 18:50`; replacement driver records DELIVERED | `arrivedAt` 17:50, `onTime` true, `deliveredAt` 18:50; ledger FINAL; no GAP row; dashboard includes SHP-1042 |
 | G8 | — | Run G0–G7 a second time | Byte-identical digest of snapshots, ledger, alerts, options, notifications (ids and real-time `createdAt` excluded) — proves AC-M3.7 |
 
 ---

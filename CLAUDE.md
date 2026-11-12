@@ -17,9 +17,9 @@ RoutePulse is an explainable shipment recovery and logistics control tower for *
 | Topic | Document |
 |---|---|
 | Decision record, scope | `planning/IDEA_HUNT.md` §7 |
-| Product requirements + acceptance criteria | `planning/02_PRODUCT_SPEC.md` (do not edit) |
-| User journeys + demo run-sheet | `planning/03_USER_JOURNEYS.md` (do not edit) |
-| Architecture, decisions D1–D9, open issues | `planning/04_TECH_ARCHITECTURE.md` |
+| Product requirements + acceptance criteria | `planning/02_PRODUCT_SPEC.md` (edit only with team approval) |
+| User journeys + demo run-sheet | `planning/03_USER_JOURNEYS.md` (edit only with team approval) |
+| Architecture, decisions D1–D9 and locked decisions L1–L10 (§0) | `planning/04_TECH_ARCHITECTURE.md` |
 | Database schema | `planning/05_DATABASE_SCHEMA.md` |
 | API contracts | `planning/06_API_SPEC.md` |
 | UI/UX plan + design tokens | `planning/07_UI_UX_PLAN.md` |
@@ -30,7 +30,7 @@ RoutePulse is an explainable shipment recovery and logistics control tower for *
 - Frontend: React + TypeScript (Vite SPA).
 - Backend: Express v5 + TypeScript (Node.js LTS).
 - Database: PostgreSQL + Prisma.
-- Planned UI libraries (architecture §3, UI plan §20): Tailwind CSS, Radix primitives, TanStack Query, React Router, Recharts, MapLibre GL JS with local tiles. Add **no other** framework or dependency without approval.
+- Approved frontend dependencies (L9): React, Vite, TypeScript, Tailwind CSS, Radix UI, TanStack Query, React Router, Recharts, MapLibre GL JS (used directly), lucide-react; self-hosted Inter. Add **no other** framework or dependency without approval (`pmtiles` is not approved yet).
 
 ## Repository layout (planned — architecture §4)
 `apps/web` (SPA) · `apps/api` (Express + Prisma) · `packages/shared` (plain TypeScript API types, enum mirrors, constants, fixtures; no runtime dependencies; never imports `@prisma/client`).
@@ -41,6 +41,7 @@ RoutePulse is an explainable shipment recovery and logistics control tower for *
 - **Engines are pure:** no Prisma, no Express, no `Date.now()`, no `Math.random()`. Time comes from `SimState`.
 - **Determinism:** fixed 5-minute grid, `settleTo(t)` with exact splits, integer seconds/metres, largest-remainder rounding. Same seed + same timed actions → same results (architecture §9, engine doc §11).
 - **Rule-based, not ML:** never describe ETA/risk as trained, learned or AI-predicted. Use "rule-based estimate".
+- **Locked definitions (L1, L3, L4, L6):** ETA = arrival at the receiving gate = Planned + Incurred + Plan change + Expected; on-time = `arrivedAt ≤ promisedBy`; `arrivedAt` is never the tap time; NEW_WINDOW uses the shipment's stored override in preview and execution.
 - **One recalculation pipeline** for every state change (architecture §6.3).
 - One API process; all mutations go through the in-process world lock.
 

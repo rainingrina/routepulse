@@ -9,6 +9,31 @@ No application code has been written yet. Entries below describe documentation o
 ### Added
 - Nothing yet.
 
+## [0.0.2] — 2026-11-12 — Decision lock (documentation only)
+
+### Added
+- Locked decisions L1–L10 recorded in `planning/04_TECH_ARCHITECTURE.md` §0.1.
+- Schema: `Shipment.physicalArrivalAt` (L6) and `Shipment.receivingWindowOverrideEndAt` (L4), with CHECK constraints; `EventType.PHYSICAL_ARRIVAL` and `EventType.RECOVERY_APPLIED`.
+- API: `arrivedAt` on shipment list items; `projectedRoadArrivalAt` and `receivingWindow` on the coordinator ETA explanation; `physicalArrivalAt`, `receivingWindowOverrideEndAt` on shipment detail; `RecoveryOptionDto.newWindowEnd`; `arrivedFrom`/`arrivedTo` list filters.
+- Engine doc: arrival terms (road arrival, applicable receiving window, eligible check-in time), NEW_WINDOW preview and acceptance rules, L5 overlap precedence statement, recalculated hero values.
+- Tests planned: ET-8 (overlap precedence), ET-9 (arrival confirmation), ET-10 (receiving override).
+
+### Changed
+- Promise, ETA and on-time are measured at arrival at the customer's receiving gate (L1); `deliveredAt` means unloading complete. Dashboard population and indexes moved from `deliveredAt` to `arrivedAt`; `deliveredCount` renamed `arrivedCount`; `NotificationKind.DELIVERED_LATE` renamed `ARRIVED_LATE`.
+- Demo reset now seeds and runs the hero pre-script through the real services to Thu 10:25, paused (L2); journeys J1, J9 and the run-sheet updated, with "Advance to" steps.
+- ETA identity documented as four terms everywhere (L3): planned + incurred + plan change + expected; spec AC-M3.2 and AC-X2.1 wording aligned (IDs and meaning unchanged).
+- NEW_WINDOW: the accepted window is stored per shipment; the window is fixed on the option, and `ChooseRecoveryRequest.newWindowEnd` was removed so the preview and execution match (L4).
+- Arrival confirmation: `arrivedAt` is the eligible check-in time of the physical arrival, never the tap time; waiting for a tap books no delay (L6).
+- Activity feed uses `GET /api/audit` (L7). Frontend dependency set approved (L9). Schema simplification S-1 rejected (L8).
+- `react-map-gl` removed from the design (not in the approved list); MapLibre GL JS is used directly.
+
+### Fixed
+- Hero SHP-1042: delivery time corrected from 17:45 (before the 17:50 arrival) to **18:50** (17:50 arrival + 60 min seed-default unloading); "transfer ~90 min" reconciled as total stoppage 11:10–12:40; customer-alert preview corrected to ≈17:35 (computed at 11:10); alerts fire at 11:10, not 11:12; customer update range ±20 min (computed), not ±25; split timing no longer quoted as a fixed number.
+- Journeys: baseline described as the primary route baseline (270 min), not a historical median.
+
+### Removed
+- Open-item lists in the engine doc and UI plan (all resolved by L1–L10); the "awaiting arrival confirmation" UNATTRIBUTED booking (replaced by L6).
+
 ## [0.0.1] — 2026-11-12 — Planning and documentation milestone
 
 ### Added

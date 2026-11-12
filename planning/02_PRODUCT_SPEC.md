@@ -1,7 +1,7 @@
 # 02 — Product specification: RoutePulse
 
 LYB Mumbai Hackathon 2026, Round 2, Problem Statement 3 (Order-to-Delivery Control Tower).
-Version 0.1, 2026-11-12. Status: **draft for team review.**
+Version 0.2, 2026-11-12. Status: **approved; revision 0.2 aligns terminology with the locked decisions L1–L10** (`04_TECH_ARCHITECTURE.md` §0). No requirement or acceptance criterion was removed; wording changed only where a locked decision required it (arrival-based promise, four-term ETA, demo reset at 10:25, NEW_WINDOW receiving override).
 Inputs: `planning/IDEA_HUNT.md` (§7 decision record), problem-statement PDF.
 Out of scope for this document: technical architecture, data schema, API design, code. Those come after review.
 
@@ -131,7 +131,7 @@ All names and companies are fictional. Real Indian city locations are used only 
 - The app runs on a **simulated clock**, visibly labelled "Simulation time".
 - Coordinator controls: pause, play, speed (1×, 10×, 60×), jump +1 h.
 - Shipments move along their route lines according to the clock.
-- **Reset demo** restores the seeded state in ≤ 5 s.
+- **Reset demo** restores the seeded demo state in ≤ 5 s: deterministic seed, then the hero pre-script run through the real simulation engine up to **Thu 10:25**, clock **paused** (locked decision L2).
 - Nothing in the demo depends on wall-clock time or an external network call.
 
 ### 5.3 Shipment milestones (M2)
@@ -142,8 +142,8 @@ Ordered milestones:
 4. Loading
 5. Gate out
 6. In transit (with named waypoints)
-7. Arrived at customer
-8. Delivered
+7. Arrived at customer (checked in at the customer's receiving gate — this is the moment the promise is measured against, L1)
+8. Delivered (unloading complete; may finish after the receiving window closes if arrival was inside it)
 
 Each milestone records: time (simulation), who recorded it (role + name), source ("driver app", "coordinator override", "seed").
 
@@ -151,31 +151,34 @@ Each milestone records: time (simulation), who recorded it (role + name), source
 
 **Nature of the model.** Deterministic and rule-based. Each factor adds a number of minutes, has an owner party and a plain-language reason. No learned model. In a pilot, factor weights would be fitted on Plant X's real history; today they are hand-set and visible.
 
-**ETA formula**
-`ETA = now + remaining baseline transit + Σ(factor minutes)`
+**ETA formula** (locked decision L3)
+`ETA = Planned arrival + Incurred delay (I) + Plan change (P) + Expected future delay (E)`
+- **ETA** = estimated arrival at the customer's receiving gate (L1).
+- **Planned arrival** = planned departure + baseline transit of the primary route (fixed at planning).
+- **I** = delay already experienced; **P** = extra baseline time after a reroute (0 if not rerouted); **E** = future extra time projected by the rules below. Equivalent form used by the engine: `ETA = now + remaining baseline transit + E` (proof in `08_ETA_AND_RISK_ENGINE.md` §3).
 
 **Factors (v1)**
 | Code | Factor | How minutes are calculated | Party |
 |---|---|---|---|
-| LANE | Baseline transit | Remaining route km ÷ the lane's typical speed (median of seeded history). This is the baseline, not a delay. | — |
+| LANE | Baseline transit | Remaining baseline minutes of the current route (Σ segment length ÷ segment baseline speed). This is the baseline, not a delay. | — |
 | GATE | Plant gate & loading wait | Before gate-out: trucks ahead in queue × typical loading time. After gate-out: actual recorded excess wait. | Plant |
 | HIST | Transporter lane history | This transporter's median *controllable* delay on this lane, from history. | Transporter |
 | DISR | Active disruption on route | Slowdown % × affected segment time, or closure wait / reroute difference. Set by the simulator or seed. | External (weather, closure) · Plant (gate congestion) · Transporter (breakdown) |
 | RPT | Driver-reported issue | Default minutes per reason code, or the driver's estimate. Applied once the driver confirms the reason. | Per reason code (§5.8) |
-| WIN | Customer receiving window | If arrival falls outside receiving hours, minutes until the window next opens. | Carried over: split across the parties whose delays pushed arrival outside the window, in proportion to their minutes. Shown as "Receiving window (knock-on)". Never attributed to the customer by default — a fixed receiving window is not a customer delay. |
+| WIN | Customer receiving window | If the road arrival falls outside the applicable receiving window (the customer's hours, or this shipment's accepted override after a new window, L4), minutes until the window next opens. | Carried over: split across the parties whose delays pushed arrival outside the window, in proportion to their minutes. Shown as "Receiving window (knock-on)". Never attributed to the customer by default — a fixed receiving window is not a customer delay. |
 
 **Uncertainty and confidence**
 - ETA is shown with a range: ± (5% of remaining time + 30 min if the last update is older than 2 h + 20 min per unconfirmed report) **[A]**.
 - Confidence: **High** (last update ≤ 1 h, no unconfirmed reports) · **Medium** (1–3 h, or an unconfirmed report) · **Low** (> 3 h without an update).
 - The range and confidence are labelled as rule-based, not statistical.
 
-**Risk level** from slack = promised delivery time − ETA **[A, thresholds configurable]**:
+**Risk level** from slack = promised arrival time − ETA **[A, thresholds configurable]**:
 | Level | Rule | Shown as |
 |---|---|---|
 | On track | slack ≥ 120 min | Green + check icon + "On track" |
 | Watch | 0 ≤ slack < 120 min | Amber + eye icon + "Watch" |
 | At risk | slack < 0 (predicted to miss) | Red + warning icon + "At risk" |
-| Late | promised time passed, not delivered | Dark red + clock icon + "Late" |
+| Late | promised time passed, not yet arrived | Dark red + clock icon + "Late" |
 
 **Risk score** (for sorting only): `clamp(50 − slack_minutes ÷ 6, 0, 100)`.
 
@@ -183,7 +186,7 @@ Each milestone records: time (simulation), who recorded it (role + name), source
 
 **Snapshots:** each recalculation stores a snapshot: time, ETA, range, level, score and the factor list. Snapshots feed the replay (X1) and the impact indicators (§7).
 
-**Explanation (X2):** a waterfall from "baseline arrival" to "predicted arrival", one bar per factor, each with minutes, party and a one-line reason (e.g. "Ghat section slowed by heavy rain — +95 min — External"). The promised time is drawn as a line. The largest factor is named in the summary sentence.
+**Explanation (X2):** a waterfall from "planned arrival" to "predicted arrival", one bar per factor, each with minutes, party and a one-line reason (e.g. "Ghat section slowed by heavy rain — +95 min — External"). The promised time is drawn as a line. The largest factor is named in the summary sentence.
 
 ### 5.5 Alerts (M4)
 In-app notification centre for coordinator and customer.
@@ -195,7 +198,7 @@ In-app notification centre for coordinator and customer.
 | Recovery action chosen | Confirmation | Update: what Plant X is doing and the new ETA |
 | Driver report submitted | Alert: "needs reason confirmation" | Nothing until the ETA changes level |
 | Shipment returns to On track | Info | Info if they had received an At-risk alert |
-| Delivered late | Info | Info with final delay and attributed cause |
+| Arrived late (after the promise) | Info | Info with final delay and attributed cause |
 
 Customer alert content (template-based, no generated text):
 - Order and shipment reference.
@@ -215,7 +218,7 @@ Action types (generated only when feasible):
 | Reroute | An alternate route exists and avoids an active disruption | Shipment follows the alternate route line |
 | Split shipment | A truck is free at the plant and the order has more than one line or > 10 t **[A]** | A new partial shipment is created from the plant with the urgent quantity |
 | Replacement truck | Breakdown reported, a truck from the same or another transporter is free within reach | Load transfers; new truck continues |
-| Agree new delivery window | Always | Promised time moves after customer acceptance; no cost |
+| Agree new delivery window | Always | After customer acceptance: this shipment's promise and its receiving window move to the agreed window (the customer's default hours and the original promise are kept on record, L4); ETA, WIN, slack and risk recalculate; no cost |
 | Notify only | Always (baseline for comparison) | No operational change; customer informed |
 
 Each card shows:
@@ -266,7 +269,7 @@ Reason code → party mapping (default; coordinator can override with a note):
 The keyword classifier is a fixed word list (English, plus verified Hindi/Romanised Hindi terms if [G-LANG] passes). It shows which words matched. It never auto-confirms.
 
 ### 5.9 Fair delay attribution (F1)
-- Every delay minute on a delivered shipment is attributed to one party: **Plant · Transporter · Customer · External · Unattributed**.
+- Every delay minute on a shipment that has arrived is attributed to one party: **Plant · Transporter · Customer · External · Unattributed**.
 - Minutes come from confirmed factor events (gate wait actuals, confirmed reports, disruptions, receiving-window waits). Any remaining gap between actual and baseline is **Unattributed** and shown, not hidden.
 - **Fair on-time rule** for transporters ("but-for" rule): a late shipment counts against the transporter only if it would have been on time without the transporter-attributed minutes.
 - The coordinator can re-attribute minutes with a mandatory note; the change is logged and visible.
@@ -274,7 +277,7 @@ The keyword classifier is a fixed word list (English, plus verified Hindi/Romani
 
 ### 5.10 Dashboard (M5)
 Coordinator view. Filters: period (last 7 / 30 / 60 days), lane, transporter.
-- **KPIs:** on-time % · shipments delivered · median delay of late shipments · median warning lead time · proactive notice rate (§7).
+- **KPIs:** on-time % (arrival ≤ agreed promise, L1) · shipments arrived · renegotiated count · median delay of late shipments · median warning lead time · proactive notice rate (§7).
 - **On-time % by lane** and **by transporter** (bar charts, value labels on bars).
 - **On-time trend** by week.
 - **Delay causes:** minutes by party (stacked) and by reason code, filterable by lane and transporter.
@@ -333,7 +336,7 @@ Format: **Given / When / Then**. Every criterion must be demonstrable on the see
 | ID | Criterion |
 |---|---|
 | AC-M3.1 | Given any live shipment, then it shows an ETA, an ETA range, a confidence level and a risk level. |
-| AC-M3.2 | Given a shipment's breakdown, then baseline + the sum of factor minutes equals the displayed ETA (to the minute). |
+| AC-M3.2 | Given a shipment's breakdown, then planned arrival + the sum of factor minutes (incurred, plan change and expected) equals the displayed ETA (to the minute). |
 | AC-M3.3 | Given each factor in the breakdown, then it shows minutes, party and a one-line plain reason. |
 | AC-M3.4 | Given a disruption is injected on a shipment's route, when it recalculates, then a DISR factor appears and the ETA increases by that factor's minutes. |
 | AC-M3.5 | Given slack crosses below 0, then the level changes to At risk at that recalculation and a snapshot is stored. |
@@ -362,23 +365,23 @@ Format: **Given / When / Then**. Every criterion must be demonstrable on the see
 | AC-M5.4 | Given the transporter table, then it shows raw and fair on-time % side by side per §5.9. |
 | AC-M5.5 | Given any chart, then a table view with the same numbers is available. |
 | AC-M5.6 | Given a hand-picked lane in the seed, then the dashboard's on-time % matches a manual count from the seed data (checked once before the demo). |
-| AC-M5.7 | Given a live shipment is delivered during the demo, then the dashboard includes it after refresh. |
+| AC-M5.7 | Given a live shipment arrives at the customer during the demo, then the dashboard includes it after refresh. |
 
 ### Differentiators
 | ID | Criterion |
 |---|---|
 | AC-X1.1 | Given a shipment that reached At risk, then the replay shows predicted ETA vs. promised time across snapshots, with a "First at risk" marker and lead time in hours and minutes. |
 | AC-X1.2 | Given the scrubber moves, then map position, level and waterfall update to that snapshot. |
-| AC-X2.1 | Given a shipment, then the waterfall runs from baseline to predicted arrival, one bar per factor, with the promise line shown. (Shares AC-M3.2/3.3.) |
+| AC-X2.1 | Given a shipment, then the waterfall runs from planned arrival to predicted arrival, one bar per factor, with the promise line shown. (Shares AC-M3.2/3.3.) |
 | AC-X3.1 | Given a recovery option is infeasible (e.g. no free truck), then it is not offered, or it is shown disabled with the reason. |
 | AC-X4.1 | Given the coordinator injects an event, then affected segments highlight, a "N affected · M at risk" summary appears, and alerts fire per §5.5. |
 | AC-X4.2 | Given a non-coordinator, then the simulator panel is not available (UI and server). |
-| AC-X4.3 | Given Reset demo, then all events, reports, choices and alerts return to the seeded state within 5 s. |
+| AC-X4.3 | Given Reset demo, then all events, reports, choices and alerts return to the seeded demo state (Thu 10:25, paused) within 5 s. |
 
 ### Direction 3 elements
 | ID | Criterion |
 |---|---|
-| AC-F1.1 | Given a delivered late shipment, then its delay minutes are split by party, and any unexplained minutes show as Unattributed. |
+| AC-F1.1 | Given a shipment that arrived late, then its delay minutes are split by party, and any unexplained minutes show as Unattributed. |
 | AC-F1.2 | Given a late shipment caused only by plant gate wait, then it does not lower the transporter's fair on-time %. |
 | AC-F1.3 | Given the coordinator re-attributes minutes, then a note is required and the change appears in the audit log and the dashboard. |
 | AC-F1.4 | Given a shipment that misses the receiving window only because of external and plant delays, then the overnight wait is attributed to External and Plant, not to the customer. |
@@ -407,7 +410,7 @@ Computed by the app from its own snapshots and event log. Fictional data; the fo
 |---|---|---|---|
 | **Warning lead time** | For each shipment that reached At risk: promised time − time of first At-risk snapshot. Report the median. | ≈ 0 h: per the brief, customers learn an order is late only after it already is. | Seeded factor patterns; real lead time depends on data freshness in a pilot. |
 | **Proactive notice rate** | Late-or-at-risk shipments where the customer was alerted before the promised time ÷ all late-or-at-risk shipments. | ≈ 0% per the brief. | In-app alert counts as notice. |
-| **Recovered shipments** | Shipments that were At risk, had a recovery action chosen, and were delivered on time ÷ shipments that reached At risk. | Not measurable today. | Recovery effects are simulated. |
+| **Recovered shipments** | Shipments that were At risk, had a recovery action chosen, and arrived on time ÷ shipments that reached At risk. | Not measurable today. | Recovery effects are simulated. |
 | **Fair-score correction** | Per transporter: fair on-time % − raw on-time %. | Raw score only. | Attribution rules in §5.8–5.9. |
 
 Pilot extension (say, do not build): compare warning lead time and on-time % for 4–6 weeks on 1–2 real lanes against the prior period.

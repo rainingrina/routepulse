@@ -1,10 +1,12 @@
 # 05 — Database schema: RoutePulse
 
-Version 0.2, 2026-11-12. Status: **approved in principle; revision 0.2 for team review.**
+Version 0.3, 2026-11-12. Status: **approved; revision 0.3 applies the locked decisions L1–L10** (architecture §0.1).
 PostgreSQL (16 assumed) + Prisma. Companion to `04_TECH_ARCHITECTURE.md` (architecture) and `06_API_SPEC.md` (API).
 The Prisma blocks below are a **design draft** for review. They are not yet a file in the repo.
 
 **Source of truth [DECIDED D9, 2026-11-12]:** `apps/api/prisma/schema.prisma` is the single source of truth for models, fields, relations, enums and indexes. Constraints Prisma cannot express (CHECKs, partial unique indexes) are added as raw SQL in the same migration and listed next to each model below. No Zod or other schema library is used anywhere. Prisma Client generates the database TypeScript types; API DTOs are separate (see `06_API_SPEC.md`).
+
+**Changes in 0.3:** `Shipment.physicalArrivalAt` (L6) and `Shipment.receivingWindowOverrideEndAt` (L4) added with CHECKs; arrival-based definitions of `arrivedAt`, `deliveredAt`, `delayMinutes`, `onTime` locked (L1); dashboard indexes moved from `deliveredAt` to `arrivedAt`; `EventType` gains `PHYSICAL_ARRIVAL` and `RECOVERY_APPLIED`; `NotificationKind.DELIVERED_LATE` renamed `ARRIVED_LATE`; AWAITING_CUSTOMER options are not superseded by routine recalculation; simplification S-1 rejected (L8).
 
 **Changes in 0.2:** classification of all tables (§2.2); `Route.baselineMinutes`; `Lane.baselineMinutes` redefined; `Shipment.progressCarryMm`; arrival-based delay fields (pending architecture §19 issue 19); `RiskSnapshot.routeId`; `DelayAttribution` stores integer seconds and a `kind`; `SimState.lastStepAt` → `lastSettledAt`; enum `AttributionKind`; second seeded driver; Json columns validated by hand-written guards.
 
@@ -96,7 +98,7 @@ Labels: **[A]** assumption · **[VERIFY]** check against current Prisma docs at 
 ### 2.3 Simplification candidates (not applied — team decision)
 | ID | Simplification | Saves | Consequence | Recommendation |
 |---|---|---|---|---|
-| S-1 | Replace `OrderLine` + `ShipmentItem` with an `items Json` column on `Order` and `Shipment` (`[{gradeCode, quantityT, isUrgent}]`) | 2 tables | No FK integrity on quantities; split must check sums in code; dashboard unaffected | **Apply if behind at hour 5.** Low risk. |
+| S-1 | Replace `OrderLine` + `ShipmentItem` with an `items Json` column on `Order` and `Shipment` (`[{gradeCode, quantityT, isUrgent}]`) | 2 tables | No FK integrity on quantities; split must check sums in code; dashboard unaffected | **Rejected (L8):** the relational schema is retained. |
 | S-2 | Merge `AuditLog` into `ShipmentEvent` (nullable `shipmentId`) | 1 table | Mixes domain timeline and security log; non-shipment audit (logins, resets) needs nullable FK; customer timeline filter becomes stricter | Keep separate. |
 | S-3 | Merge `Order` into `Shipment` | 1 table | Split children would duplicate order data; customer "orders" view disappears | Keep. |
 | S-4 | Drop `RiskSnapshot` and store only `firstAtRiskAt` | 1 table | Removes X1 replay (cut-order step 2 in spec §3.3) | Only if X1 is cut. |
@@ -165,7 +167,7 @@ enum ReasonCode {
 enum EventType {
   MILESTONE DRIVER_REPORT REPORT_REVIEWED DISRUPTION_STARTED DISRUPTION_ENDED
   ALERT_OPENED ALERT_RESOLVED CUSTOMER_NOTIFIED CUSTOMER_RESPONDED
-  RECOVERY_CHOSEN ATTRIBUTION_OVERRIDDEN
+  RECOVERY_CHOSEN RECOVERY_APPLIED ATTRIBUTION_OVERRIDDEN PHYSICAL_ARRIVAL
 }
 enum EventSource     { DRIVER COORDINATOR SIMULATION SEED SYSTEM }
 enum DisruptionKind  { WEATHER_SLOWDOWN ROAD_CLOSURE GATE_CONGESTION TRUCK_BREAKDOWN }
@@ -178,7 +180,7 @@ enum OptionStatus    { PROPOSED AWAITING_CUSTOMER CHOSEN SUPERSEDED }
 enum Audience        { COORDINATOR CUSTOMER }
 enum NotificationKind {
   AT_RISK AT_RISK_CUSTOMER RECOVERY_CONFIRMED PLAN_UPDATED REPORT_NEEDS_REVIEW
-  CUSTOMER_RESPONDED BACK_ON_TRACK DELIVERED DELIVERED_LATE
+  CUSTOMER_RESPONDED BACK_ON_TRACK DELIVERED ARRIVED_LATE
 }
 enum TruckStatus     { AVAILABLE ASSIGNED MAINTENANCE }
 enum AttributionStatus { LIVE FINAL }
@@ -381,8 +383,9 @@ model Shipment {
   plannedDepartureAt DateTime  @db.Timestamptz(3)
   plannedArrivalAt   DateTime  @db.Timestamptz(3)  // plannedDeparture + primary route baseline (arrival at customer)
   promisedBy         DateTime  @db.Timestamptz(3)  // agreed promise (copied from Order; may be renegotiated)
-  originalPromisedBy DateTime  @db.Timestamptz(3)
+  originalPromisedBy DateTime  @db.Timestamptz(3)  // never changed after planning (L4)
   renegotiated       Boolean   @default(false)
+  receivingWindowOverrideEndAt DateTime? @db.Timestamptz(3)  // L4: accepted NEW_WINDOW end for this shipment only; Customer hours untouched
 
   // Live movement state (written only by simulation steps and actions)
   progressM          Int       @default(0)                   // distance along current route, integer metres (API shows km)
@@ -409,11 +412,12 @@ model Shipment {
   firstAtRiskAt      DateTime? @db.Timestamptz(3)
   customerNotifiedAt DateTime? @db.Timestamptz(3)
 
-  // Delivery outcome (replaces a Delivery table)
-  arrivedAt          DateTime? @db.Timestamptz(3)
-  deliveredAt        DateTime? @db.Timestamptz(3)
-  delayMinutes       Int?                          // max(0, arrivedAt − promisedBy) — set at ARRIVED (architecture §10.4; §19 issue 19 open)
-  onTime             Boolean?                      // arrivedAt ≤ promisedBy (agreed promise, D4)
+  // Arrival and delivery outcome (replaces a Delivery table) — L1, L6
+  physicalArrivalAt  DateTime? @db.Timestamptz(3)  // truck reached the customer gate (set by the simulation)
+  arrivedAt          DateTime? @db.Timestamptz(3)  // arrival at the receiving gate = eligible check-in time of physicalArrivalAt; set when ARRIVED is recorded, never the tap time
+  deliveredAt        DateTime? @db.Timestamptz(3)  // unloading complete = arrivedAt + unloadingMinutes (+ confirmed unloading waits)
+  delayMinutes       Int?                          // max(0, arrivedAt − promisedBy), set at ARRIVED
+  onTime             Boolean?                      // arrivedAt ≤ promisedBy (agreed promise, D4/L1)
 
   createdAt          DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt          DateTime  @updatedAt @db.Timestamptz(3)
@@ -439,8 +443,8 @@ model Shipment {
   @@index([isHistorical, riskScore(sort: Desc)])     // coordinator list sorted by risk
   @@index([driverUserId, currentMilestone])          // driver trip
   @@index([orderId])                                 // customer scope via order
-  @@index([laneId, deliveredAt])                     // dashboard by lane + period
-  @@index([transporterId, deliveredAt])              // dashboard by transporter + period
+  @@index([laneId, arrivedAt])                       // dashboard by lane + period (arrival-based, L1)
+  @@index([transporterId, arrivedAt])                // dashboard by transporter + period
 }
 ```
 - **FK** `orderId`, `laneId`, `routeId`, `transporterId`, `truckId?`, `driverUserId?`, `parentShipmentId?` (self).
@@ -450,6 +454,8 @@ model Shipment {
   - `CHECK ("riskScore" IS NULL OR "riskScore" BETWEEN 0 AND 100)`
   - `CHECK (("arrivedAt" IS NULL) = ("delayMinutes" IS NULL) AND ("arrivedAt" IS NULL) = ("onTime" IS NULL))`
   - `CHECK ("deliveredAt" IS NULL OR "arrivedAt" IS NOT NULL)`
+  - `CHECK ("arrivedAt" IS NULL OR ("physicalArrivalAt" IS NOT NULL AND "arrivedAt" >= "physicalArrivalAt"))` (L6)
+  - `CHECK ("receivingWindowOverrideEndAt" IS NULL OR ("renegotiated" AND "receivingWindowOverrideEndAt" > "originalPromisedBy"))` (L4)
   - `CHECK ("delayMinutes" IS NULL OR "delayMinutes" >= 0)`
   - `CHECK ("deliveredAt" IS NULL OR "arrivedAt" IS NULL OR "deliveredAt" >= "arrivedAt")`
   - `CHECK ("plannedArrivalAt" > "plannedDepartureAt")`
@@ -655,7 +661,8 @@ model RecoveryOption {
 }
 ```
 - **Constraints [RAW SQL]:** at most one Suggested per set: `CREATE UNIQUE INDEX option_one_suggested_per_set ON "RecoveryOption"("optionSetId") WHERE "isSuggested";` · `CHECK (feasible OR "infeasibleReason" IS NOT NULL)` · `CHECK (NOT "isSuggested" OR (feasible AND kind NOT IN ('NEW_WINDOW','NOTIFY_ONLY')))` · `CHECK ("extraCostInr" >= 0)` · `CHECK (("co2eDeltaKg" IS NULL) = ("co2eMethod" IS NULL))`.
-- Older sets are marked `SUPERSEDED` when a new set is generated; `Shipment.currentOptionSetId` points at the latest set.
+- Older sets are marked `SUPERSEDED` when a new set is generated, **except** an option in `AWAITING_CUSTOMER` (a chosen NEW_WINDOW): it is superseded only when the coordinator chooses another option or the alert resolves (L4). `Shipment.currentOptionSetId` points at the latest set.
+- For NEW_WINDOW, `params.newWindowEnd` is fixed at generation and is the only value applied on acceptance (preview = execution, L4).
 
 ### 5.17 `Notification`
 ```prisma
@@ -716,7 +723,7 @@ model DelayAttribution {
 ```
 - Holds **incurred** time (`kind = TIME_LOST`) and **plan-change** time from a reroute (`kind = PLAN_CHANGE`, `sourceKey = "ROUTE:<disruptionId>"`, party of the avoided disruption). Expected time lives only in `RiskSnapshot.factors`. This split is what prevents double counting (architecture §10.2).
 - The settle operation upserts on `(shipmentId, sourceKey, party)` and adds seconds. WIN knock-on writes one row per receiving party (architecture §10.3–10.5).
-- At ARRIVED/DELIVERED: rows become `FINAL`; a `kind = GAP` row with party `UNATTRIBUTED` stores any difference between `Shipment.delayMinutes` and the attributed minutes (AC-F1.1).
+- At ARRIVED: rows become `FINAL` (nothing after arrival affects the promise, L1/L6); a `kind = GAP` row with party `UNATTRIBUTED` stores any difference between `Shipment.delayMinutes` and the attributed minutes (AC-F1.1).
 - Override: the whole row moves to a new party; `originalParty`, note, user and time are stored; an `AuditLog` row is written (AC-F1.3). If a row with the target party already exists, the service merges the seconds into it.
 - **Constraints [RAW SQL]:** `CHECK ("delaySeconds" >= 0)`; `CHECK (("originalParty" IS NULL) = ("overrideNote" IS NULL))`; `CHECK ("sourceKey" NOT LIKE 'DISR:%' OR "disruptionId" IS NOT NULL)`; `CHECK ("sourceKey" NOT LIKE 'ROUTE:%' OR ("disruptionId" IS NOT NULL AND kind = 'PLAN_CHANGE'))`; `CHECK ("sourceKey" NOT LIKE 'RPT:%' OR "driverReportId" IS NOT NULL)`; `CHECK ((kind = 'GAP') = ("sourceKey" = 'GAP'))`; `CHECK (kind <> 'GAP' OR party = 'UNATTRIBUTED')`.
 
@@ -798,13 +805,14 @@ Reset inserts ≈ 3,500 rows with `createMany` in one transaction — well insid
 | M2 map + milestones (AC-M2.1–2.7) | `Route.geometry`, `Route.segments`, `Shipment.progressM`, `Shipment.currentMilestone`, `ShipmentEvent (MILESTONE)` with partial unique; `Customer.lat/lng`; active `Disruption` |
 | M3 ETA + risk + reasons (AC-M3.1–3.8) | `Shipment.etaAt/etaLowAt/etaHighAt/slackMinutes/riskLevel/riskScore/confidence`; `RiskSnapshot` (factors, ruleVersion); `DelayAttribution` (incurred); `Shipment.lastUpdateAt`, `silentFrom` |
 | M4 alerts + suggested action (AC-M4.1–4.8) | `Alert` (episode index), `RecoveryOption` (set, suggested index, rule text), `Notification`, `Alert.customerResponse`, `AuditLog` (`recovery.choose` with alternatives) |
-| M5 dashboard (AC-M5.1–5.7) | `Shipment.deliveredAt/delayMinutes/onTime` by `laneId`, `transporterId`; `DelayAttribution` by `party`, `reason`; `Shipment.firstAtRiskAt`, `customerNotifiedAt` for impact KPIs |
+| M5 dashboard (AC-M5.1–5.7) | `Shipment.arrivedAt/delayMinutes/onTime/renegotiated` by `laneId`, `transporterId`; `DelayAttribution` by `party`, `reason`; `Shipment.firstAtRiskAt`, `customerNotifiedAt` for impact KPIs |
 | X1 replay | `RiskSnapshot` (incl. `progressKm`), `ShipmentEvent` |
 | X3 recovery cards | `RecoveryOption`, `Truck.status/lat/lng`, `OrderLine.isUrgent`, `ShipmentItem`, `Shipment.parentShipmentId` |
 | X4 simulator + reset | `Disruption`, `SimState` |
 | F1 fair attribution (AC-F1.1–1.4) | `DelayAttribution` (party, GAP row, override columns), `Transporter.fleetSize` |
 | F2/F3 driver reports (AC-F2.1–F3.2) | `DriverReport` (chip, text, suggested, matched keywords, reason, status, review fields) |
 | S1 CO₂e gate (AC-S1.1–1.2) | `RecoveryOption.co2eDeltaKg` + `co2eMethod`, both null until the factor is verified |
-| New window renegotiation | `Shipment.promisedBy`, `originalPromisedBy`, `renegotiated`; `RecoveryOption.status = AWAITING_CUSTOMER` |
+| New window renegotiation (L4) | `Shipment.promisedBy`, `originalPromisedBy`, `renegotiated`, `receivingWindowOverrideEndAt`; `RecoveryOption.status = AWAITING_CUSTOMER`, `params.newWindowEnd`; `ShipmentEvent` CUSTOMER_RESPONDED + RECOVERY_APPLIED; `AuditLog` |
+| Arrival confirmation (L6) | `Shipment.physicalArrivalAt`, `arrivedAt`; `ShipmentEvent` PHYSICAL_ARRIVAL and MILESTONE ARRIVED (data: confirmation lag) |
 | Audit (spec §5.14) | `AuditLog`, plus `ShipmentEvent.actorUserId/source` |
 | Journeys J1–J9 | Covered by the rows above; J9 reset by §6 note 3 and `SimState` |

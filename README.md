@@ -5,7 +5,7 @@ Know it will be late hours before it is — know why, and fix it.
 
 Built for the LYB Mumbai Hackathon 2026, Round 2, Problem Statement 3 (Order-to-Delivery Control Tower). All companies, people and data are **fictional**; "Plant X" is a fictional polymer producer.
 
-> **Project status (2026-11-12): planning complete, implementation not started.** The repository currently contains planning documents only. The commands and configuration below describe the **planned** setup from `planning/04_TECH_ARCHITECTURE.md`; they do not work yet and will be updated to match the real `package.json` scripts when the code exists. See `PROGRESS.md`.
+> **Project status (2026-11-12): planning complete and decisions locked (L1–L10); implementation not started.** The repository currently contains planning documents only. The commands and configuration below describe the **planned** setup from `planning/04_TECH_ARCHITECTURE.md`; they do not work yet and will be updated to match the real `package.json` scripts when the code exists. See `PROGRESS.md`.
 
 ---
 
@@ -45,7 +45,7 @@ None of these is implemented yet.
 | Backend | Express v5 + TypeScript on Node.js |
 | Database | PostgreSQL + Prisma (`schema.prisma` is the single source of truth) |
 | Validation | Hand-written request validation (no schema-validation library) |
-| Planned UI libraries | Tailwind CSS, Radix primitives, TanStack Query, React Router, Recharts, MapLibre GL JS with local map tiles (pending final confirmation, see `planning/07_UI_UX_PLAN.md` §20) |
+| Approved UI libraries (not installed yet) | Tailwind CSS, Radix UI, TanStack Query, React Router, Recharts, MapLibre GL JS, lucide-react; self-hosted Inter font |
 | Tests | Vitest (unit, integration, golden scenario) |
 
 ## Architecture overview
@@ -58,7 +58,8 @@ Browser (React SPA)  ──JSON /api/*──▶  Express v5 API  ──Prisma─
                                       └─ simulation runner (5-minute grid)
 ```
 - One API process serves the API, the built SPA and local map assets from one origin; the demo runs without internet.
-- The ETA is rule-based: `Predicted arrival = Planned arrival + Incurred delay + Expected future delay` (plus a plan-change term after a reroute). It is not a trained model.
+- The ETA is the estimated arrival at the customer's receiving gate, and it is rule-based: `ETA = Planned arrival + Incurred delay + Plan change + Expected future delay` (plan change is 0 unless the shipment was rerouted). It is not a trained model.
+- On-time means arrived at the receiving gate by the agreed promise; delivery (unloading) may finish later.
 - Details: `planning/04_TECH_ARCHITECTURE.md` (architecture), `planning/05_DATABASE_SCHEMA.md` (schema), `planning/06_API_SPEC.md` (API), `planning/08_ETA_AND_RISK_ENGINE.md` (rules).
 
 ---
@@ -95,6 +96,7 @@ Unit tests for the ETA, risk, attribution and recovery engines; integration test
 ## Demo
 
 - Live demo on a single laptop, offline, with three Chrome cookie jars (coordinator, customer, driver).
+- Reset prepares the demo at simulation time Thu 10:25, paused, by running the hero's morning through the real simulation engine.
 - Hero scenario: shipment SHP-1042 from Plant X to a fictional converter in Pune — heavy rain on the ghat, a driver-reported breakdown, an early at-risk alert, a replacement-truck recovery, and a replay showing when the risk first appeared. Run-sheet: `planning/03_USER_JOURNEYS.md` §5.
 - Impact indicators (computed from the app's own records on fictional data): warning lead time, proactive notice rate, recovered shipments, fair-score correction (spec §7).
 
@@ -105,7 +107,7 @@ Unit tests for the ETA, risk, attribution and recovery engines; integration test
 - The ETA and risk are deterministic rules with hand-set values, not a trained model; a pilot would fit the rates on real history.
 - CO₂e is shown only after an emissions factor is verified (gate G-CO2); a second language only after a team member verifies it (gate G-LANG).
 - Prototype security limits: no token revocation, no MFA, single-process lock, local database.
-- Open design decisions are listed in `PROGRESS.md` §0.
+- Remaining open item: whether to add the `pmtiles` browser library for the tiled basemap or use the GeoJSON fallback (`PROGRESS.md` §0).
 
 ## Generative AI declaration
 

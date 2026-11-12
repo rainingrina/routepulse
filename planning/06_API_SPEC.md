@@ -1,9 +1,11 @@
 # 06 — API specification: RoutePulse
 
-Version 0.2, 2026-11-12. Status: **approved in principle; revision 0.2 for team review.**
+Version 0.3, 2026-11-12. Status: **approved; revision 0.3 applies the locked decisions L1–L10** (architecture §0.1).
 Companion to `04_TECH_ARCHITECTURE.md` and `05_DATABASE_SCHEMA.md`. AC-IDs point to `02_PRODUCT_SPEC.md` §6.
 
 **Contract approach [DECIDED D9, 2026-11-12]:** the TypeScript below is the contract. It lives as plain `interface`/`type` declarations in `packages/shared/src/api/*.ts`. **No Zod and no other schema-validation library.** The database model's source of truth is `schema.prisma`; Prisma Client types are used only inside the API. Request validation is hand-written (§1.2). Responses are built by serializers into these DTO types; Prisma entities are never returned directly. Example responses for every endpoint go in `packages/shared/fixtures`, typed with `satisfies`, so the frontend can be built before the endpoint exists.
+
+**Changes in 0.3:** arrival-based terms locked (L1): list items gain `arrivedAt`, ETA explanation gains `projectedRoadArrivalAt` and `receivingWindow`, dashboard `deliveredCount` renamed `arrivedCount`; `NotificationKind.DELIVERED_LATE` → `ARRIVED_LATE`; `EventType` gains `PHYSICAL_ARRIVAL`, `RECOVERY_APPLIED`; shipment detail gains `physicalArrivalAt`, `deliveredAt`, `receivingWindowOverrideEndAt` (L4, L6); `RecoveryOptionDto.newWindowEnd` added and `ChooseRecoveryRequest.newWindowEnd` **removed** so the preview and the execution use the same window (L4); ARRIVED/DELIVERED validation rules (L6); NEW_WINDOW acceptance rules and stale-acceptance 409 (L4); activity feed uses #37 (L7).
 
 **Changes in 0.2:** validation section (§1.2) and type-consistency rules (§1.3); `Factor.phase` adds `PLAN_CHANGE`; ETA totals add `planChangeMinutes`; arrival-based on-time definitions (pending architecture §19 issue 19); driver hand-over fields (D3); new endpoint #38 `GET /api/reference`; attribution rows show `kind`; consistency review (§17).
 
@@ -95,7 +97,7 @@ type ReasonCode =
   | 'DOCUMENTS' | 'UNLOADING_WAIT' | 'OTHER'          // driver chips
   | 'TRANSPORTER_PACE' | 'RECEIVING_WINDOW';            // system causes
 type EventType = 'MILESTONE' | 'DRIVER_REPORT' | 'REPORT_REVIEWED' | 'DISRUPTION_STARTED' | 'DISRUPTION_ENDED'
-  | 'ALERT_OPENED' | 'ALERT_RESOLVED' | 'CUSTOMER_NOTIFIED' | 'CUSTOMER_RESPONDED' | 'RECOVERY_CHOSEN' | 'ATTRIBUTION_OVERRIDDEN';
+  | 'ALERT_OPENED' | 'ALERT_RESOLVED' | 'CUSTOMER_NOTIFIED' | 'CUSTOMER_RESPONDED' | 'RECOVERY_CHOSEN' | 'RECOVERY_APPLIED' | 'ATTRIBUTION_OVERRIDDEN' | 'PHYSICAL_ARRIVAL';
 type EventSource = 'DRIVER' | 'COORDINATOR' | 'SIMULATION' | 'SEED' | 'SYSTEM';
 type DisruptionKind = 'WEATHER_SLOWDOWN' | 'ROAD_CLOSURE' | 'GATE_CONGESTION' | 'TRUCK_BREAKDOWN';
 type ReportStatus = 'PENDING_REVIEW' | 'CONFIRMED';
@@ -104,7 +106,7 @@ type CustomerResponse = 'ACCEPT_PROPOSAL' | 'PREFER_TO_WAIT' | 'REQUEST_CALL';
 type RecoveryKind = 'REROUTE' | 'SPLIT' | 'REPLACEMENT_TRUCK' | 'NEW_WINDOW' | 'NOTIFY_ONLY';
 type OptionStatus = 'PROPOSED' | 'AWAITING_CUSTOMER' | 'CHOSEN' | 'SUPERSEDED';
 type NotificationKind = 'AT_RISK' | 'AT_RISK_CUSTOMER' | 'RECOVERY_CONFIRMED' | 'PLAN_UPDATED' | 'REPORT_NEEDS_REVIEW'
-  | 'CUSTOMER_RESPONDED' | 'BACK_ON_TRACK' | 'DELIVERED' | 'DELIVERED_LATE';
+  | 'CUSTOMER_RESPONDED' | 'BACK_ON_TRACK' | 'DELIVERED' | 'ARRIVED_LATE';
 ```
 
 ### 2.2 Core objects
@@ -141,7 +143,9 @@ interface EtaExplanationCoordinator {
   view: 'coordinator';
   shipmentId: Id; simTime: ISODateTime; ruleVersion: string;
   plannedArrivalAt: ISODateTime;
-  predictedArrivalAt: ISODateTime; etaLowAt: ISODateTime; etaHighAt: ISODateTime;
+  projectedRoadArrivalAt: ISODateTime;  // when the truck is projected to reach the customer gate (before any WIN wait)
+  predictedArrivalAt: ISODateTime; etaLowAt: ISODateTime; etaHighAt: ISODateTime;  // ETA = arrival at the receiving gate (L1)
+  receivingWindow: { opensAt: ISODateTime; closesAt: ISODateTime; overrideEndAt: ISODateTime | null };  // applicable window for the projected arrival day (L4)
   promisedBy: ISODateTime; slackMinutes: Minutes;
   level: RiskLevel; score: number; confidence: Confidence; confidenceReason: string;
   summary: string;                      // "At risk: +180 min breakdown is the largest factor"
@@ -182,7 +186,7 @@ interface ShipmentListItemCoordinator {
   riskLevel: RiskLevel | null; riskScore: number | null; confidence: Confidence | null;
   hasOpenAlert: boolean; pendingReportCount: number;
   parentShipmentId: Id | null;
-  deliveredAt: ISODateTime | null; onTime: boolean | null; delayMinutes: Minutes | null;
+  arrivedAt: ISODateTime | null; deliveredAt: ISODateTime | null; onTime: boolean | null; delayMinutes: Minutes | null;  // onTime = arrivedAt ≤ promisedBy (L1)
 }
 
 interface ShipmentListItemCustomer {
@@ -193,7 +197,7 @@ interface ShipmentListItemCustomer {
   etaAt: ISODateTime | null; etaLowAt: ISODateTime | null; etaHighAt: ISODateTime | null;
   promisedBy: ISODateTime; riskLevel: RiskLevel | null;
   plainStatus: string;                  // "On the way · expected 17:50"
-  deliveredAt: ISODateTime | null; onTime: boolean | null;
+  arrivedAt: ISODateTime | null; deliveredAt: ISODateTime | null; onTime: boolean | null;
 }
 
 type ShipmentListItem = ShipmentListItemCoordinator | ShipmentListItemCustomer;
@@ -204,10 +208,11 @@ interface ShipmentDetailCoordinator extends ShipmentListItemCoordinator {
   items: { orderLineId: Id; gradeCode: string; quantityT: number; isUrgent: boolean }[];
   milestones: MilestoneEntry[];
   plannedArrivalAt: ISODateTime; originalPromisedBy: ISODateTime; renegotiated: boolean;
+  receivingWindowOverrideEndAt: ISODateTime | null;   // accepted NEW_WINDOW end for this shipment only (L4)
   progressKm: number; stopped: boolean; stoppedUntil: ISODateTime | null;
   lastUpdateAt: ISODateTime | null;
   firstAtRiskAt: ISODateTime | null; customerNotifiedAt: ISODateTime | null;
-  arrivedAt: ISODateTime | null;
+  physicalArrivalAt: ISODateTime | null;              // truck reached the gate (L6); arrivedAt/deliveredAt are in the list-item fields
   childShipmentIds: Id[];
   openAlert: AlertSummary | null;
   latestCustomerResponse: { response: CustomerResponse; at: ISODateTime } | null;
@@ -233,7 +238,8 @@ interface RecoveryOptionDto {
   id: Id; optionSetId: string; kind: RecoveryKind; title: string;   // "Replacement truck from Khopoli"
   feasible: boolean; infeasibleReason: string | null;
   newEtaAt: ISODateTime | null; etaLowAt: ISODateTime | null; etaHighAt: ISODateTime | null;
-  meetsPromise: boolean; minutesSavedVsNotify: Minutes;
+  meetsPromise: boolean; minutesSavedVsNotify: Minutes;   // NEW_WINDOW: judged against its own newWindowEnd
+  newWindowEnd: ISODateTime | null;     // NEW_WINDOW only: fixed at generation; the exact value applied on acceptance (L4)
   extraCostInr: number; costNote: string;                        // "Estimate from fictional rate card"
   co2eDeltaKg: number | null;                                     // null until G-CO2 (AC-S1.1)
   co2eNote: string;                                               // "CO₂e — method under verification" or method + source
@@ -535,7 +541,7 @@ interface GeoJSONLineString { type: 'LineString'; coordinates: [number, number][
     riskLevel?: RiskLevel[];                   // repeated param
     laneId?: Id; transporterId?: Id;
     customerId?: Id;                           // coordinator only
-    deliveredFrom?: ISODateTime; deliveredTo?: ISODateTime;
+    arrivedFrom?: ISODateTime; arrivedTo?: ISODateTime;   // filter on arrivedAt (L1); used by dashboard drill-down
     onTime?: 'true' | 'false';
     q?: string;                                // code search, ≤ 32 chars
     sort?: 'risk' | 'eta' | 'promise';         // default 'risk' (score desc)
@@ -574,8 +580,8 @@ interface GeoJSONLineString { type: 'LineString'; coordinates: [number, number][
   ```
 - **Validation:**
   - `milestone` must be exactly the next milestone in order; `IN_TRANSIT` is recorded by the system immediately after `GATE_OUT` and cannot be posted.
-  - `ARRIVED` requires the truck to be within 2 km of the route end ("Truck is 38 km from the destination").
-  - `DELIVERED` requires `ARRIVED`.
+  - `ARRIVED` requires a recorded physical arrival and `simTime ≥` the eligible check-in time ("Truck is 38 km from the destination" / "Receiving opens at 08:00"). `arrivedAt` is set to the eligible check-in time, never the tap time (L6).
+  - `DELIVERED` requires `ARRIVED` and `simTime ≥ arrivedAt + unloadingMinutes` ("Unloading finishes at 18:50"). `deliveredAt` = that completion time, not the tap time.
 - **Errors:** `403 FORBIDDEN` (customer; or driver posting a coordinator-only milestone), `404 NOT_FOUND`, `409 INVALID_TRANSITION` with a plain reason (AC-M2.6), `409 ALREADY_DONE`.
 - **Side effects:** event, `lastUpdateAt`, recalculation; on `DELIVERED`: delivery fields, attribution finalised, alert resolved, notifications; audit `milestone.record` (`milestone.override` for coordinators).
 
@@ -744,9 +750,9 @@ interface DriverHandover {
 - **Roles:** customer (own).
 - **Request:** `{ response: CustomerResponse }`
 - **Response 200:** `{ alert: CustomerAlertDto }`
-- **Validation:** alert must be `OPEN` or `ACTION_CHOSEN` and `canRespond`; one response per alert (a later response replaces the earlier one only while the alert is `OPEN` **[A]**).
-- **Errors:** `403 FORBIDDEN`, `404 NOT_FOUND`, `409 INVALID_TRANSITION` (alert resolved).
-- **Side effects:** coordinator notification `CUSTOMER_RESPONDED`; event `CUSTOMER_RESPONDED`; if the chosen option is `NEW_WINDOW` in `AWAITING_CUSTOMER` and the response is `ACCEPT_PROPOSAL`: `promisedBy` updated, `renegotiated = true`, option `CHOSEN`, recalculation; audit `alert.customerResponse`.
+- **Validation:** alert must be `OPEN` or `ACTION_CHOSEN` and `canRespond`; one response per alert (a later response replaces the earlier one only while the alert is `OPEN` **[A]**). When the alert's chosen option is a NEW_WINDOW, `ACCEPT_PROPOSAL` is valid only while that option is still `AWAITING_CUSTOMER`.
+- **Errors:** `403 FORBIDDEN`, `404 NOT_FOUND`, `409 INVALID_TRANSITION` (alert resolved), `409 STALE_OPTIONS` (the NEW_WINDOW option was superseded; nothing applied).
+- **Side effects:** coordinator notification `CUSTOMER_RESPONDED`; event `CUSTOMER_RESPONDED`; audit `alert.customerResponse`. If the chosen option is `NEW_WINDOW` in `AWAITING_CUSTOMER` and the response is `ACCEPT_PROPOSAL` (L4): `promisedBy` and `receivingWindowOverrideEndAt` set to the option's stored `newWindowEnd`; `renegotiated = true`; `originalPromisedBy` and the customer's default hours unchanged; option `CHOSEN`; event `RECOVERY_APPLIED`; audit `recovery.apply`; recalculation of ETA, WIN, slack and risk; customer notification `PLAN_UPDATED`.
 
 ### 10.4 `GET /api/shipments/:shipmentId/recovery-options`
 - **Purpose:** the latest option set for a WATCH or AT_RISK shipment (AC-M4.3, AC-M4.4, AC-X3.1). Read-only: sets are generated by the recalculation pipeline.
@@ -771,7 +777,6 @@ interface DriverHandover {
   interface ChooseRecoveryRequest {
     optionSetId: string;                   // must equal the shipment's current set
     confirm: true;
-    newWindowEnd?: ISODateTime;            // required for NEW_WINDOW; > current promisedBy, ≤ +48 h
     note?: string;                         // ≤ 280
   }
   ```
@@ -787,7 +792,7 @@ interface DriverHandover {
     customerNotified: boolean;
   }
   ```
-- **Validation:** option belongs to the shipment and to `optionSetId`; option `feasible`; feasibility re-checked at apply time.
+- **Validation:** option belongs to the shipment and to `optionSetId`; option `feasible`; feasibility re-checked at apply time. No field may change the option's parameters: for NEW_WINDOW the stored `newWindowEnd` is used (L4); an unknown field such as `newWindowEnd` is rejected with 400.
 - **Errors:** `403 FORBIDDEN`, `404 NOT_FOUND`, `409 STALE_OPTIONS` (newer set exists, or the option became infeasible — `details.currentOptionSetId` included), `409 ALREADY_DONE` (an option is already CHOSEN for this alert).
 - **Side effects:** effect applied (route switch / child shipment + items / truck switch + `stoppedUntil` / awaiting customer), event `RECOVERY_CHOSEN`, alert → `ACTION_CHOSEN`, recalculation, customer notification `PLAN_UPDATED` (not for NEW_WINDOW until accepted), audit `recovery.choose` with the ids and summaries of all options in the set.
 
@@ -874,14 +879,14 @@ interface AttributionResponse {
   interface DashboardResponse {
     filter: { period: '7d' | '30d' | '60d'; from: ISODateTime; to: ISODateTime; laneId: Id | null; transporterId: Id | null };
     generatedAtSim: ISODateTime;
-    deliveredCount: number;                              // size of the filtered set (shipments that arrived in the window)
+    arrivedCount: number;                                // size of the filtered set (shipments whose arrivedAt is in the window, L1)
     kpis: {
       onTimePct: Pct;
       lateCount: number;
       medianDelayMinutesOfLate: Minutes | null;
       medianWarningLeadMinutes: Minutes | null;          // promisedBy − firstAtRiskAt, shipments that reached AT_RISK
       proactiveNoticeRatePct: Pct;                       // late-or-at-risk with customerNotifiedAt < promisedBy
-      recoveredPct: Pct;                                 // reached AT_RISK, action chosen, delivered on time
+      recoveredPct: Pct;                                 // reached AT_RISK, action chosen, arrived on time
       renegotiatedCount: number;
     };
     onTimeByLane: { laneId: Id; laneName: string; delivered: number; onTime: number; onTimePct: Pct }[];
@@ -908,14 +913,14 @@ interface AttributionResponse {
 - **Errors:** `403 FORBIDDEN`, `404 NOT_FOUND` (unknown lane/transporter).
 - **Data source:** `Shipment` rows with `arrivedAt` in the window (filtered) + their `DelayAttribution` rows. Computed per request by a pure aggregation function over database records; no stored aggregates.
 - **Definitions** (also returned in `definitions`): on-time = `arrivedAt ≤ promisedBy`, where `promisedBy` is the **agreed** promise (D4; arrival vs delivery pending architecture §19 issue 19). Renegotiated shipments are included in on-time % and also counted in `renegotiatedCount`. Fair on-time applies the but-for rule (architecture §10.4).
-- Drill-down: the UI calls `GET /api/shipments?status=delivered&laneId=…&deliveredFrom=…` with the same filter.
+- Drill-down: the UI calls `GET /api/shipments?status=all&laneId=…&arrivedFrom=…&arrivedTo=…` with the same filter (arrival-based, L1).
 
 ---
 
 ## 14. Audit
 
 ### 14.1 `GET /api/audit`
-- **Purpose:** decision history (spec §5.14).
+- **Purpose:** decision history (spec §5.14); also the source of the control tower's activity feed (L7): the client calls it with `limit` (and `shipmentId` when a shipment is selected) and shows domain actions only.
 - **Roles:** coordinator.
 - **Query:** `shipmentId?` (matches `entityId` of the shipment and its alerts, reports and options); `entityType?`; `entityId?`; `limit?` (default 100).
 - **Response 200**
@@ -1007,7 +1012,10 @@ Checked every endpoint against `05_DATABASE_SCHEMA.md` and the role matrix in sp
 | C-4 | Replacement truck switches the driver (D3), but the original driver's trip had no way to show the hand-over | `recentHandovers` on #21; `driverChange` on #30; event data `previousDriverUserId` |
 | C-5 | Ledger minutes would not sum exactly to the identity with fractional movement | Ledger stores integer `delaySeconds`; API rounds with largest remainder |
 | C-6 | `Shipment.progressKm` (decimal) could disagree with the integer movement model | Schema uses `progressM` + `progressCarryMm`; API exposes `progressKm` as a derived number |
-| C-7 | On-time definition used `deliveredAt` while the ETA refers to arrival | Definitions now use `arrivedAt` (pending §19 issue 19 of the architecture) |
+| C-7 | On-time definition used `deliveredAt` while the ETA refers to arrival | Definitions use `arrivedAt` (locked, L1) |
+| C-9 | NEW_WINDOW preview and execution could use different windows (choose request carried its own `newWindowEnd`) | Window fixed on the option (`newWindowEnd`); request field removed (L4) |
+| C-10 | Late ARRIVED tap could move `arrivedAt` | `physicalArrivalAt` added; `arrivedAt` = eligible check-in time (L6) |
+| C-11 | Activity feed had no source | Reuses #37 (L7) |
 | C-8 | Validation section referred to a schema library | Replaced by §1.2 (hand-written) |
 
 ### 17.2 Field-to-column check (summary)

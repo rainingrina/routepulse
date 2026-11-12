@@ -1,6 +1,6 @@
 # 07 — UI/UX plan: RoutePulse
 
-Version 0.1, 2026-11-12. Status: **draft for team review.**
+Version 0.2, 2026-11-12. Status: **approved; revision 0.2 applies the locked decisions L1–L10** (architecture §0.1). All items formerly open in §20 are resolved.
 Inputs: `02_PRODUCT_SPEC.md` (spec), `03_USER_JOURNEYS.md` (journeys), `04_TECH_ARCHITECTURE.md`, `05_DATABASE_SCHEMA.md`, `06_API_SPEC.md`, `08_ETA_AND_RISK_ENGINE.md`. Endpoint numbers like **#14** refer to the API index (API §3).
 This plan does not change product requirements. Items that need a decision are in §20.
 
@@ -106,7 +106,7 @@ Minimum text size: 12 px on desktop, 16 px body on the driver UI.
 | Z-index | base 0 · map controls 10 · sticky header 20 · drawer 30 · popover 40 · modal 50 · toast 60 |
 
 ### 2.6 Iconography
-- One outline icon set, 1.5 px stroke, 16/20/24 px. Proposed: **lucide-react** (ISC licence, tree-shaken) — **[APPROVAL]** (§20 item 4). Fallback without a dependency: a hand-picked set of ~30 inline SVG icons in `components/icons/`.
+- One outline icon set, 1.5 px stroke, 16/20/24 px. **lucide-react** (ISC licence, tree-shaken) — **approved (L9)**. Not installed during the documentation phase.
 - Every icon next to text is `aria-hidden`; icon-only buttons have an `aria-label`.
 
 ### 2.7 Implementation of tokens
@@ -228,7 +228,7 @@ API: **#1** login · **#3** me (on load; signed-in users are redirected to their
 ### 6.3 Shipment list (left, 360 px)
 - Header: "Shipments" + search by code (debounced, client-side over the loaded list) + filter chips: All · At risk · Watch · On track · Late.
 - Sorted by risk score (default, from #14 `sort=risk`).
-- **Row (72 px):** left 4 px level bar (colour) · `StatusBadge` (icon + label) · code `SHP-1042` · customer + city · lane · ETA `16:20 ± 25` vs promise `18:00` · slack text ("1 h 40 m spare" / "Misses by 14 h") · confidence chip if not HIGH · badges: "Alert", "Report pending".
+- **Row (72 px):** left 4 px level bar (colour) · `StatusBadge` (icon + label) · code `SHP-1042` · customer + city · lane · ETA `16:20 ± 20` vs promise `18:00` · slack text ("1 h 40 m spare" / "Misses by 14 h") · confidence chip if not HIGH · badges: "Alert", "Report pending".
 - Hover: highlight matching truck on map. Click/Enter: select (map flies to the truck; right panel shows the quick panel). Keyboard: ↑/↓ move, Enter selects, Esc clears.
 - Split child shipments are indented under their parent with a "Split" chip.
 
@@ -238,11 +238,11 @@ Shows all live shipments, routes, sites, plant, active disruptions. Selected shi
 ### 6.5 Right panel
 **Default: tabs "Alerts" and "Activity".**
 - **Alerts** (#26 active): cards sorted newest first — level icon, "SHP-1042 at risk of missing Thu 18:00", top factor sentence, customer response chip if any ("Customer accepted proposal 11:20"), buttons "View options" (→ recovery in the quick panel) and "Open". Resolved alerts collapse into "Recently resolved".
-- **Activity feed:** chronological list (newest first, 50 items) of domain activity: milestones, driver reports, report reviews, disruptions, alerts, customer responses, recovery choices. Each item: icon, one-line summary, shipment code link, simulation time. New items slide in (fade only under reduced motion). **Data source: see §20 item 1** (no dedicated endpoint in the approved API).
+- **Activity feed:** chronological list (newest first, 50 items) of domain activity: milestones, driver reports, report reviews, disruptions, alerts, customer responses, recovery choices. Each item: icon, one-line summary, shipment code link, simulation time. New items slide in (fade only under reduced motion). **Data source (L7):** `GET /api/audit` (#37) with `limit=50` (plus `shipmentId` when a shipment is selected); the client shows only domain actions (`milestone.*`, `report.*`, `disruption.*`, `alert.*`, `recovery.*`, `attribution.*`) and hides `auth.*` and `sim.clock`. No separate endpoint.
 
 **When a shipment is selected: quick panel** (replaces the tabs, back arrow returns):
 1. Header: code, customer, lane, `StatusBadge`, "Open full detail" link (→ `/shipments/:id`).
-2. ETA block: "Estimated arrival 16:20 ± 25 · Promised by 18:00 · Confidence High"; summary sentence.
+2. ETA block: "Estimated arrival 16:20 ± 20 · Promised by 18:00 · Confidence High"; summary sentence.
 3. Compact `EtaWaterfall` (§7.3).
 4. Milestones (compact horizontal stepper).
 5. Recovery section (when WATCH/AT_RISK): Suggested card + "Compare all options" (→ full recovery view, §9).
@@ -255,7 +255,7 @@ Shows all live shipments, routes, sites, plant, active disruptions. Selected shi
 - `simError` from #4 → amber banner under the top bar: "Simulation paused: <reason>".
 
 ### 6.7 API dependencies (control tower)
-#3, #4, #5, #6, #7, #8, #9, #10, #11, #14, #18, #24, #26, #29, #31, #36, #38 and the activity source (§20 item 1).
+#3, #4, #5, #6, #7, #8, #9, #10, #11, #14, #18, #24, #26, #29, #31, #36, #38 and #37 for the activity feed (L7).
 
 ---
 
@@ -279,11 +279,11 @@ Below 1280 px: right column moves under the left column.
 Code (`h1`), customer + city, lane, transporter + truck, driver name (coordinator only), `StatusBadge`, `EtaDisplay`, promise, `ConfidenceChip` with tooltip reason, "Renegotiated" chip if applicable, buttons: **Replay** (→ §10), **Override milestone** (secondary, opens dialog requiring a note; API #17), **Report on behalf of driver** (secondary; same form as the driver's, logged; API #22, #23 — spec §4).
 
 ### 7.3 ETA explanation — `EtaWaterfall`
-- Horizontal waterfall from **Planned arrival** to **Predicted arrival**, with a vertical **Promised by** line (dashed navy) and the receiving window shaded (light teal band) on the time axis.
+- Horizontal waterfall from **Planned arrival** to **Predicted arrival at the receiving gate** (L1), with a vertical **Promised by** line (dashed navy), a **Road arrival** tick (`projectedRoadArrivalAt`) and the applicable receiving window shaded (light teal band; an accepted override is labelled "Agreed window until 19:30") on the time axis.
 - Bars grouped under overline labels **SO FAR** (INCURRED), **PLAN CHANGE** (only if rerouted) and **EXPECTED**, each bar coloured by **party** (§2.3), labelled "+120 min · Heavy rain on ghat section". WIN bar shows its party split as stacked segments with a "knock-on" label.
 - Pending RPT bars use a dashed outline + "Pending coordinator review" chip.
 - Under the chart, `FactorList` repeats every bar as text rows (accessible equivalent): factor, phase, minutes, party, detail, source link.
-- Footer: "Rule-based estimate · How is this calculated?" → popover with #20 content. Identity line: "13:20 planned + 49 so far + 1,071 expected = Fri 08:00".
+- Footer: "Rule-based estimate · How is this calculated?" → popover with #20 content. Identity line (L3, four terms): "13:20 planned + 49 so far + 0 plan change + 1,071 expected = Fri 08:00".
 - API: **#18** (coordinator view), **#20**.
 
 ### 7.4 Milestones
@@ -353,7 +353,7 @@ Shown in the quick panel (Suggested only + "Compare all") and in full on the shi
 Order: Suggested → other feasible (meets promise first, then by cost) → NEW_WINDOW → NOTIFY_ONLY → infeasible. The suggestion rule text (from #29 `suggestionRule`) sits above the cards.
 
 ### 9.2 Choose flow
-1. Click "Choose" → `ConfirmRecoveryDialog`: summary (what changes, new ETA, cost), customer message preview ("Plant X confirmed: replacement truck. New estimate 17:50 ± 25 min."), optional note, **Confirm** button. NEW_WINDOW opens `NewWindowDialog` with a time picker (must be after the current promise, ≤ +48 h).
+1. Click "Choose" → `ConfirmRecoveryDialog`: summary (what changes, new ETA, cost), customer message preview ("Plant X confirmed: replacement truck. New estimate 17:50 ± 20 min."), optional note, **Confirm** button. NEW_WINDOW opens `NewWindowDialog`, which shows the option's fixed `newWindowEnd` read-only ("Agreed window for this shipment until 19:30 — customer must accept") and the preview ETA; there is no time picker, so the preview and the execution use the same window (L4). After confirm the card shows "Waiting for customer acceptance"; if the customer accepts, the card shows "Accepted 11:3x — new promise 19:30".
 2. On success (#30): toast "Recovery confirmed"; card shows "Chosen by Meera at 11:25"; for REPLACEMENT_TRUCK a line "Driver changed: Ramesh → <replacement driver>" (from `driverChange`).
 3. On `409 STALE_OPTIONS`: `StaleOptionsBanner` "Options changed — review the updated cards", options refetch; nothing is applied.
 4. On `409 ALREADY_DONE`: "An option was already chosen for this alert" + refresh.
@@ -438,7 +438,7 @@ Target: 360 × 740 px; works up to 480 px wide centred on larger screens. Tap ta
 │ [ ⚠ Report a problem ]      │  ← 56 px, sticky bottom
 └─────────────────────────────┘
 ```
-- **Next step card:** shows `nextMilestone` and a single primary button; if `canRecordNext` is false, the button is disabled and `nextBlockedReason` is shown ("38 km to destination"). On tap → confirm sheet "Mark gate out at 09:30?" → #17. Errors (`409 INVALID_TRANSITION`) show the server's plain reason.
+- **Next step card:** shows `nextMilestone` and a single primary button; if `canRecordNext` is false, the button is disabled and `nextBlockedReason` is shown ("38 km to destination", "Receiving opens at 08:00", "Unloading finishes at 18:50"). After physical arrival the card reads "At Kestrel's gate — confirm arrival"; the recorded arrival time is the physical arrival time, not the tap time (L6). On tap → confirm sheet "Mark gate out at 09:30?" → #17. Errors (`409 INVALID_TRANSITION`) show the server's plain reason.
 - **Hand-over banner (D3):** from `recentHandovers` — "Load handed over to TRK-11 at 11:25. Your trip for SHP-1042 has ended." For the replacement driver, `instruction` reads "Collect load from TRK-07 near Lonavala".
 - **Mini route map:** collapsed by default (saves data and attention); expands to a 240 px map with own route, truck and destination (#10, #11).
 - Empty state (no assigned shipment): "No trip assigned right now."
@@ -461,7 +461,7 @@ Target: 360 × 740 px; works up to 480 px wide centred on larger screens. Tap ta
 ### 13.1 Layout
 ```
 ┌ Filter bar (sticky): Period [7d | 30d | 60d] · Lane [All ▾] · Transporter [All ▾] · "Fictional seeded data" ┐
-├ Impact KPIs: On-time % · Delivered · Median delay (late) · Median warning lead · Proactive notice rate · Recovered % · Renegotiated ┤
+├ Impact KPIs: On-time % · Arrived · Median delay (late) · Median warning lead · Proactive notice rate · Recovered % · Renegotiated ┤
 ├ On-time % by lane (bar) ───────────────┬ On-time % by transporter (bar) ───────────────┤
 ├ Weekly on-time trend (line) ───────────┬ Delay minutes by party (100% stacked bar) ────┤
 ├ Delay causes by reason (horizontal bar, sorted) ──────────────────────────────────────────┤
@@ -470,8 +470,8 @@ Target: 360 × 740 px; works up to 480 px wide centred on larger screens. Tap ta
 ```
 - One request (**#36**) per filter change keeps every chart consistent (AC-M5.3). Filter options from **#38**.
 - Every chart card: title, one-line definition (from `definitions`), "Chart / Table" toggle (AC-M5.5), hover tooltips per mark, value labels on bars. No dual axes.
-- **Transporter table:** raw vs fair on-time side by side; the gap cell is highlighted (primary-subtle) and, for small transporters, a "Small fleet" chip and explanation popover ("Most late minutes on this lane were attributed to plant gate waits and weather"). Row click → drill-down list via **#14** (`status=delivered`, same filters).
-- KPI definitions: on-time against the **agreed** promise; renegotiated count shown separately (D4).
+- **Transporter table:** raw vs fair on-time side by side; the gap cell is highlighted (primary-subtle) and, for small transporters, a "Small fleet" chip and explanation popover ("Most late minutes on this lane were attributed to plant gate waits and weather"). Row click → drill-down list via **#14** (`status=all`, `arrivedFrom`/`arrivedTo` = the filter window).
+- KPI definitions: on-time = arrived at the receiving gate by the **agreed** promise (L1, D4); renegotiated count shown separately.
 - Empty filter result: "No deliveries match these filters" with "Clear filters".
 - Responsive: 2-column grid ≥ 1280 px; 1 column below.
 
@@ -534,7 +534,7 @@ Target: 360 × 740 px; works up to 480 px wide centred on larger screens. Tap ta
 ## 18. Demo-specific UI notes (journeys §5)
 - Three Chrome cookie jars (D2): coordinator at 1440 px (normal profile), customer at ~900 px (Incognito), driver at 360 px (Guest).
 - The hand-over (D3): the driver window logs out and logs in as the replacement driver before J8.
-- Pre-demo: "Reset demo" from the Simulation dock; the demo start time depends on architecture §19 issue 18 (open).
+- Pre-demo: "Reset demo" from the Simulation dock → Thu 10:25, paused (L2). The presenter uses "Advance to…" before each scripted step (10:30, 11:10, 11:20, 11:25, 17:50, 18:50).
 - Large text in the coordinator window is not needed; rely on hierarchy and the selected-shipment highlight for the audience.
 
 ---
@@ -544,7 +544,7 @@ Target: 360 × 740 px; works up to 480 px wide centred on larger screens. Tap ta
 **Tokens and consistency**
 - [ ] No raw HEX values in components; all colours from tokens.
 - [ ] One icon set, one stroke width; icons aligned to text baselines.
-- [ ] Numbers use tabular figures; times formatted consistently ("Thu 11:10", "17:50 ± 25 min").
+- [ ] Numbers use tabular figures; times formatted consistently ("Thu 11:10", "17:50 ± 20 min").
 - [ ] Spacing on the 4 px grid; card paddings consistent (16 or 24).
 - [ ] Only the login panel uses a gradient; shadows limited to the four tokens.
 
@@ -578,14 +578,18 @@ Target: 360 × 740 px; works up to 480 px wide centred on larger screens. Tap ta
 
 ---
 
-## 20. Items needing a team decision
+## 20. Decision log
 
-| # | Item | Why | Proposal |
-|---|---|---|---|
-| 1 | **Activity feed data source.** The approved API has no cross-shipment activity endpoint. | Control tower showcase needs a feed. | Short term: use **#37** `GET /api/audit` (coordinator) and filter client-side to domain actions (`milestone.*`, `report.*`, `disruption.*`, `alert.*`, `recovery.*`, `attribution.*`). Better: add an optional `actions` prefix filter to #37 (small API change, needs approval). |
-| 2 | **Arrival vs delivery wording** (architecture §19 issue 19, still open). | Labels like "Promised by" and "Estimated arrival" depend on it. | UI uses "Estimated arrival" (spec §10 wording) and "Promised by"; no change needed if arrival is chosen. |
-| 3 | **Demo start time** (architecture §19 issue 18, still open). | Affects the reset button and run-sheet. | Reset to 10:25 via pre-script. |
-| 4 | **Icon dependency.** | Architecture does not list an icon library. | Approve `lucide-react`, or use ~30 inline SVGs (no dependency, ~1 hour extra). |
-| 5 | **UI library confirmation.** Tailwind CSS, Radix primitives, Recharts, TanStack Query, React Router, MapLibre are listed as assumptions in architecture §3. | This plan relies on them. | Confirm as the approved UI dependency set; no others. |
-| 6 | **Self-hosted Inter font files** (static assets, not a package). | Offline requirement. | Approve. |
-| 7 | **NEW_WINDOW and receiving hours** (08 §13 item 3). | `NewWindowDialog` copy says "new delivery window"; whether receiving hours also extend is undecided. | Decide with 08 item 3. |
+All items that were open in revision 0.1 are resolved (architecture §0.1).
+
+| # | Item | Resolution |
+|---|---|---|
+| 1 | Activity feed data source | **L7** — `GET /api/audit` (#37) with existing filters (§6.5) |
+| 2 | Arrival vs delivery wording | **L1** — "Estimated arrival" and "Promised by" refer to arrival at the receiving gate; "Delivered" means unloading complete |
+| 3 | Demo start time | **L2** — reset to Thu 10:25, paused |
+| 4 | Icon dependency | **L9** — `lucide-react` |
+| 5 | UI library set | **L9** — React, Vite, TypeScript, Tailwind CSS, Radix UI, TanStack Query, React Router, Recharts, MapLibre GL JS, lucide-react. Nothing else without approval. |
+| 6 | Self-hosted Inter | **L9** — approved |
+| 7 | NEW_WINDOW and receiving hours | **L4** — shipment-specific override; dialog shows the fixed window (§9.2) |
+
+Gated features stay disabled (L10): CO₂e shows "method under verification"; no second language until verified.

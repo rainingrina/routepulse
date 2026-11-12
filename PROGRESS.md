@@ -1,6 +1,6 @@
 # PROGRESS — RoutePulse
 
-Last updated: 2026-11-12. **No application code exists yet.** Implementation starts only after the team's explicit approval.
+Last updated: 2026-11-12 (decision lock L1–L10). **No application code exists yet.** Implementation starts only after the team's explicit approval of this documentation baseline.
 
 **Status values:** Not Started · In Progress · Implemented · Tested · Verified
 - *Implemented* = code written. *Tested* = automated tests written and passing (ran by us). *Verified* = checked in the running app against the acceptance criteria.
@@ -15,28 +15,29 @@ Last updated: 2026-11-12. **No application code exists yet.** Implementation sta
 | ID | Document | Status | Notes |
 |---|---|---|---|
 | D-01 | `planning/IDEA_HUNT.md` | Locked (2026-11-12) | Direction and decision record |
-| D-02 | `planning/02_PRODUCT_SPEC.md` | Approved | Do not edit |
-| D-03 | `planning/03_USER_JOURNEYS.md` | Approved | Do not edit |
-| D-04 | `planning/04_TECH_ARCHITECTURE.md` (v0.2) | Approved in principle; v0.2 under review | Decisions D1–D9 |
-| D-05 | `planning/05_DATABASE_SCHEMA.md` (v0.2) | Approved in principle; v0.2 under review | |
-| D-06 | `planning/06_API_SPEC.md` (v0.2) | Approved in principle; v0.2 under review | |
-| D-07 | `planning/07_UI_UX_PLAN.md` (v0.1) | Draft — awaiting review | |
-| D-08 | `planning/08_ETA_AND_RISK_ENGINE.md` (v0.1) | Draft — awaiting review | |
-| D-09 | `CLAUDE.md`, `PROGRESS.md`, `CHANGELOG.md`, `README.md` | Draft — awaiting review | |
+| D-02 | `planning/02_PRODUCT_SPEC.md` (v0.2) | Approved; terminology aligned to L1–L4 — revision awaiting review | No acceptance criterion removed (57 before and after) |
+| D-03 | `planning/03_USER_JOURNEYS.md` (v0.2) | Approved; hero scenario corrected to L1, L2, L6 — revision awaiting review | |
+| D-04 | `planning/04_TECH_ARCHITECTURE.md` (v0.3) | Approved; decision lock L1–L10 recorded — revision awaiting review | Decisions D1–D9, L1–L10 |
+| D-05 | `planning/05_DATABASE_SCHEMA.md` (v0.3) | Approved; two `Shipment` fields and enum changes — revision awaiting review | |
+| D-06 | `planning/06_API_SPEC.md` (v0.3) | Approved; contract changes for L1, L4, L6, L7 — revision awaiting review | |
+| D-07 | `planning/07_UI_UX_PLAN.md` (v0.2) | Approved; decision log closed — revision awaiting review | |
+| D-08 | `planning/08_ETA_AND_RISK_ENGINE.md` (v0.2) | Approved; all former open items resolved — revision awaiting review | |
+| D-09 | `CLAUDE.md`, `PROGRESS.md`, `CHANGELOG.md`, `README.md` | Updated for the decision lock — awaiting review | |
 
-### Open decisions that block or shape implementation
-| # | Decision | Source | Blocks |
-|---|---|---|---|
-| O-1 | Promise measured at arrival or delivery | Architecture §19 #19 | 2.x schema fields, 8.x engine, 14.x definitions |
-| O-2 | Demo start time (reset to 10:25 vs advance on stage) | Architecture §19 #18 | 4.4, 16.x |
-| O-3 | Three-term vs four-term ETA identity display (plan change after reroute) | Engine doc §13 #1 | 7.x, 11.4 |
-| O-4 | NEW_WINDOW: also extend receiving hours? (schema field) | Engine doc §13 #3 | 2.1, 9.x |
-| O-5 | Overlap rules and "awaiting arrival confirmation" booking | Engine doc §13 #4–5 | 7.x, 8.x |
-| O-6 | Activity feed source (audit filter vs new filter param) | UI plan §20 #1 | 11.x |
-| O-7 | Icon library (`lucide-react` vs inline SVG); UI dependency set; self-hosted Inter | UI plan §20 #4–6 | 1.x, 10.x |
-| O-8 | Table simplification S-1 (order/shipment items as JSON) | Schema §2.3 | 2.1 (only if behind at hour 5) |
-| O-9 | G-CO2: verified emissions factor | Spec §11 | 9.6 |
-| O-10 | G-LANG: verified second language | Spec §11 | 13.x, 12.x |
+### Decision status
+| # | Decision | Status |
+|---|---|---|
+| O-1 | Promise at arrival or delivery | **Locked — L1** (arrival at the receiving gate) |
+| O-2 | Demo start time | **Locked — L2** (reset to Thu 10:25, paused) |
+| O-3 | ETA identity | **Locked — L3** (four terms) |
+| O-4 | NEW_WINDOW receiving hours | **Locked — L4** (`Shipment.receivingWindowOverrideEndAt`) |
+| O-5 | Overlaps and arrival confirmation | **Locked — L5, L6** |
+| O-6 | Activity feed source | **Locked — L7** (`GET /api/audit`) |
+| O-7 | Icons, UI dependency set, Inter | **Locked — L9** |
+| O-8 | Schema simplification S-1 | **Rejected — L8** (relational schema retained) |
+| O-9 | G-CO2: verified emissions factor | **Gate closed (L10)** — CO₂e stays disabled until verified; does not block implementation |
+| O-10 | G-LANG: verified second language | **Gate closed (L10)** — English only until verified; does not block implementation |
+| O-11 | `pmtiles` browser library for the tiled basemap (not in the L9 list) | **Open** — approve it, or use the GeoJSON fallback basemap (architecture §16.2, §19 #27); blocks only task 10.2's tiled variant |
 
 ---
 
@@ -51,14 +52,14 @@ Last updated: 2026-11-12. **No application code exists yet.** Implementation sta
 | 1.5 | Express v5 app: helmet, JSON-only + 100 kB limit, requestId, error middleware | Dev A | 1.1 | Not Started | Not tested |
 | 1.6 | Vitest set-up for all workspaces; test DB `routepulse_test` | Dev A | 1.3 | Not Started | N/A |
 | 1.7 | `packages/shared`: enums mirror, P0 API types, fixtures (`satisfies`) | Both | 1.1 | Not Started | Not tested |
-| 1.8 | Design tokens (`tokens.css`), Tailwind theme, self-hosted Inter | Dev B | 1.4, O-7 | Not Started | N/A |
+| 1.8 | Design tokens (`tokens.css`), Tailwind theme, self-hosted Inter | Dev B | 1.4 | Not Started | N/A |
 | 1.9 | `.gitignore` covers `.env`, build output, `node_modules`, map assets if large (developers apply) | Dev A | 1.1 | Not Started | N/A |
 
 ## 2. Database and Prisma
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
-| 2.1 | `schema.prisma` (20 models, enums) per schema doc v0.2 | Dev A | 1.3, O-1, O-4 | Not Started | N/A |
+| 2.1 | `schema.prisma` (20 models, enums) per schema doc v0.3, incl. `physicalArrivalAt` and `receivingWindowOverrideEndAt` | Dev A | 1.3 | Not Started | N/A |
 | 2.2 | Initial migration + raw SQL CHECKs and partial unique indexes | Dev A | 2.1 | Not Started | Not tested |
 | 2.3 | Json column types + hand-written guards (`guards/`) | Dev A | 2.1 | Not Started | Not tested |
 | 2.4 | Enum drift check (`contract-checks.ts`) + CT-1 test | Dev A | 1.7, 2.1 | Not Started | Not tested |
@@ -80,7 +81,7 @@ Last updated: 2026-11-12. **No application code exists yet.** Implementation sta
 | 4.1 | Route geometry: one-time open routing export → GeoJSON; segments by hand (D5) | Dev A | — | Not Started | N/A |
 | 4.2 | Reference data: customers, lanes, routes, transporters, trucks, users (incl. second driver, D3) | Dev A | 2.2, 4.1 | Not Started | Not tested |
 | 4.3 | Deterministic 60-day history (~200 shipments) with attribution matching designed paces | Dev A | 4.2 | Not Started | Not tested |
-| 4.4 | Live shipments + hero SHP-1042 + hero pre-script | Dev A | 4.2, 6.x, O-2 | Not Started | Not tested |
+| 4.4 | Live shipments + hero SHP-1042 + hero pre-script through the real services to Thu 10:25 (L2) | Dev A | 4.2, 6.x | Not Started | Not tested |
 | 4.5 | Facts/assumptions file listing every seeded value and config value | Dev A | 4.3 | Not Started | N/A |
 
 ## 5. Shipment APIs
@@ -109,7 +110,7 @@ Last updated: 2026-11-12. **No application code exists yet.** Implementation sta
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
-| 7.1 | `projectEta` (gate, transit pieces, closures, stops, WIN) | Dev A | 6.2, O-3, O-5 | Not Started | Not tested |
+| 7.1 | `projectEta` (gate, transit pieces, closures, stops, WIN with receiving override, L5 precedence) | Dev A | 6.2 | Not Started | Not tested |
 | 7.2 | Identity + largest-remainder rounding (ET-1, ET-2, ET-3) | Dev A | 7.1 | Not Started | Not tested |
 | 7.3 | HIST pace from history + proration (ET-6) | Dev A | 4.3, 7.1 | Not Started | Not tested |
 | 7.4 | Risk level, score, range, confidence (RK-1…RK-3) | Dev A | 7.1 | Not Started | Not tested |
@@ -120,9 +121,9 @@ Last updated: 2026-11-12. **No application code exists yet.** Implementation sta
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
-| 8.1 | Ledger booking in settle (AT-1) incl. overlap rules | Dev A | 6.2, O-5 | Not Started | Not tested |
+| 8.1 | Ledger booking in settle (AT-1) incl. L5 overlap rules (ET-8) | Dev A | 6.2 | Not Started | Not tested |
 | 8.2 | WIN knock-on split (ET-7) | Dev A | 8.1 | Not Started | Not tested |
-| 8.3 | Finalisation at arrival, GAP row, but-for rule (AT-2, AT-4) | Dev A | 8.1, O-1 | Not Started | Not tested |
+| 8.3 | Physical arrival, eligible check-in, finalisation at ARRIVED, GAP row, but-for rule (AT-2, AT-4, ET-9) | Dev A | 8.1 | Not Started | Not tested |
 | 8.4 | Attribution endpoints (#34, #35) + overrides (AT-3) | Dev A | 8.3 | Not Started | Not tested |
 
 ## 9. Alerts and recovery
@@ -132,16 +133,16 @@ Last updated: 2026-11-12. **No application code exists yet.** Implementation sta
 | 9.1 | Alert lifecycle + one-active index; notifications (#31–#33) | Dev A | 7.5 | Not Started | Not tested |
 | 9.2 | Alerts (#26, #27) and customer response (#28) | Dev A | 9.1 | Not Started | Not tested |
 | 9.3 | `generateOptions` (5 kinds), Suggested rule (RC-1, RC-2) | Dev A | 7.1 | Not Started | Not tested |
-| 9.4 | Choose (#30) incl. hand-over (D3), staleness 409 (RC-4, RC-5, AZ-9) | Dev A | 9.3 | Not Started | Not tested |
+| 9.4 | Choose (#30) incl. hand-over (D3), staleness 409; NEW_WINDOW acceptance applies the stored override (L4) (RC-4, RC-5, ET-10, AZ-9) | Dev A | 9.3 | Not Started | Not tested |
 | 9.5 | Driver reports: classify (#22), create (#23), queue (#24), review (#25) (CL-1) | Dev A | 7.5 | Not Started | Not tested |
-| 9.6 | CO₂e on options — only if G-CO2 passes (RC-3 must pass either way) | Dev A | O-9 | Not Started | Not tested |
+| 9.6 | CO₂e on options — only if G-CO2 passes (RC-3 must pass either way) | Dev A | O-9 (gate) | Not Started | Not tested |
 
 ## 10. Map
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
 | 10.1 | One-hour offline tiles spike (architecture §16.2) — record PASS/FAIL | Dev B | 1.4 | Not Started | N/A |
-| 10.2 | Basemap (PMTiles) or GeoJSON fallback; CSP check | Dev B | 10.1 | Not Started | Not tested |
+| 10.2 | Basemap (PMTiles, if O-11 approved) or GeoJSON fallback; CSP check | Dev B | 10.1, O-11 | Not Started | Not tested |
 | 10.3 | Layers, HTML truck/site markers, legend, selection sync | Dev B | 10.2, 5.3 | Not Started | Not tested |
 | 10.4 | Marker interpolation, reduced-motion behaviour | Dev B | 10.3 | Not Started | Not tested |
 
@@ -150,9 +151,9 @@ Last updated: 2026-11-12. **No application code exists yet.** Implementation sta
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
 | 11.1 | Control tower layout, KPI strip, shipment list (UI plan §6) | Dev B | 3.4, 5.1, 10.3 | Not Started | Not tested |
-| 11.2 | Alerts tab and activity feed | Dev B | 9.2, O-6 | Not Started | Not tested |
+| 11.2 | Alerts tab and activity feed from `GET /api/audit` (L7) | Dev B | 9.2, 5.5 | Not Started | Not tested |
 | 11.3 | Quick panel + shipment detail page (UI plan §6.5, §7) | Dev B | 7.5 | Not Started | Not tested |
-| 11.4 | ETA waterfall + factor list | Dev B | 7.5, O-3 | Not Started | Not tested |
+| 11.4 | ETA waterfall (four terms, road-arrival tick, receiving window band) + factor list | Dev B | 7.5 | Not Started | Not tested |
 | 11.5 | Recovery cards, confirm/new-window dialogs, stale/conflict states (UI plan §9) | Dev B | 9.4 | Not Started | Not tested |
 | 11.6 | Replay page (UI plan §10) | Dev B | 7.5 | Not Started | Not tested |
 | 11.7 | Simulation dock + page; reset dialog | Dev B | 6.4–6.6 | Not Started | Not tested |
@@ -178,7 +179,7 @@ Last updated: 2026-11-12. **No application code exists yet.** Implementation sta
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
-| 14.1 | `analyticsService` + dashboard endpoint (#36); AZ-10 | Dev A | 8.3, O-1 | Not Started | Not tested |
+| 14.1 | `analyticsService` + dashboard endpoint (#36), arrival-based; AZ-10 | Dev A | 8.3 | Not Started | Not tested |
 | 14.2 | Dashboard page: filters, KPIs, charts with table toggle, transporter table (UI plan §13) | Dev B | 14.1 | Not Started | Not tested |
 
 ## 15. Testing and integration

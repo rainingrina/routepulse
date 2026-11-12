@@ -1,6 +1,6 @@
 # 08 — ETA and risk engine: RoutePulse
 
-Version 0.1, 2026-11-12. Status: **draft for team review.**
+Version 0.2, 2026-11-12. Status: **approved; revision 0.2 applies the locked decisions L1–L10** (architecture §0.1). All items formerly open in §13 are resolved.
 This document is the detailed rulebook behind `04_TECH_ARCHITECTURE.md` §9–§12. It does not change any approved decision. Where it must interpret or extend, the item is marked **[INTERPRETATION]** or **[OPEN]** and listed in §13.
 
 **Nature of the engine.** Every number is produced by fixed, hand-written rules from stated inputs. Nothing is learned from data. The UI and the pitch describe it as "rule-based" (spec §10; AC-M3.8). The rule set is versioned: `ruleVersion = "eta-rules-v1"`.
@@ -32,7 +32,8 @@ All values live in `apps/api/src/config/`. Values marked **[A]** are fictional a
 | Load transfer time | 45 min **[A]** | — |
 | Split eligibility | > 1 order line or > 10 t | Spec §5.6 |
 | Rate card (fictional) | dispatch ₹3,000 · ₹55/km · transfer fee ₹2,000 **[A]** | Spec §5.1 |
-| Arrival tolerance | within 2 km of route end | Architecture §19 issue 16 |
+| Arrival confirmation | ARRIVED allowed only after physical arrival and from the eligible check-in time; DELIVERED only from `arrivedAt + unloadingMinutes` | Architecture §9.3 (L6) |
+| NEW_WINDOW proposal | Projected road arrival rounded **up** to the next 30-minute mark; later than the current promise; ≤ promise + 48 h | Architecture §12 (L4) |
 | CO₂ factor | `null` until G-CO2 passes | Spec §5.12 |
 
 ---
@@ -46,29 +47,26 @@ All values live in `apps/api/src/config/`. Values marked **[A]** are fictional a
 | `plannedArrivalAt` | `plannedDepartureAt + B(primary route)` — fixed at planning, never moved by delays |
 | `C` | Baseline minutes **consumed**: the baseline time of the distance already covered on the current route (from the per-segment table, rounded to the minute) |
 | `R` | Baseline minutes **remaining**: `B(current route) − C` |
-| `promisedBy` | The **agreed** promise (D4). Starts as the order's promise; moves only when a NEW_WINDOW is accepted |
-| ETA / predicted arrival | Predicted arrival at the customer (architecture §10.1; arrival vs delivery is **[OPEN]** §13 item 2) |
+| `promisedBy` | The **agreed** promise (D4) for **arrival at the receiving gate** (L1). Starts as the order's promise; moves only when a NEW_WINDOW is accepted. `originalPromisedBy` never changes |
+| Road arrival | When the truck reaches the customer's gate: `projectedRoadArrivalAt` (projected) / `physicalArrivalAt` (actual) |
+| Applicable receiving window | The customer's default hours; after an accepted NEW_WINDOW, additionally any road arrival up to `Shipment.receivingWindowOverrideEndAt` (L4) |
+| Eligible check-in time | Road arrival if inside the applicable window, otherwise the next default opening after it |
+| ETA / `predictedArrivalAt` | Predicted arrival at the receiving gate = eligible check-in time of the projected road arrival (L1) |
+| `arrivedAt` | Eligible check-in time of `physicalArrivalAt`; confirmed by the ARRIVED milestone, never the tap time (L6) |
+| `deliveredAt` | `arrivedAt + unloadingMinutes` (+ confirmed unloading waits); may be after the window closes (L1) |
 
 ---
 
 ## 3. The identity
 
-The approved identity is:
+The locked identity (L3) is:
 
 ```
-Predicted ETA = Planned arrival + Incurred delay + Expected future delay
-```
-
-It holds exactly, to the minute, for every shipment that has **not been rerouted**.
-
-After a REROUTE, the current route has a different baseline than the planned (primary) route. Architecture 0.2 (§10.2) therefore carries a fourth, separately labelled term:
-
-```
-Predicted ETA = Planned arrival + Incurred (I) + Plan change (P) + Expected (E)
+ETA = Planned arrival + Incurred (I) + Plan change (P) + Expected (E)
 P = B(current route) − B(primary route)   (0 unless rerouted)
 ```
 
-**[OPEN — §13 item 1]** This is a conflict between the three-term wording in this request and the approved architecture. This document follows the approved architecture: P is shown as its own "Plan change" bar, and the three-term identity is the special case P = 0. If the team prefers strictly three terms, P can be displayed inside "Expected future delay" with the label "Longer route"; the arithmetic does not change.
+All four terms are kept in the engine and in the explanation model; P is shown as its own "Plan change" bar. Without a reroute, P = 0 and the identity reads `ETA = Planned arrival + Incurred delay + Expected future delay`.
 
 ### 3.1 Why nothing is double-counted
 | Term | Covers | Computed from |
@@ -116,13 +114,15 @@ Before departure: `Planned + I + E = plannedDep + B + max(0, now − plannedDep)
 | After `plannedDepartureAt`, at gate or loading | Δ | GATE · PLANT · "Gate wait / loading" |
 | Stopped (`stoppedUntil > t`) | Δ | The binding stop (§4.3) |
 | Moving, pace `p`, slowdown `s` | `Δ − Δ·p·(1−s)` | DISR `Δ·s` (disruption's party) and HIST `Δ·(1−s)·(1−p)` (TRANSPORTER) |
-| Holding at the destination, outside receiving hours | Δ | WIN · knock-on split (§6) |
-| Holding at the destination inside receiving hours, waiting for a manual ARRIVED tap | Δ | UNATTRIBUTED · "Awaiting arrival confirmation" **[INTERPRETATION — §13 item 5]** |
-| After ARRIVED (unloading) | 0 for the promise | Customer "waiting to unload" reports are recorded for information |
+| Physically arrived, outside the applicable receiving window | Δ | WIN · knock-on split (§6) |
+| Physically arrived and eligible for check-in, waiting for a manual ARRIVED tap | 0 | Nothing (L6). `arrivedAt` is the eligible check-in time; the confirmation lag is recorded only in the ARRIVED event data. No attribution record is needed, so the ETA and on-time result cannot change |
+| After ARRIVED (unloading) | 0 for the promise | Confirmed "waiting to unload" reports extend `deliveredAt` only |
 
 The two moving terms add up: `Δ·s + Δ(1−s)(1−p) = Δ − Δ·p(1−s)`. The same split is used in the projection (§5), so expected minutes become identical incurred minutes when the future happens as projected.
 
-### 4.3 Overlapping causes [INTERPRETATION — §13 item 4]
+### 4.3 Overlapping causes [DECIDED L5]
+The same precedence is applied by the settle step (incurred) and by the forward projection (expected), so an expected minute always becomes the same incurred minute. Every disruption and report keeps its own events in history; only the winning cause receives ledger time, so effective delay is booked once.
+
 | Overlap | Rule | Reason |
 |---|---|---|
 | Stopped **and** inside a slowdown window | Whole Δ to the stop; slowdown ignored | A stopped truck is not slowed |
@@ -139,8 +139,9 @@ The two moving terms add up: `Δ·s + Δ(1−s)(1−p) = Δ − Δ·p(1−s)`. T
 - A driver report's stop ends at `stoppedUntil`; the coordinator cannot shorten it in v1 (re-reporting creates a new report).
 
 ### 4.5 At arrival and delivery
-- `delayMinutes = max(0, arrivedAt − promisedBy)`; `onTime = arrivedAt ≤ promisedBy` (agreed promise, D4).
-- Ledger rows become FINAL. A GAP row (UNATTRIBUTED) records any difference between `delayMinutes` and the attributed minutes beyond the promise; in the simulation it is normally 0.
+- `delayMinutes = max(0, arrivedAt − promisedBy)`; `onTime = arrivedAt ≤ promisedBy` (agreed promise, D4; arrival-based, L1).
+- **After physical arrival the identity freezes at the eligible check-in time:** WIN accrues while the truck waits for the window; afterwards nothing is booked and the ETA equals `arrivedAt` (L6).
+- At ARRIVED the ledger rows become FINAL. A GAP row (UNATTRIBUTED) records any difference between `delayMinutes` and the attributed minutes beyond the promise; in the simulation it is normally 0.
 - **But-for rule** (spec §5.9): `countsAgainstTransporter = delayMinutes > 0 && (delayMinutes − transporterMinutes) ≤ 0`, where `transporterMinutes` = FINAL TIME_LOST + PLAN_CHANGE minutes attributed to TRANSPORTER.
 - Overrides: the coordinator moves a whole row to another party with a note; `originalParty` is kept; audit row written (AC-F1.3).
 
@@ -178,15 +179,19 @@ The two moving terms add up: `Δ·s + Δ(1−s)(1−p) = Δ − Δ·p(1−s)`. T
 
 ## 6. Receiving-window constraint and knock-on split
 
-- Receiving hours come from `Customer.receivingOpenMin` / `receivingCloseMin` in local time (Asia/Kolkata).
-- If the projected arrival is outside the window, WIN extra = minutes until the window next opens.
+- Default receiving hours come from `Customer.receivingOpenMin` / `receivingCloseMin` in local time (Asia/Kolkata). They are never modified by a recovery (L4).
+- Eligibility is decided by **arrival** time (L1). If the road arrival is outside the applicable window (default hours, or this shipment's accepted override), WIN extra = eligible check-in time − road arrival.
+- Unloading may finish after the window closes if arrival was inside it (L1).
+- Settlement and projection use the same window rule.
 - **Split (spec §5.9, AC-F1.4):** WIN minutes are divided across parties in proportion to each party's other minutes on the shipment (I + P + E, excluding WIN). Rounded with largest remainder. If no other minutes exist → UNATTRIBUTED. **Never to the customer by default.**
 - The same split applies when WIN time is actually incurred (truck holding at the destination).
 
 ### 6.1 Renegotiated windows (NEW_WINDOW)
-- The coordinator offers a new promise (`newWindowEnd`); the option becomes AWAITING_CUSTOMER. On the customer's ACCEPT_PROPOSAL: `promisedBy = newWindowEnd`, `renegotiated = true`, `originalPromisedBy` kept.
-- The prediction is **not** changed by a new promise — only slack, level and score change.
-- **[OPEN — §13 item 3]** Journeys J5 describe NEW_WINDOW as "accept 19:30 receiving". The approved schema stores only a new promise, not a change to the customer's receiving hours. If receiving still closes at 18:00, a 19:20 arrival still triggers WIN and the new promise is still missed. Proposal: add a per-shipment receiving-close override (one nullable column on `Shipment`) set together with the new promise. This needs your approval because it changes the approved schema.
+- **Preview:** when options are generated, NEW_WINDOW gets a fixed `newWindowEnd` = projected road arrival rounded up to the next 30-minute mark (later than the current promise, ≤ +48 h). Its `newEtaAt` is computed by `projectEta` with `receivingWindowOverrideEndAt = newWindowEnd`.
+- **Choose:** the coordinator chooses it; the option becomes AWAITING_CUSTOMER and is not superseded by routine recalculations.
+- **Acceptance (L4):** on the customer's ACCEPT_PROPOSAL the service applies exactly the stored `newWindowEnd`: `promisedBy` and `receivingWindowOverrideEndAt` are set to it, `renegotiated = true`. `originalPromisedBy` and the customer's default hours are unchanged. ETA, WIN, slack and risk are recalculated; the new ETA equals the preview's `newEtaAt` at the same time. Events CUSTOMER_RESPONDED and RECOVERY_APPLIED and audit rows are written.
+- **Stale:** if the coordinator chose another option or the alert resolved, acceptance returns 409 and nothing is applied.
+- Example (hero at 11:25): road arrival 19:20 → `newWindowEnd` 19:30 → preview ETA 19:20 (inside the override, WIN = 0), meets the new window; ₹0; never auto-suggested.
 
 ---
 
@@ -198,14 +203,14 @@ The risk engine consumes only the projection result and the promise. It introduc
 | Output | Rule |
 |---|---|
 | Slack | `promisedBy − predictedArrival` (minutes) |
-| Level | ON_TRACK ≥ 120 · WATCH 0–119 · AT_RISK < 0 · LATE when `now > promisedBy` and not arrived |
+| Level | ON_TRACK ≥ 120 · WATCH 0–119 · AT_RISK < 0 · LATE when `now > promisedBy` and the shipment has not physically arrived inside the applicable window |
 | Score | `clamp(round(50 − slack ÷ 6), 0, 100)` — sorting only; never shown as a probability |
 | Range | ± (5% of minutes to predicted arrival + 30 if last update > 2 h + 20 per pending report), rounded to the nearest 5 min |
 | Confidence | HIGH / MEDIUM / LOW from data freshness and pending reports |
 | Summary | Names the largest factor: "At risk: +180 min breakdown is the largest factor" |
 
 ### 7.2 Confidence and uncertainty — how they are shown
-- The ETA is always shown with its range ("17:50 ± 25 min") and a confidence chip with the reason ("Medium — driver report pending review").
+- The ETA is always shown with its range ("17:50 ± 20 min") and a confidence chip with the reason ("Medium — driver report pending review").
 - The range and confidence are labelled **rule-based**, not statistical. They never claim a probability.
 
 ### 7.3 How risk changes over time
@@ -225,7 +230,7 @@ All options are computed by running `projectEta` on a **modified copy** of the c
 | **REROUTE** | Truck moving; an alternate route avoids an active disruption; current position before the routes diverge | Remaining route = alternate; P = B_alt − B_primary; avoided DISR removed from E | P attributed to the avoided disruption's party (PLAN_CHANGE row) | Extra distance and cost; possibly longer if the disruption ends early |
 | **SPLIT** | A truck AVAILABLE at the plant; > 1 order line or > 10 t | New child shipment for urgent lines with its own plan (`plannedDeparture = now + loading`); parent ETA unchanged | Child starts with a clean ledger; parent keeps its own | Second truck cost; urgent grade early, remainder still late |
 | **REPLACEMENT_TRUCK** | Stopped by a breakdown; an AVAILABLE truck with a default driver within the radius | `stoppedUntil = now + travel + transfer`; RPT/DISR expected stop replaced by the shorter hand-over | Remaining stop stays with the original cause (TRANSPORTER for a breakdown), relabelled "Load transfer" | Cost of a second vehicle; driver changes (D3) |
-| **NEW_WINDOW** | Always | Prediction unchanged; promise moves on acceptance | None | No cost; customer must agree; counted as renegotiated (D4) |
+| **NEW_WINDOW** | Always | With the shipment-specific override, WIN is recalculated: if the road arrival is ≤ `newWindowEnd`, ETA = road arrival; slack and level change | None | No cost; customer must agree; counted as renegotiated (D4); customer default hours untouched (L4) |
 | **NOTIFY_ONLY** | Always | Unchanged | None | Baseline for comparison |
 
 **Suggested** (AC-M4.4): among feasible options that meet the current promise, excluding NEW_WINDOW and NOTIFY_ONLY, the lowest cost; ties → earliest ETA. If none meets the promise, the feasible option with the smallest delay (same exclusions). If none is feasible, nothing is suggested.
@@ -241,9 +246,9 @@ All options are computed by running `projectEta` on a **modified copy** of the c
 | Pause / play | Pause keeps `simTime` (no snapping); play resumes without a jump |
 | Speed | 1× / 10× / 60×; changing speed first settles at the old speed |
 | Advance | `ADVANCE n` and `ADVANCE_TO t` pause implicitly and process every boundary in order; `ADVANCE 60` ≡ 12 × `ADVANCE 5` |
-| Reset | Truncate + deterministic reseed + hero pre-script (start time **[OPEN]**, architecture §19 issue 18) |
-| Background shipments (D7) | Autopilot: AT_GATE at `plannedGateAt`, LOADING by bay availability, GATE_OUT when loaded and not before `plannedDepartureAt`, ARRIVED at the exact crossing minute, DELIVERED after unloading |
-| Hero shipment (D7) | Manual: driver taps AT_GATE, GATE_OUT, ARRIVED, DELIVERED. LOADING is always recorded by the simulation (plant activity). The truck holds at the destination until the ARRIVED tap |
+| Reset (L2) | Truncate + deterministic reseed (Thu 08:00) + hero pre-script through the normal services (AT_GATE 08:10, LOADING 08:50 by simulation, GATE_OUT 09:30) + advance to **Thu 10:25**, paused |
+| Background shipments (D7) | Autopilot: AT_GATE at `plannedGateAt`, LOADING by bay availability, GATE_OUT when loaded and not before `plannedDepartureAt`, PHYSICAL_ARRIVAL at the exact crossing minute, ARRIVED at the eligible check-in time, DELIVERED after unloading |
+| Hero shipment (D7, L6) | Manual: driver taps AT_GATE, GATE_OUT, ARRIVED, DELIVERED. LOADING is always recorded by the simulation (plant activity). The truck holds at the gate after physical arrival; `arrivedAt` and `deliveredAt` come from the simulation's times, not the taps |
 | Pings | Autopilot pings every 30 min unless seeded silent; driver actions also count |
 | Long gap | > 12 boundaries in one tick → process 12, pause, show `simError` |
 
@@ -288,9 +293,10 @@ Projection from 11:10: stop 180 → moves again 14:10; remaining ghat 59.0 basel
 - E_RPT = **180** (TRANSPORTER, pending review)
 - E_HIST = 179 × 0.0753 = 13.5 → **13**
 - E_DISR = (59.0 ÷ 0.93) × 1.857 = 117.9 → **118**
-- Provisional arrival = 11:10 + 179 + 311 = **19:20** → after the 18:00 close.
+- **Road arrival** = 11:10 + 179 + 311 = **19:20** → after the 18:00 close.
 - E_WIN = 19:20 → Fri 08:00 = **760**. Other minutes by party: PLANT 40; TRANSPORTER 7 + 180 + 13 = 200; EXTERNAL 2 + 118 = 120; total 360. Split: PLANT 84.4, TRANSPORTER 422.2, EXTERNAL 253.3 → largest remainder → **85 / 422 / 253**.
-- Predicted = 13:20 + 49 + (180 + 13 + 118 + 760) = 13:20 + 1,120 min = **Fri 08:00** ✓.
+- **Receiving-window wait** (WIN) = 760 min; **final receiving ETA** = 13:20 + 49 + 0 + (180 + 13 + 118 + 760) = 13:20 + 1,120 min = **Fri 08:00** ✓ (P = 0, no reroute).
+- Proposed action in the customer alert at 11:10 = Suggested option computed at 11:10: REPLACEMENT_TRUCK with a stop until 12:25 → ETA **≈ 17:35** if confirmed then. Meera confirms at 11:25, so the realised ETA is 17:50 (Example 3).
 - Slack = −840 → **AT_RISK**, score 100. Range ± (5% of 1,250 = 62.5 + 20 pending = 82.5) → ±85. Confidence MEDIUM (pending report).
 - Alert opens; `firstAtRiskAt = 11:10`; coordinator and customer notified.
 
@@ -302,14 +308,14 @@ At 11:25 the truck has been stopped 15 min. C = 91, R = 179. I = 11:25 − 08:50
 | Option | Calculation | Predicted | Meets 18:00? | Cost (fictional) |
 |---|---|---|---|---|
 | NOTIFY_ONLY | 11:25 + 179 + 165 + 13 + 118 = 19:20 → WIN | Fri 08:00 | ✗ | ₹0 |
-| REPLACEMENT_TRUCK | TRK-11 at a yard 20 km away: travel 30 min + transfer 45 min → stop until 12:40; E = 75 + 13.5 + 117.9 = 206.4 | **17:50** | ✓ | 3,000 + 20 km × 55 + 2,000 = **₹6,100** |
-| SPLIT | Urgent 8 t from the plant: loading to 12:05; alternate route B_alt = 360 [A] at p = 0.97 → 371 min | ≈ 18:16 (urgent part); remainder Fri 08:00 | ✗ | Higher (second dispatch + 160 km) |
+| REPLACEMENT_TRUCK | TRK-11 at Khopoli yard, 20 km away: travel 30 min + transfer 45 min → stop until 12:40. The load is stopped **≈ 90 min in total** (11:10–12:40), which is the journeys' "transfer ~90 min". E = 75 + 13.5 + 117.9 = 206.4 | **17:50** | ✓ | 3,000 + 20 km × 55 + 2,000 = **₹6,100** |
+| SPLIT | Urgent 8 t from the plant: loading to 12:05; alternate route B_alt = 360 **[A]** at p = 0.97 → 371 min | ≈ 18:16 (urgent part) with this seed value; remainder Fri 08:00. The exact time is fixed by the seeded alternate route and the golden test | ✗ | Higher (second dispatch + 160 km) |
 | REROUTE | Truck is stationary | — | Disabled: "Truck is stationary (breakdown)" | — |
-| NEW_WINDOW | Prediction unchanged; promise would move | Fri 08:00 (see §6.1 open item) | Only with a new promise | ₹0 |
+| NEW_WINDOW | `newWindowEnd` = 19:20 rounded up = 19:30; with the override, the 19:20 road arrival is inside the window → WIN 0 | 19:20 (if the customer accepts) | ✓ against the new window 19:30; never auto-suggested | ₹0 |
 
 **Suggested:** REPLACEMENT_TRUCK (only feasible option that meets the current promise).
 **After choose (11:25):** truck → TRK-11, driver → the second seeded driver (D3). Predicted = 13:20 + 64 + (75 + 13 + 118) = **17:50** ✓ (now + R + E = 11:25 + 179 + 206). Slack 10 → **WATCH**. WIN disappears; its knock-on minutes are gone because the window is no longer missed. Alert → ACTION_CHOSEN; customer gets PLAN_UPDATED.
-**Arrival 17:50:** `onTime = true`, `delayMinutes = 0`. Total incurred vs plan = 17:50 − 08:50 − 270 = 270 min → GATE 40 (PLANT), HIST 20 (TRANSPORTER), DISR 120 (EXTERNAL), RPT 90 (TRANSPORTER). Because the shipment was on time, the but-for rule does not count anything against the transporter. **Warning lead time** for the replay = 18:00 − 11:10 = **6 h 50 min**.
+**Physical arrival 17:50** (inside 08:00–18:00) → eligible check-in 17:50 → `arrivedAt` = **17:50**, `onTime = true`, `delayMinutes = 0`, even if the replacement driver taps ARRIVED a few minutes later (L6). **Delivered 18:50** = 17:50 + 60 min unloading (Kestrel uses the seed default `unloadingMinutes = 60`); finishing after the 18:00 close is allowed because arrival was inside the window (L1). Total incurred vs plan = 17:50 − 08:50 − 270 = 270 min → GATE 40 (PLANT), HIST 20 (TRANSPORTER), DISR 120 (EXTERNAL), RPT 90 (TRANSPORTER). Because the shipment was on time, the but-for rule does not count anything against the transporter. **Warning lead time** for the replay = 18:00 − 11:10 = **6 h 50 min**.
 
 ### Example 4 — Fair attribution on historical shipments (but-for rule)
 | Shipment | Delay beyond promise | Minutes by party (final) | delay − transporter | Counts against transporter? |
@@ -338,14 +344,18 @@ For a transporter with these three shipments: raw on-time = 1 of 3 (33.3%); fair
 
 ---
 
-## 13. Items needing a team decision
+## 13. Decision log
 
-| # | Item | Status | Proposal |
-|---|---|---|---|
-| 1 | Three-term identity in this request vs four-term identity (with P after REROUTE) in approved architecture §10.2 | **OPEN** | Keep four terms internally; P = 0 unless rerouted. Optionally display P inside "Expected" labelled "Longer route". |
-| 2 | Promise measured at arrival or at delivery (architecture §19 issue 19) | **OPEN** (carried over) | Arrival |
-| 3 | NEW_WINDOW changes the promise but not receiving hours (J5 implies extended receiving) | **OPEN** | Add one nullable `Shipment.receivingCloseOverrideAt`, set with the new promise |
-| 4 | Overlap rules in §4.3 (latest-ending stop binds; largest slowdown wins) | **INTERPRETATION** — confirm | As written |
-| 5 | Manual hero truck waiting at destination before the ARRIVED tap | **INTERPRETATION** — confirm | Book as UNATTRIBUTED "Awaiting arrival confirmation"; presenter taps promptly; golden test taps at the exact arrival minute |
-| 6 | Demo start time (architecture §19 issue 18) | **OPEN** (carried over) | Reset to 10:25 via the hero pre-script |
-| 7 | Hero numbers here (rain s = 0.65 for 8 h, transfer 75 min) differ slightly from the journeys' indicative "transfer ~90 min" | **INFO** | Journeys were indicative; these values reproduce the journeys' 14:20 / 16:20 / 19:20 / 17:50 timeline |
+All items that were open in revision 0.1 are resolved by the locked decisions (architecture §0.1).
+
+| # | Item | Resolution |
+|---|---|---|
+| 1 | Three-term vs four-term identity | **L3** — four terms; P = 0 without a reroute (§3) |
+| 2 | Promise at arrival or delivery | **L1** — arrival at the receiving gate (§2, §4.5, §6) |
+| 3 | NEW_WINDOW did not change receiving hours | **L4** — `Shipment.receivingWindowOverrideEndAt`; preview = execution (§6.1) |
+| 4 | Overlap rules | **L5** — as in §4.3 |
+| 5 | Waiting for a manual ARRIVED tap | **L6** — `physicalArrivalAt`; `arrivedAt` = eligible check-in; nothing booked for confirmation lag (§4.2) |
+| 6 | Demo start time | **L2** — reset to Thu 10:25, paused (§9) |
+| 7 | Hero "transfer ~90 min" vs 17:50 | Reconciled by calculation: total stoppage 11:10–12:40 ≈ 90 min = 15 min before the decision + 30 min travel + 45 min transfer → ETA 17:50 (Example 3) |
+
+No engine decision remains open. Gates G-CO2 and G-LANG stay closed (L10).
