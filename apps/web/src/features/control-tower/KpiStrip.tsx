@@ -103,8 +103,8 @@ export function KpiStrip({
         <div className="flex min-w-[180px] flex-1">
           <KpiCard
             label="Median warning lead"
-            value={kpis?.medianWarningLeadMinutes != null ? formatDuration(kpis.medianWarningLeadMinutes) : '—'}
-            caption="Before the promised time"
+            value={kpis?.medianWarningLeadMinutes != null ? `${kpis.medianWarningLeadMinutes < 0 ? '−' : ''}${formatDuration(kpis.medianWarningLeadMinutes)}` : '—'}
+            caption={kpis?.medianWarningLeadMinutes != null && kpis.medianWarningLeadMinutes < 0 ? 'After the promised time' : 'Before the promised time'}
             loading={dashboard.isPending}
             unavailable={dashboard.isError ? unavailableText(dashboard.error) : null}
           />

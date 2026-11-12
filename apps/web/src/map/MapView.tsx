@@ -50,6 +50,8 @@ export interface MapViewProps {
   className?: string;
   /** Extra overlay content (e.g. the simulation dock). */
   children?: ReactNode;
+  /** Legend starts expanded (control tower) or collapsed (small maps). */
+  legendOpen?: boolean;
 }
 
 /** Keyed HTML markers rendered by React through portals (architecture §16.1: labels are HTML, not symbol layers). */
@@ -103,6 +105,7 @@ export function MapView({
   ariaLabel = 'Shipment map',
   className,
   children,
+  legendOpen = true,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<MlMap | null>(null);
@@ -346,7 +349,7 @@ export function MapView({
       <div className="pointer-events-none absolute top-[88px] right-[10px] z-10">
         <IconButton icon={Maximize2} label="Fit all shipments" size="sm" onClick={fitAll} className="pointer-events-auto border border-border bg-surface shadow-xs" />
       </div>
-      <MapLegend showDisruptions={showDisruptions} illustrativeRoutes={layers.routes.some((r) => r.geometry.x_source === 'HAND_TRACED_DEMO')} />
+      <MapLegend showDisruptions={showDisruptions} illustrativeRoutes={layers.routes.some((r) => r.geometry.x_source === 'HAND_TRACED_DEMO')} initiallyOpen={legendOpen} />
       {children}
     </div>
   );

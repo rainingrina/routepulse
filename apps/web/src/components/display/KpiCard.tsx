@@ -44,7 +44,7 @@ export function KpiCard({
           {value}
         </span>
       )}
-      {caption ? <span className="mt-0.5 truncate text-small text-text-muted">{caption}</span> : null}
+      {caption ? <span className="mt-0.5 max-w-full truncate text-small text-text-muted">{caption}</span> : null}
     </>
   );
   const base = 'flex min-w-[148px] flex-1 flex-col items-start rounded-lg border bg-surface px-4 py-3 text-left shadow-xs';

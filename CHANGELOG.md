@@ -19,6 +19,44 @@ Entries below describe the backend (branch `backend`) and frontend (branch `fron
   - 72 unit tests (API client, retry/session rules, role guard, formatting, login validation, status badges, list filters, activity summaries, recovery ordering, map geometry, mock fixture identity checks).
   - `docs/FRONTEND_BACKEND_HANDOFF.md`.
 
+### Added (M10 — analytics endpoint and dashboard)
+- **Backend:** `GET /api/analytics/dashboard` (#36, coordinator only, read-only): `engines/analytics.ts` (pure) + `services/analyticsService.ts` (one query) + `routes/analytics.ts`. One filtered set per request — shipments whose `arrivedAt` is in [to − 7/30/60 d, to] with `to` = last settled simulation time, optional lane and transporter (unknown id → 404). KPIs, on-time by lane/transporter, weekly trend, causes by party/reason/lane/transporter and the transporter table (raw vs fair on-time by the existing but-for rule) exactly as API §13; definitions and data note returned with the numbers.
+- **Decisions recorded (2026-11-12, M10):** cause charts sum all attributed minutes of the set (GAP rows under Unattributed by party only); weekly buckets are calendar weeks from Monday 00:00 IST; the window ends at the last settled simulation time; even-count medians = mean of the two middle values rounded half-up. Also: percentages have one decimal and are null when there is nothing to divide; `gapPct` is computed from the counts; "recovery chosen" = a CHOSEN RecoveryOption (a NEW_WINDOW counts once accepted).
+- **Shared contracts:** `DashboardQuery`, `DashboardResponse`, `DASHBOARD_PERIODS`, `DashboardPeriod` (`api/analytics.ts`). The web's temporary `pending.ts` is deleted: every API type now comes from `@routepulse/shared`.
+- **Frontend:** `/dashboard` (UI plan §13) with URL filters, KPI cards, six chart cards with Chart/Table toggles, transporter table and drill-down via #14; the planned-screen placeholder component is removed. The Control Tower's #36 cards now show real values.
+- **Tests:** API 359 (new: 11 unit, 7 integration), web 121 (new: 7 dashboard component tests from captured real responses); mutations for recovery, but-for parties, GAP, window inclusivity, week start, proactive timing, empty state and gap display caught.
+
+### Changed (M10)
+- `KpiCard` caption is width-limited so long captions truncate inside the card (it could overflow the page).
+- Control Tower "Median warning lead" shows a sign and "After the promised time" if the median is negative (before, the duration was shown without its sign).
+- `apps/web/src/test/fixtures/api-11-20.json`: M10 keys (#36 at 30 d / 60 d / Pune lane / an empty filter, #14 drill-down) from the real API; existing keys unchanged.
+
+### Added (M9 — operational completion and role-based portals)
+- **Backend:** orders list (#12) and order detail (#13, `OrderSummary & { shipments }` unwrapped as in API §7.2; status derived; worst live risk); milestone taps and coordinator overrides over HTTP (#17) through the existing `simulationService.recordMilestone` (note required for coordinators, audit `milestone.override`, `note` kept on the event; 409 ALREADY_DONE for a passed milestone or a repeated DELIVERED; IN_TRANSIT rejected; driver posting a system milestone → 403); replay (#19, read-only from stored RiskSnapshots + the coordinator timeline, positions on each snapshot's route); driver trip (#21) with derived instruction for the replacement driver and hand-overs from RECOVERY_CHOSEN events (12 sim-hours). New `services/portalService.ts`, `routes/portal.ts`.
+- **Shared contracts:** `OrderSummary`, `OrderDetail`, `OrderListQuery`, `RecordMilestoneRequest/Response`, `ReplaySnapshot`, `ReplayResponse`, `DriverTripResponse` moved verbatim from the web's `pending.ts` to `@routepulse/shared` (`api/orders.ts`). Only the dashboard DTOs remain pending (M10).
+- **Frontend:** customer portal (orders with alert banner and responses, order detail with plain ETA card, milestones, own map, inline updates; notifications page); driver portal (trip with next step, confirm, blocked reasons, instruction, hand-over, mini map, open reports; report a problem with chips, suggestion confirm, duration); coordinator replay page (chart, scrubber, play, events, Chart/Table) and driver-report queue (Pending/Confirmed, Confirm, Change with note); Replay link on the shipment page. Only `/dashboard` remains a placeholder. New `api/hooks/portal.ts`, `map/MiniMap.tsx`, `components/cssToken.ts`.
+- **Tests:** API 341 (new `tests/integration/portal.test.ts`, 12 tests incl. golden G6), web 114 (new `features/portals.test.tsx`, 21 tests from real API responses captured into `api-11-20.json`); ownership, ALREADY_DONE, hand-over filter, Accept-without-proposal, blocked-button and sort mutations caught.
+
+### Changed (M9)
+- A tap on a milestone that is already passed now returns **409 ALREADY_DONE** (API §7.6) instead of INVALID_TRANSITION; the M4 test `LOADING` on an in-transit shipment was updated accordingly.
+- `toDriverTripShipment` takes the derived instruction (was always `null`).
+- `NotificationList` takes a `linkFor` (customer items open the order); `MapView`/`MapLegend` accept a collapsed legend for small maps.
+- API Vitest `testTimeout` raised to 30 s: several integration tests advance ~20 sim-hours through the real pipeline and took 4.7–6.9 s on a loaded machine, so the 5 s default timed out and cascaded. Assertions unchanged.
+- `apps/web/src/test/fixtures/api-11-20.json`: M9 keys added (customer orders/detail/alerts/notifications, driver trips before/after hand-over and at the gate, classify, report queue, replays, milestone tap) from the real API; existing keys unchanged.
+
+### Added (M8 — recovery engine)
+- **Backend:** recovery options generated inside the recalculation pipeline for Watch / At risk / Late shipments when inputs change; five kinds with documented feasibility (REPLACEMENT_TRUCK, REROUTE, SPLIT, NEW_WINDOW, NOTIFY_ONLY), each ETA from the one projection path on a modified world copy; Suggested rule; #29 options and #30 choose (re-evaluated at the decision minute → RC-4, 409 STALE_OPTIONS / ALREADY_DONE, audit of all alternatives), hand-over (truck + driver switch, original truck to maintenance), reroute with a PLAN_CHANGE ledger row, SPLIT child shipment, NEW_WINDOW acceptance through #28 (L4); RECOVERY_CHOSEN / RECOVERY_APPLIED events, RECOVERY_CONFIRMED / PLAN_UPDATED notifications; alerts carry proposed and chosen options and a plain customer action line.
+- **Approved alert lifecycle:** an alert with an active recovery action (ACTION_CHOSEN) stays open when risk improves and resolves when the recovery completes = at arrival; ordinary OPEN alerts still resolve when risk drops below At risk.
+- **Decisions recorded (2026-11-12):** documented yard road distance (Khopoli yard 20 km); recovery completes at arrival, no cancel endpoint; option sets regenerate only when inputs change; SPLIT defaults (same-transporter free plant truck else any, lane primary route, autopilot, code `<parent>-S1`, departure after 40 min loading, same promise).
+- **Shared contracts:** `RecoveryOptionsResponse`, `ChooseRecoveryRequest`, `ChooseRecoveryResponse` (moved verbatim from the web's `pending.ts`).
+- **Frontend:** recovery UI enabled on the real API; confirm dialog states that the estimate is recalculated at the decision minute.
+- **Tests:** API 329 (new: 9 unit + 21 integration), web 93 (new recovery component tests from captured real responses); lifecycle, stale-set and duplicate-choice mutations caught.
+
+### Changed (M8)
+- `etaService`: `loadEtaContext` + `explainIn` (one projection path for the pipeline and for recovery options). `applyChange` passes the static world to the action.
+- Stop cause after a shortened stop keeps the original report (engine doc §8 "Load transfer").
+- M7 test expectation updated: alerts now carry the Suggested option as `proposedOption` (was `null` before M8).
+
 ### Added (Combined Milestone 1 — M7 + real control tower)
 - **Backend:** shipments list/detail (#14, #15), timeline (#16), map layers (#10, `x_source` kept) and positions (#11, extrapolated read-only with the same engine), audit (#37), reference (#38), disruptions list/create/end (#7–#9, through `applyChange` and the pipeline, with impact summary), alert engine inside the pipeline (open on AT_RISK/LATE, one active per shipment, firstAtRiskAt/customerNotifiedAt, resolve on level drop or arrival, ARRIVED_LATE at finalisation), notifications (#31–#33, scoped, shared coordinator read state), alerts (#26, #27) and customer response (#28 without the NEW_WINDOW branch). Deterministic ids for alerts, notifications and events.
 - **Shared contracts:** moved from the web's `pending.ts` to `@routepulse/shared` (verbatim from API §2.2/§5–§7/§10–§11/§14): shipments, timeline, alerts, notifications, disruptions, map, audit, reference DTOs; `GeoJSONLineString.x_source?` (optional, non-breaking).

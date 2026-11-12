@@ -1,6 +1,6 @@
 # PROGRESS — RoutePulse
 
-Last updated: 2026-11-12 — backend Milestones 1–6 and **Combined Milestone 1** (M7 disruptions, alerts, notifications + the control tower on real APIs) on branch `backend`; frontend Phases 1–2 merged and now integrated with the real API (the in-browser mock remains available for development only). Nothing is marked Verified. Frontend ↔ backend notes: `docs/FRONTEND_BACKEND_HANDOFF.md`.
+Last updated: 2026-11-12 — backend Milestones 1–6 and **Combined Milestone 1** (M7 disruptions, alerts, notifications + the control tower on real APIs), **M8 recovery engine** **M9 operational completion + role portals** (orders, milestone taps, replay, driver trip; customer and driver portals, replay page, report queue) and **M10 analytics** (#36 + `/dashboard`; the Control Tower's on-time and warning-lead cards now show real values) on branch `backend` — all planned functional milestones are implemented; frontend Phases 1–2 merged and now integrated with the real API (the in-browser mock remains available for development only). Nothing is marked Verified. Frontend ↔ backend notes: `docs/FRONTEND_BACKEND_HANDOFF.md`.
 
 **Status values:** Not Started · In Progress · Implemented · Tested · Verified
 - *Implemented* = code written. *Tested* = automated tests written and passing (ran by us). *Verified* = checked in the running app against the acceptance criteria.
@@ -55,7 +55,7 @@ Last updated: 2026-11-12 — backend Milestones 1–6 and **Combined Milestone 1
 | 1.4 | Vite + React app shell; dev proxy for `/api`, `/tiles`, `/glyphs` — `apps/web` joined the workspace; scripts `dev`, `dev:mock`, `build`, `typecheck`, `test` (run with `-w @routepulse/web`) | Dev B | 1.1 | Implemented | Typecheck + production build pass; mock dev server serves every module; not yet run against the API |
 | 1.5 | Express v5 app: helmet (same-origin CSP), JSON-only (415) + 100 kB limit, requestId, error envelope middleware, request log, `GET /api/health` | Dev A | 1.1 | Tested | 7 integration tests pass; a deliberately broken 415 guard made the suite fail (test can fail) |
 | 1.6 | Vitest set-up (api workspace); test DB `routepulse_test` migrated by global setup; guard refuses non-test databases | Dev A | 1.3 | Tested | Runs green; guard proven by refusing the dev DB |
-| 1.7 | `packages/shared`: enums, base types and the DTOs of every implemented endpoint (#1–#6, #18, #20–#25, #34, #35); the web app imports them (20 former duplicates removed from `apps/web/src/api/contract/pending.ts`); DTOs of unbuilt endpoints still live in `pending.ts` until published | Both | 1.1 | In Progress | Workspace typecheck clean (shared, api, web); enum drift check passes (2.4) |
+| 1.7 | `packages/shared`: enums, base types and the DTOs of every endpoint (#1–#38); the web app imports every API type from `@routepulse/shared` — the temporary `apps/web/src/api/contract/pending.ts` was deleted in M10 after the dashboard DTOs were published | Both | 1.1 | Tested | Workspace typecheck clean (shared, api, web); enum drift check passes (2.4) |
 | 1.8 | Design tokens (`tokens.css`), Tailwind theme, self-hosted Inter | Dev B | 1.4 | In Progress | Tokens (UI plan §2) and Tailwind theme done; default palette disabled; Inter files not added yet (handoff Q5) |
 | 1.9 | `.gitignore` covers `.env*` (except `.env.example`), `dist/`, `node_modules/`, generated Prisma client (developers commit) | Dev A | 1.1 | Implemented | N/A |
 
@@ -65,7 +65,7 @@ Last updated: 2026-11-12 — backend Milestones 1–6 and **Combined Milestone 1
 |---|---|---|---|---|---|
 | 2.1 | `schema.prisma`: all 20 models and 22 enums per schema doc v0.3 (incl. `physicalArrivalAt`, `receivingWindowOverrideEndAt`); explicit `onDelete: Restrict` except the 5 documented Cascades | Dev A | 1.3 | Tested | `prisma validate` passes; migration applied to dev and test; integration tests query real tables |
 | 2.2 | Migrations `init_sim_state`, `sim_state_checks`, `full_schema`: 49 CHECK constraints + 5 partial unique indexes; `prisma migrate diff` against the schema is empty (Prisma will not drop them) | Dev A | 2.1 | Tested | Constraint and index lists asserted; 10 behavioural rejection tests pass |
-| 2.3 | Json guards: `isLineString`, `isSegmentArray`, `routeProblems` (seed), `isFactorArray` (RiskSnapshot.factors), `isReportNeedsReviewParams` (Notification.params for REPORT_NEEDS_REVIEW); alert/response notification params are built from typed literals in `alertService` without a separate guard yet; option params come with M8 | Dev A | 2.1 | In Progress | Route, factor and report-notification guards exercised by tests |
+| 2.3 | Json guards: `isLineString`, `isSegmentArray`, `routeProblems` (seed), `isFactorArray` (RiskSnapshot.factors), `isReportNeedsReviewParams` (Notification.params), `isOptionParams` (RecoveryOption.params per kind, M8); alert/recovery notification params are typed literals without a separate guard | Dev A | 2.1 | In Progress | Guards unit-tested |
 | 2.4 | Enum drift check: compile-time equality of 22 shared unions vs Prisma enums (`contract-checks.ts`) + runtime order test (CT-1) | Dev A | 1.7, 2.1 | Tested | Passes; renaming one shared value failed both `tsc` (1 error) and the test |
 
 ## 3. Authentication and authorisation
@@ -92,10 +92,10 @@ Last updated: 2026-11-12 — backend Milestones 1–6 and **Combined Milestone 1
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
-| 5.1 | Shipments list (#14, filters/sort/limit, role views) and detail (#15) done; orders (#12, #13) not started | Dev A | 3.2, 4.2 | In Progress | #14/#15 integration tests (roles, scope, filters, validation, customer key scan) |
-| 5.2 | Timeline (#16) done (coordinator all events with actors; customer milestones/notices/recovery without actors). Milestone taps over HTTP (#17) not started (service exists since M4) | Dev A | 5.1 | In Progress | #16 tested |
+| 5.1 | Shipments list (#14, filters/sort/limit, role views) and detail (#15); orders list (#12: open/delivered/all, derived status, worst live risk, coordinator `customerId` filter) and order detail (#13, unwrapped `OrderSummary & { shipments }` per API §7.2) — M9 | Dev A | 3.2, 4.2 | Tested | #14/#15 + #12/#13 integration tests (roles, scope, 404 for other customers, validation, customer key scan) |
+| 5.2 | Timeline (#16) (coordinator all events with actors; customer milestones/notices/recovery without actors). Milestone taps over HTTP (#17, M9) through the existing `simulationService.recordMilestone` (world lock, one transaction, the one pipeline): driver own shipment AT_GATE/GATE_OUT/ARRIVED/DELIVERED; coordinator override of the same next step on manual shipments with a required note (audit `milestone.override`); IN_TRANSIT and system milestones rejected; 409 ALREADY_DONE for a passed milestone, 409 INVALID_TRANSITION with the plain reason otherwise | Dev A | 5.1 | Tested | #16 + #17 integration tests (roles, other driver 404, duplicates, early taps, arrivedAt ≠ tap time, rollback writes nothing, audit) |
 | 5.3 | Map layers (#10, role-scoped, `x_source: HAND_TRACED_DEMO` kept), positions (#11, live shipments, extrapolated between grid steps by the same engine, read-only), reference (#38) | Dev A | 4.1, 5.1 | Tested | Scoping per role, extrapolation writes nothing |
-| 5.4 | Driver trip (#21) incl. instruction and hand-overs | Dev A | 5.1, 9.4 | Not Started | Not tested |
+| 5.4 | Driver trip (#21, M9): own live shipments with next step (same rules as #17); derived instruction for the replacement driver ("Collect load from TRK-07 near <segment> — transfer until HH:MM" while the transfer runs); hand-overs from RECOVERY_CHOSEN events (`previousDriverUserId` = caller, last 12 sim-hours) | Dev A | 5.1, 9.4 | Tested | Integration tests (scope, roles, instruction appears/ends, hand-over appears/expires) |
 | 5.5 | Audit (#37): coordinator, shipment filter incl. its alerts/reports/attribution rows; `shipmentCode` added to audit data for the activity feed | Dev A | 5.1 | Tested | Roles, filters, validation |
 
 ## 6. Simulation
@@ -118,7 +118,7 @@ Last updated: 2026-11-12 — backend Milestones 1–6 and **Combined Milestone 1
 | 7.2 | Identity + largest-remainder rounding (ET-1, ET-2, ET-3) | Dev A | 7.1 | Tested | ET-1 at every 5-min step 09:30–18:00; ET-2 property test (1,000 ledgers); ET-3 over 12 settles |
 | 7.3 | HIST pace from history + proration (ET-6) | Dev A | 4.3, 7.1 | Tested | 20 → 10 → 0 min |
 | 7.4 | Risk level, score, range, confidence (RK-1…RK-3) | Dev A | 7.1 | Tested | `engines/risk.ts`, 6 unit tests |
-| 7.5 | Recalculation pipeline (`services/etaService.ts`) + snapshot rule + cached fields; ETA endpoint (#18) and rules (#20) done; replay (#19) **not started** (needs the timeline/position DTOs) | Dev A | 7.1, 7.4 | In Progress | Pipeline, snapshot rule, transactions, #18 scoping/AZ-4 scan, #20 tested |
+| 7.5 | Recalculation pipeline (`services/etaService.ts`) + snapshot rule + cached fields; ETA endpoint (#18), rules (#20) and replay (#19, M9: stored RiskSnapshots ascending, position on the snapshot's own route, coordinator timeline, lead time = promise − firstAtRiskAt; read-only) | Dev A | 7.1, 7.4 | Tested | Pipeline, snapshot rule, transactions, #18 scoping/AZ-4 scan, #20, #19 (G6, read-only digest, roles) tested |
 | 7.6 | Worked examples from the engine doc as unit tests: Example 2 (hero 09:30 / 10:25 / 10:30 / 11:10 / 11:25) and Example 3 (17:50 after the transfer) done with the derived pace; Example 1 (Nashik, designed p = 0.95) not written | Dev A | 7.2 | In Progress | Example 2–3 checkpoints pass |
 
 ## 8. Delay attribution
@@ -135,9 +135,9 @@ Last updated: 2026-11-12 — backend Milestones 1–6 and **Combined Milestone 1
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
 | 9.1 | Alert lifecycle in the pipeline (open on AT_RISK/LATE, one active per shipment, firstAtRiskAt/customerNotifiedAt, resolve on level drop or at arrival, new episode after resolution) and notifications AT_RISK, AT_RISK_CUSTOMER, BACK_ON_TRACK, ARRIVED_LATE, REPORT_NEEDS_REVIEW, CUSTOMER_RESPONDED; endpoints #31–#33. RECOVERY_CONFIRMED / PLAN_UPDATED come with M8; DELIVERED notification not implemented (no documented trigger/audience) | Dev A | 7.5 | Tested | G2 alerts, no duplicates (AC-M4.7), resolution, scoping, read state |
-| 9.2 | Alerts #26, #27 (coordinator and customer views) and customer response #28 (record, notify, event, audit). The NEW_WINDOW acceptance branch of #28 comes with M8 | Dev A | 9.1 | In Progress | #26–#28 tested |
-| 9.3 | `generateOptions` (5 kinds), Suggested rule (RC-1, RC-2) | Dev A | 7.1 | Not Started | Not tested |
-| 9.4 | Choose (#30) incl. hand-over (D3), staleness 409; NEW_WINDOW acceptance applies the stored override (L4) (RC-4, RC-5, ET-10, AZ-9) | Dev A | 9.3 | Not Started | Not tested |
+| 9.2 | Alerts #26, #27 (proposed/chosen options, customer action line) and customer response #28 incl. the NEW_WINDOW acceptance branch (L4, through the pipeline) | Dev A | 9.1 | Tested | #26–#28 incl. accept and stale acceptance |
+| 9.3 | `evaluateOptions` (5 kinds, documented feasibility, one projection path) + Suggested rule (RC-1, RC-2, RC-3); option sets regenerated when inputs change (decision 2026-11-12); replacement distance = documented yard road distance (Khopoli 20 km) or route distance from the plant | Dev A | 7.1 | Tested | Unit (rules) + integration (feasibility, reasons, suggestion, CO₂e null) |
+| 9.4 | Choose (#30) re-evaluated at the decision minute (RC-4), stale/duplicate protection (AZ-9), hand-over with truck and driver switch (D3, RC-5), REROUTE with PLAN_CHANGE ledger row, SPLIT child shipment (stated defaults), NEW_WINDOW awaiting → acceptance applies the stored window (L4, ET-10) | Dev A | 9.3 | Tested | G5–G8 parts, RC-4 per kind, rollback, running vs paused |
 | 9.5 | Driver reports: classify (#22), create (#23), queue (#24), review (#25) (CL-1); RPT pending → confirmed; review re-tags attribution. Driver trip endpoint #21 itself is task 5.4 (the `DriverTripShipment` DTO is built and returned by #23) | Dev A | 7.5 | Tested | 29 integration + classifier unit tests; driver scope and role checks |
 | 9.6 | CO₂e on options — only if G-CO2 passes (RC-3 must pass either way) | Dev A | O-9 (gate) | Not Started | Not tested |
 
@@ -154,45 +154,45 @@ Last updated: 2026-11-12 — backend Milestones 1–6 and **Combined Milestone 1
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
-| 11.1 | Control tower layout, KPI strip, shipment list — connected to real #14/#26/#24; dashboard KPIs (#36) show "Unavailable" until M10 | Dev B / Dev A | 3.4, 5.1, 10.3 | Implemented | Component tests from real API fixtures; manual browser run |
+| 11.1 | Control tower layout, KPI strip, shipment list — connected to real #14/#26/#24; the On-time (30 d) and Median warning lead cards use the real #36 (same cached query as the dashboard's 30 d view; negative lead shown with a sign) | Dev B / Dev A | 3.4, 5.1, 10.3 | Implemented | Component tests from real API fixtures (incl. #36); developer browser run (88.5 % / 4 h 15 m at Thu 11:20 on the test DB) |
 | 11.2 | Alerts tab (real #26: shipment code, status, first-at-risk time, reason) and activity feed (real #37) | Dev B / Dev A | 9.2, 5.5 | Implemented | Component tests from real API fixtures; manual browser run |
 | 11.3 | Quick panel (real #15/#18) + shipment detail page (#15, #18, #34, #16) | Dev A | 7.5 | Implemented | Component tests (live, arrived, 404, loading); manual browser run |
 | 11.4 | ETA explanation: four-term identity table + factor list on the detail page (from #18). A graphical waterfall chart is not built | Dev A | 7.5 | In Progress | Component tests |
-| 11.5 | Recovery cards/dialogs exist (mock); with the real API an explicit "not available yet" notice is shown until M8 (`features/recovery/availability.ts`) | Dev B | 9.4 | In Progress | Notice tested (and mutation-checked) |
-| 11.6 | Replay page (UI plan §10) | Dev B | 7.5 | Not Started | Not tested |
+| 11.5 | Recovery cards, compare dialog, confirm dialog (now notes re-evaluation at the decision minute), stale/already-done banners — on the real #29/#30 | Dev B / Dev A | 9.4 | Implemented | Component tests from real API fixtures (not browser-checked in M8) |
+| 11.6 | Replay page (UI plan §10, M9): first-at-risk callout or "Never at risk", read-only banner, mini map at the snapshot position, snapshot panel (level, ETA ± range, slack, factors), EtaTimelineChart (Recharts: ETA line + range band, dashed promise, first-at-risk diamond, whole-hour IST ticks) with Chart/Table toggle, native range slider (←/→, Home/End, `aria-valuetext`), Play replay at 1 snapshot/s (off under reduced motion), focusable event markers | Dev B / Dev A | 7.5 | Implemented | Component tests from real API fixtures; developer browser run (desktop) |
 | 11.7 | Simulation dock (real #5/#6) + Simulation page: inject disruption (#8, segments from #38), impact summary, active list with End (#7/#9) | Dev A | 6.4–6.6 | Implemented | Component tests; manual browser run (rain → 3 alerts, impact shown) |
-| 11.8 | Driver reports queue; attribution tab with overrides | Dev B | 8.4, 9.5 | Not Started | Not tested |
+| 11.8 | Driver reports queue (M9): Pending / Confirmed tabs, cards with highlighted matched keywords, reason, delay used, party; Confirm; Change reason/party with a required note and the approved "Other · Unattributed" preset. Attribution overrides UI (#35) not built in M9 | Dev B / Dev A | 8.4, 9.5 | In Progress | Component tests from real API fixtures; developer browser run (change + confirm) |
 
 ## 12. Customer portal
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
-| 12.1 | Orders list with alert banner and response buttons (UI plan §11) | Dev B | 5.1, 9.2 | Not Started | Not tested |
-| 12.2 | Order detail with plain ETA, milestones, own map | Dev B | 12.1, 10.3 | Not Started | Not tested |
-| 12.3 | Notifications page | Dev B | 9.1 | Not Started | Not tested |
+| 12.1 | Orders list (M9): "Your orders", Open/Delivered, at-risk first, cards (grades, promise, status, ETA ± range, plain status, shipment count); CustomerAlertBanner with plain reason, server action line and Accept proposal (only when proposed) · Prefer to wait · Request a call; acknowledgement after responding | Dev B / Dev A | 5.1, 9.2 | Implemented | Component tests from real API fixtures (privacy word scan); developer browser run (response sent) |
+| 12.2 | Order detail (M9): per shipment plain ETA card, milestones without actor names, own-route mini map, transporter name (no driver), alert banner; order updates inline | Dev B / Dev A | 12.1, 10.3 | Implemented | Component tests (incl. 404); developer browser run |
+| 12.3 | Notifications page (M9): shared notification list with unread dots and Mark all read; items open the related order | Dev B / Dev A | 9.1 | Implemented | Component test |
 
 ## 13. Driver portal
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
-| 13.1 | Trip page: next-step card, instruction, hand-over banner, mini map (UI plan §12) | Dev B | 5.4 | Not Started | Not tested |
-| 13.2 | Report a problem: chips, suggestion confirm, duration, success | Dev B | 9.5 | Not Started | Not tested |
-| 13.3 | 360 px check, ≥ 48 px targets | Dev B | 13.1, 13.2 | Not Started | Not tested |
+| 13.1 | Trip page (M9): next-step card with one 56 px action, confirm dialog, server blocked reason and 409 messages, arrival-time note (L6), hand-over banner, derived instruction, stopped notice, collapsed mini map, open reports, sticky Report a problem, empty state | Dev B / Dev A | 5.4 | Implemented | Component tests (blocked, enabled at gate, instruction, hand-over, error); developer browser run at 360 px |
+| 13.2 | Report a problem (M9): 8 chips (2 columns, 64 px), text with #22 debounced 400 ms → "Suggested … Is this right?" Yes / Pick another, how-long chips, Send (56 px) → "Plant X has been informed." | Dev B / Dev A | 9.5 | Implemented | Component test; developer browser run at 360 px (typed text → suggestion → sent) |
+| 13.3 | 360 px check, ≥ 48 px targets | Dev B | 13.1, 13.2 | In Progress | Developer browser run at 360 × 740 (trip, report); not a full visual QA |
 
 ## 14. Analytics
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
-| 14.1 | `analyticsService` + dashboard endpoint (#36), arrival-based; AZ-10 | Dev A | 8.3 | Not Started | Not tested |
-| 14.2 | Dashboard page: filters, KPIs, charts with table toggle, transporter table (UI plan §13) | Dev B | 14.1 | Not Started | Not tested |
+| 14.1 | `analyticsService` + pure `engines/analytics.ts` + #36 (M10): one filtered set (arrivedAt in [to − period, to], `to` = last settled sim time; lane/transporter filters), KPIs (on-time, late, median delay of late, median warning lead, proactive notice, recovered, renegotiated), on-time by lane/transporter, Monday-IST weekly trend, causes by party/reason/lane/transporter from all attributed minutes, transporter table with raw vs fair (but-for) on-time; coordinator only; read-only | Dev A | 8.3 | Tested | 11 unit + 7 integration tests (roles 401/403, 400/404, SQL reconciliation per lane and total minutes, filters, read-only digest, live arrival AC-M5.7); recovery, but-for, window and week mutations caught |
+| 14.2 | Dashboard page (M10): URL-backed filters (period, lane, transporter from #38), 7 KPI cards with definitions, on-time by lane / transporter, weekly on-time and arrivals per week, delay minutes by party (100 % stacked per lane, fixed party order + legend), causes by reason, all with Chart/Table toggle; transporter table (raw / fair / gap, small-fleet chip, top cause); drill-down dialog via #14 (same window); empty, loading and error states | Dev B / Dev A | 14.1 | Implemented | 7 component tests from real API fixtures (incl. empty set and 404); developer browser run at 1440 / 1024 / 768 / 390 px (no horizontal overflow) |
 
 ## 15. Testing and integration
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
 | 15.1 | Day-1 go/no-go gate (IDEA_HUNT §7.6) by build hour 5 | Both | 4.4, 6.3, 7.5, 3.2, 10.3 | Not Started | Not tested |
-| 15.2 | Golden hero test G0–G8 — G0, G1, **G2** (report path incl. one OPEN alert, firstAtRiskAt 11:10, coordinator + customer notifications, REPORT_NEEDS_REVIEW), G3 (customer response part), G4 pass through the services/HTTP. G5–G8 need recovery (M8) | Dev A | 6.x–9.x | In Progress | G0–G4 parts pass |
-| 15.3 | Full suite green: unit + integration + typecheck | Both | All | Not Started | Not tested |
+| 15.2 | Golden hero test G0–G8 — G0–G5, G7 (arrival 17:50 on time, alert resolved at arrival, ledger GATE 40 / HIST 20 / DISR 120 / RPT 90), G8 (two runs identical) and G6 (M9: replay first at risk 11:10, lead time 410 min, snapshots at 10:30 / 11:10 / 11:25 action times) pass through the services/HTTP | Dev A | 6.x–9.x | Tested | G0–G8 pass |
+| 15.3 | Full suite green: unit + integration + typecheck | Both | All | In Progress | Green at M10: `npm test` (typecheck + API 24 files / 359 tests + web 10 files / 121 tests); final run pending feature stop |
 | 15.4 | Acceptance-criteria walk-through (spec §6) in the running app | Both | 11–14 | Not Started | Not tested |
 | 15.5 | Visual QA checklist (UI plan §19) | Dev B | 11–14 | Not Started | Not tested |
 | 15.6 | Accessibility pass (keyboard, contrast, reduced motion) | Dev B | 11–14 | Not Started | Not tested |

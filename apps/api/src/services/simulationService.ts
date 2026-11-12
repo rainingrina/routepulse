@@ -1,4 +1,4 @@
-import type { Milestone, Role, SimStateDto } from '@routepulse/shared';
+import { MILESTONES, type Milestone, type Role, type SimStateDto } from '@routepulse/shared';
 import type { PrismaClient } from '../db/prisma.js';
 import { DomainError } from '../errors/domainError.js';
 import { eligibleCheckIn } from '../engines/receivingWindow.js';
@@ -244,7 +244,7 @@ export function createSimulationService(deps: SimulationServiceDeps) {
    */
   async function applyChangeInternal<T>(
     trigger: Exclude<RecalcTrigger, 'STEP' | 'MILESTONE' | 'RESET' | 'SEED'>,
-    apply: (tx: Prisma.TransactionClient, actionS: number) => Promise<{ result: T; shipmentIds?: readonly string[] }>,
+    apply: (tx: Prisma.TransactionClient, actionS: number, world: StaticWorld) => Promise<{ result: T; shipmentIds?: readonly string[] }>,
   ): Promise<{ result: T; actionS: number }> {
     const c = await loadClock();
     const actionS = await settleForAction();
@@ -253,7 +253,7 @@ export function createSimulationService(deps: SimulationServiceDeps) {
       return await prisma.$transaction(
         async (tx) => {
           const w = await staticWorld(tx);
-          const { result, shipmentIds = [] } = await apply(tx, actionS);
+          const { result, shipmentIds = [] } = await apply(tx, actionS, w);
           c.lastSettledS = actionS;
           await recalc(tx, { simTimeS: actionS, trigger, world: w, actionShipmentIds: shipmentIds });
           await persistClock(tx, c, true);
@@ -267,7 +267,7 @@ export function createSimulationService(deps: SimulationServiceDeps) {
     }
   }
 
-  async function recordMilestoneInternal(shipmentId: string, m: Milestone, actor: Actor): Promise<void> {
+  async function recordMilestoneInternal(shipmentId: string, m: Milestone, actor: Actor, note?: string): Promise<void> {
     const c = await loadClock();
     const actionS = await settleForAction();
 
@@ -278,7 +278,12 @@ export function createSimulationService(deps: SimulationServiceDeps) {
         const disruptions = await loadDisruptions(tx, actionS);
         const before = await loadLiveShipments(tx, w, disruptions);
         const target = before.find((s) => s.id === shipmentId);
-        if (!target) throw new DomainError('NOT_FOUND', 'This item is not available.');
+        if (!target) {
+          // Delivered shipments leave the live set: a repeated tap is ALREADY_DONE, not missing.
+          const done = await tx.shipment.findFirst({ where: { id: shipmentId, isHistorical: false, currentMilestone: 'DELIVERED' }, select: { id: true } });
+          if (done) throw new DomainError('ALREADY_DONE', 'This milestone is already recorded.');
+          throw new DomainError('NOT_FOUND', 'This item is not available.');
+        }
         const working = before.map((s) => ({ ...s }));
         const sh = working.find((s) => s.id === shipmentId) as SimShipment;
         const driverEvents: SimEvent[] = [];
@@ -286,6 +291,8 @@ export function createSimulationService(deps: SimulationServiceDeps) {
         let delivered: string[] = [];
 
         if (sh.autopilot) throw new DomainError('INVALID_TRANSITION', "This shipment's milestones are recorded by the simulation.");
+        // A milestone at or before the current one was already recorded (duplicate tap) — API §7.6.
+        if (MILESTONES.indexOf(m) <= MILESTONES.indexOf(sh.milestone)) throw new DomainError('ALREADY_DONE', 'This milestone is already recorded.');
         switch (m) {
           case 'AT_GATE':
             if (sh.milestone !== 'TRUCK_ASSIGNED') throw new DomainError('INVALID_TRANSITION', 'The truck can only report at the gate once, after it is assigned.');
@@ -337,12 +344,12 @@ export function createSimulationService(deps: SimulationServiceDeps) {
         const settled = simulate({ shipments: working, routes: w.routes, disruptions, config: SIM_CONFIG, fromS: actionS, toS: actionS });
         await persistShipments(tx, before, settled.shipments);
         await persistLedger(tx, before, settled.shipments, disruptions, actionS);
-        await persistEvents(tx, driverEvents, actor.role === 'COORDINATOR' ? 'COORDINATOR' : 'DRIVER', actor.userId, { tappedAt: fromS(actionS).toISOString() });
+        await persistEvents(tx, driverEvents, actor.role === 'COORDINATOR' ? 'COORDINATOR' : 'DRIVER', actor.userId, { tappedAt: fromS(actionS).toISOString(), ...(note ? { note } : {}) });
         await persistEvents(tx, systemEvents, 'SYSTEM');
         await persistEvents(tx, settled.events, 'SIMULATION');
         await finalizeArrivals(tx, [...driverEvents, ...settled.events]);
         await releaseTrucks(tx, [...delivered, ...settled.delivered]);
-        await writeAudit(tx, { actorUserId: actor.userId, actorRole: actor.role, action: 'milestone.record', entityType: 'Shipment', entityId: shipmentId, data: { milestone: m, shipmentId, shipmentCode: sh.code } });
+        await writeAudit(tx, { actorUserId: actor.userId, actorRole: actor.role, action: actor.role === 'COORDINATOR' ? 'milestone.override' : 'milestone.record', entityType: 'Shipment', entityId: shipmentId, data: { milestone: m, shipmentId, shipmentCode: sh.code, ...(note ? { note } : {}) } });
         c.lastSettledS = actionS;
         await recalc(tx, { simTimeS: actionS, trigger: 'MILESTONE', world: w, actionShipmentIds: [shipmentId], eventShipmentIds: [...new Set(settled.events.map((e) => e.shipmentId))] });
         await persistClock(tx, c, true);
@@ -474,8 +481,9 @@ export function createSimulationService(deps: SimulationServiceDeps) {
       });
     },
 
-    async recordMilestone(shipmentId: string, milestone: Milestone, actor: Actor): Promise<void> {
-      return lock.run(() => recordMilestoneInternal(shipmentId, milestone, actor));
+    /** #17: a driver tap or a coordinator override (note required by the controller; audit milestone.override). */
+    async recordMilestone(shipmentId: string, milestone: Milestone, actor: Actor, note?: string): Promise<void> {
+      return lock.run(() => recordMilestoneInternal(shipmentId, milestone, actor, note));
     },
 
     /** Any world change (disruption, report, review, recovery, window) through the single pipeline. */

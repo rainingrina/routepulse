@@ -14,3 +14,6 @@ export * from './api/disruptions.js';
 export * from './api/map.js';
 export * from './api/audit.js';
 export * from './api/reference.js';
+export * from './api/recovery.js';
+export * from './api/orders.js';
+export * from './api/analytics.js';

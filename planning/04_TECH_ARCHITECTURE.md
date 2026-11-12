@@ -565,6 +565,7 @@ stateDiagram-v2
   RESOLVED --> [*]
 ```
 - One active alert (OPEN or ACTION_CHOSEN) per shipment (AC-M4.7; partial unique index).
+- **Approved 2026-11-12 (M8):** `ACTION_CHOSEN → RESOLVED` only when the recovery completes, i.e. at arrival; an improving risk level does not resolve it (supersedes the "level below AT_RISK" edge for ACTION_CHOSEN in the diagram above).
 - On opening: set `firstAtRiskAt` if empty; create coordinator + customer notifications in the same transaction; set `customerNotifiedAt` if empty.
 - Notification triggers as in spec §5.5: AT_RISK / AT_RISK_CUSTOMER, RECOVERY_CONFIRMED / PLAN_UPDATED, REPORT_NEEDS_REVIEW, CUSTOMER_RESPONDED, BACK_ON_TRACK, DELIVERED, and ARRIVED_LATE (sent at arrival when `arrivedAt > promisedBy`).
 - Notifications store `templateKey` + `params` + English `text`. The client renders from its dictionary (enables a verified second language later).
@@ -767,7 +768,22 @@ Status: **Resolved** (by a decision or by design), **Open** (team decision neede
 | 37 | Reviewing a report after delivery: the review response must carry a live ETA | Interpretation (Milestone 6) | 409 INVALID_TRANSITION; post-delivery corrections use the attribution override (#35) — approved |
 | 38 | A LATE shipment that never passed AT_RISK would get no alert | Interpretation (Combined M1) | Alerts open on AT_RISK or LATE |
 | 39 | "Returns to On track" notification vs resolution when the level drops to WATCH | Interpretation (Combined M1) | Resolution at WATCH or ON_TRACK sends BACK_ON_TRACK ("no longer at risk") |
-| 40 | Alert state diagram resolves ACTION_CHOSEN when the level drops, but G5/Example 3 keep the hero's alert ACTION_CHOSEN at WATCH after recovery | **Open (decide in M8)** | Current code follows the diagram (no ACTION_CHOSEN exists before M8) |
+| 40 | Alert state diagram resolves ACTION_CHOSEN when the level drops, but G5/Example 3 keep the hero's alert ACTION_CHOSEN at WATCH after recovery | **Resolved (approved 2026-11-12, M8)** | An alert with an active recovery action stays open when risk improves; it resolves when the recovery completes = arrival. Ordinary OPEN alerts resolve when risk drops |
+| 42 | Replacement-truck distance: hand-traced map gives ~1.5 km for TRK-11, Example 3 assumes 20 km | **Resolved (approved 2026-11-12)** | Documented yard road distance (`config/recovery.ts`: Khopoli yard 20 km); trucks at the plant use the shipment's route distance; other locations are not candidates |
+| 43 | "Each recalculation creates a new option set" would make sets stale every step | **Resolved (approved 2026-11-12)** | Regenerate only when inputs change; a decided set is kept |
+| 44 | Recovery completion / cancel undefined | **Resolved (approved 2026-11-12)** | Completes at arrival; no cancel endpoint |
+| 45 | SPLIT details undefined (truck, route, driver, code, autopilot) | **Resolved (approved 2026-11-12)** | Same-transporter free plant truck (lowest code) else any; lane primary route; autopilot, no driver; code `<parent>-S1`; departure after 40 min loading; same promise; urgent lines moved |
+| 46 | Option ETA shown at generation vs realised at the decision (Example 2: 17:35 proposed at 11:10, 17:50 realised at 11:25) | Interpretation (M8) | Choose re-evaluates at the decision minute and refreshes the option row (RC-4); the audit keeps the values shown |
+| 47 | #17 "coordinator for any milestone (override)" — the engine only models the driver steps; LOADING / IN_TRANSIT are system-recorded and autopilot shipments are simulation-driven | Interpretation (M9) | Coordinator override = the same next driver step on a manual shipment, same timing rules, note required, audit `milestone.override`; system milestones → 409 (403 for drivers) |
+| 48 | Repeated tap on a passed milestone | Interpretation (M9) | 409 ALREADY_DONE (API §7.6 lists it); before M9 the service answered INVALID_TRANSITION |
+| 49 | `DriverTripShipment.instruction` wording and lifetime | Interpretation (M9) | Only for the replacement driver, while the transfer runs (`stopUntil` from the RECOVERY_CHOSEN event): "Collect load from <previous truck> near <segment> — transfer until HH:MM."; "near" = the route segment name at the stored progress. The previous driver gets the hand-over banner, not an instruction |
+| 50 | Notifications for drivers | Interpretation (M9) | None: the notification audience is coordinator/customer only (schema). Drivers see the next step, instruction, hand-overs and report status on `/trip` |
+| 51 | Customer "reject" a proposal | Interpretation (M9) | The approved responses are ACCEPT_PROPOSAL / PREFER_TO_WAIT / REQUEST_CALL; "Accept proposal" is shown only when a proposal exists |
+| 52 | Which minutes the #36 cause charts sum | **Resolved (approved 2026-11-12, M10)** | All attributed minutes of the filtered set (delay vs plan, incl. on-time shipments and the WIN knock-on split); GAP under Unattributed by party only |
+| 53 | Weekly trend buckets | **Resolved (approved 2026-11-12, M10)** | Calendar weeks from Monday 00:00 IST; first/last may be partial; empty weeks shown |
+| 54 | "Window ends at current simTime" between grid steps | **Resolved (approved 2026-11-12, M10)** | The last settled simulation time (same as the other read endpoints) |
+| 55 | Median of an even count | **Resolved (approved 2026-11-12, M10)** | Mean of the two middle values, rounded half-up; null when empty |
+| 56 | Risk distribution / recovery savings requested for the dashboard but not in API §13 | Interpretation (M10) | Not added to #36 (no invented metrics); live risk counts stay in the Control Tower KPI strip; recovery is shown as recovered % and renegotiated count |
 | 41 | DELIVERED notification kind has no documented trigger or audience | Open | Not sent |
 
 ---

@@ -13,7 +13,10 @@ import type { Actor } from './simulationService.js';
  * its own.
  *
  *   [*] → OPEN            level becomes AT_RISK (or LATE) and the shipment has no active alert
- *   OPEN / ACTION_CHOSEN → RESOLVED   level below AT_RISK, or the shipment arrived
+ *   OPEN → RESOLVED       level below AT_RISK, or the shipment arrived
+ *   ACTION_CHOSEN → RESOLVED   only when the recovery completes = the shipment arrives (approved
+ *                         2026-11-12: an alert with an active recovery action stays open even when
+ *                         the risk improves; no cancel operation exists)
  *
  * One active alert per shipment (partial unique index, AC-M4.7): staying at risk across any number
  * of recalculations never opens a second alert; a new episode starts only after resolution.
@@ -79,7 +82,7 @@ export async function evaluateAlerts(tx: Prisma.TransactionClient, simTimeS: num
     if (atRisk && !alert) {
       await openAlert(tx, simTimeS, s, r);
       changed = true;
-    } else if (!atRisk && alert) {
+    } else if (!atRisk && alert && alert.status === 'OPEN') {
       await resolveAlert(tx, simTimeS, s, alert.id, r.level);
       changed = true;
     }
@@ -89,9 +92,14 @@ export async function evaluateAlerts(tx: Prisma.TransactionClient, simTimeS: num
 
 async function openAlert(tx: Prisma.TransactionClient, atS: number, s: ShipmentFacts, r: EtaResult): Promise<void> {
   const alertId = `alr_${s.id}_${atS}`;
+  // Proposed action = the Suggested option of the shipment's current set (architecture §11), which the
+  // pipeline generated just before this step; the set's options are attached to the new alert.
+  const ship = await tx.shipment.findUniqueOrThrow({ where: { id: s.id }, select: { currentOptionSetId: true } });
+  const suggested = ship.currentOptionSetId ? await tx.recoveryOption.findFirst({ where: { optionSetId: ship.currentOptionSetId, isSuggested: true }, select: { id: true } }) : null;
   await tx.alert.create({
-    data: { id: alertId, shipmentId: s.id, status: 'OPEN', openedAt: fromS(atS), topFactor: r.topFactor?.code ?? null, topReason: r.topFactor?.reason ?? null },
+    data: { id: alertId, shipmentId: s.id, status: 'OPEN', openedAt: fromS(atS), topFactor: r.topFactor?.code ?? null, topReason: r.topFactor?.reason ?? null, proposedOptionId: suggested?.id ?? null },
   });
+  if (ship.currentOptionSetId) await tx.recoveryOption.updateMany({ where: { optionSetId: ship.currentOptionSetId, alertId: null }, data: { alertId } });
   await tx.shipment.update({
     where: { id: s.id },
     data: { ...(s.firstAtRiskAt ? {} : { firstAtRiskAt: fromS(atS) }), ...(s.customerNotifiedAt ? {} : { customerNotifiedAt: fromS(atS) }) },
@@ -164,6 +172,10 @@ export async function onArrived(tx: Prisma.TransactionClient, shipmentId: string
   const atS = toS(s.arrivedAt);
   const alert = await tx.alert.findFirst({ where: { shipmentId, status: { in: ['OPEN', 'ACTION_CHOSEN'] } }, select: { id: true } });
   if (alert) await resolveAlert(tx, atS, s, alert.id, 'ARRIVED');
+  // The recovery is complete at arrival: a proposal still awaiting the customer lapses (L4), and no
+  // current option set remains.
+  await tx.recoveryOption.updateMany({ where: { shipmentId, status: { in: ['AWAITING_CUSTOMER', 'PROPOSED'] } }, data: { status: 'SUPERSEDED' } });
+  await tx.shipment.update({ where: { id: shipmentId }, data: { currentOptionSetId: null } });
   if (s.arrivedAt.getTime() <= s.promisedBy.getTime()) return;
   if ((await tx.notification.count({ where: { shipmentId, kind: 'ARRIVED_LATE' } })) > 0) return;
   const rows = await tx.delayAttribution.findMany({ where: { shipmentId, kind: 'TIME_LOST', factor: { not: 'WIN' }, reason: { not: null } }, select: { reason: true, delaySeconds: true }, orderBy: { id: 'asc' } });
@@ -194,11 +206,12 @@ export async function onArrived(tx: Prisma.TransactionClient, shipmentId: string
 export async function respondToAlert(tx: Prisma.TransactionClient, atS: number, input: { alertId: string; customerId: string; response: CustomerResponse; actor: Actor }): Promise<string> {
   const a = await tx.alert.findFirst({
     where: { id: input.alertId, shipment: { order: { customerId: input.customerId } } },
-    select: { id: true, status: true, customerResponse: true, shipmentId: true, shipment: { select: { code: true } } },
+    select: { id: true, status: true, customerResponse: true, chosenOptionId: true, shipmentId: true, shipment: { select: { code: true } } },
   });
   if (!a) throw notFound();
   if (a.status === 'RESOLVED') throw new DomainError('INVALID_TRANSITION', 'This alert is already resolved.');
-  if (a.status === 'ACTION_CHOSEN' && a.customerResponse !== null) throw new DomainError('INVALID_TRANSITION', 'Your response was already recorded for this action.');
+  const awaiting = a.chosenOptionId ? (await tx.recoveryOption.findUnique({ where: { id: a.chosenOptionId }, select: { status: true } }))?.status === 'AWAITING_CUSTOMER' : false;
+  if (a.status === 'ACTION_CHOSEN' && a.customerResponse !== null && !awaiting) throw new DomainError('INVALID_TRANSITION', 'Your response was already recorded for this action.');
   await tx.alert.update({ where: { id: a.id }, data: { customerResponse: input.response, customerRespondedAt: fromS(atS), customerRespondedByUserId: input.actor.userId } });
   const n = await tx.notification.count({ where: { alertId: a.id, kind: 'CUSTOMER_RESPONDED' } });
   const text: Record<CustomerResponse, string> = { ACCEPT_PROPOSAL: 'accepted the proposal', PREFER_TO_WAIT: 'prefers to wait', REQUEST_CALL: 'requested a call' };
