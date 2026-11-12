@@ -2,44 +2,61 @@ import { Outlet } from 'react-router';
 import { useDriverReports } from '../../api/hooks/world';
 import { useSync } from '../../api/sync';
 import { CountBadge } from '../../components/display/basics';
-import { Factory, ICON_STROKE } from '../../components/icons';
+import { Bell, FlaskConical, LayoutDashboard, ListChecks, Package, Radar } from '../../components/icons';
 import { SimClockControl } from '../../features/simulation/SimClockControl';
 import { t } from '../../i18n/en';
+import { BP, useMediaQuery } from '../useMediaQuery';
 import { useCurrentUser } from '../RoleGuard';
 import { NotificationBell } from './NotificationBell';
-import { LayoutOutlet, MockModeBanner, SkipLink, SyncBanners, TopNavLink, UserMenu, Wordmark } from './shell';
+import { ContextStrip, LayoutOutlet, MobileNav, MockModeBanner, SkipLink, SyncBanners, TopNavLink, UserMenu, Wordmark, type NavItem } from './shell';
 
-/** UI plan §3 coordinator top bar (64 px) + "Fictional data · Plant X" strip. Desktop-first. */
+/**
+ * Coordinator frame (UI plan §3, v2): one 56 px graphite bar — wordmark, the four sections, the
+ * simulation clock, notifications and account — then a thin context strip. Below 1024 px the
+ * sections move into a sheet; the clock stays available on the Control Tower dock and the
+ * Simulation page.
+ */
 export function CoordinatorLayout() {
   const pending = useDriverReports({ status: 'PENDING_REVIEW' });
   const pendingCount = pending.data?.items.length ?? 0;
+  const isLg = useMediaQuery(BP.lg);
+  const isXl = useMediaQuery(BP.xl);
+  const isWide = useMediaQuery(BP.wide);
+  const badge = <CountBadge count={pendingCount} label={`${pendingCount} pending review`} />;
+  const items: NavItem[] = [
+    { to: '/control-tower', label: t.nav.controlTower, icon: Radar },
+    { to: '/dashboard', label: t.nav.dashboard, icon: LayoutDashboard },
+    { to: '/reports', label: t.nav.reports, icon: ListChecks, badge },
+    { to: '/simulation', label: t.nav.simulation, icon: FlaskConical },
+  ];
   return (
     <div className="flex h-dvh flex-col">
       <SkipLink />
       <MockModeBanner />
-      <header className="z-20 shrink-0 border-b border-border bg-surface">
-        <div className="flex h-16 items-center gap-4 px-4 xl:px-6">
-          <Wordmark />
-          <nav aria-label="Main" className="flex min-w-0 items-center gap-1 overflow-x-auto">
-            <TopNavLink to="/control-tower">{t.nav.controlTower}</TopNavLink>
-            <TopNavLink to="/dashboard">{t.nav.dashboard}</TopNavLink>
-            <TopNavLink to="/reports">
-              {t.nav.reports}
-              <CountBadge count={pendingCount} label={`${pendingCount} pending review`} />
-            </TopNavLink>
-            <TopNavLink to="/simulation">{t.nav.simulation}</TopNavLink>
-          </nav>
+      <header className="on-dark z-20 shrink-0 bg-nav-bg">
+        <div className="flex h-14 items-center gap-3 px-3 xl:px-5">
+          {!isLg ? <MobileNav items={items} footer={<SimClockControl canControl onDark wrap />} /> : null}
+          <Wordmark inverse />
+          {isLg ? (
+            <nav aria-label="Main" className="ml-2 flex shrink-0 items-center gap-1 xl:ml-4">
+              {items.map((it) => (
+                <TopNavLink key={it.to} to={it.to} icon={it.icon} title={isXl ? undefined : it.label}>
+                  {/* 1024–1279 px: icon-only links (label kept for assistive tech) so the clock fits. */}
+                  <span className={isXl ? undefined : 'sr-only'}>{it.label}</span>
+                  {it.badge}
+                </TopNavLink>
+              ))}
+            </nav>
+          ) : null}
           <div className="flex-1" />
-          <div className="hidden lg:block">
-            <SimClockControl canControl />
-          </div>
-          <NotificationBell />
-          <UserMenu />
+          {isLg ? <SimClockControl canControl onDark compact={!isWide} /> : null}
+          <NotificationBell onDark />
+          <UserMenu onDark />
         </div>
-        <p className="border-t border-border bg-surface-subtle px-4 py-0.5 text-small text-text-muted xl:px-6">
-          {t.fictionalNotice} · {t.ruleBased}s · {t.timesInIst}
-        </p>
       </header>
+      <ContextStrip>
+        {t.fictionalNotice} · {t.ruleBased}s · {t.timesInIst}
+      </ContextStrip>
       <SyncBanners />
       <main id="main" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         <LayoutOutlet />
@@ -48,7 +65,7 @@ export function CoordinatorLayout() {
   );
 }
 
-/** UI plan §3 customer top bar: company name, Orders, Notifications, user menu, "Times shown in IST". */
+/** Customer frame (UI plan §3, §11): company identity, Orders and Notifications, account. */
 export function CustomerLayout() {
   const user = useCurrentUser();
   const { sync } = useSync();
@@ -57,52 +74,55 @@ export function CustomerLayout() {
     <div className="flex min-h-screen flex-col">
       <SkipLink />
       <MockModeBanner />
-      <header className="sticky top-0 z-20 border-b border-border bg-surface">
-        <div className="mx-auto flex h-16 max-w-[1280px] items-center gap-3 px-4">
-          <div className="flex min-w-0 flex-col">
-            <span className="truncate text-h3 text-text">{user.customer?.name ?? user.name}</span>
-            <span className="text-small text-text-muted">
-              Deliveries from Plant X · <Wordmark className="!text-small" />
-            </span>
+      <header className="on-dark sticky top-0 z-20 bg-nav-bg">
+        <div className="mx-auto flex h-14 max-w-[1280px] items-center gap-2 px-3 sm:gap-3 md:px-4">
+          <span className="hidden md:inline-flex">
+            <Wordmark inverse />
+          </span>
+          <span aria-hidden className="hidden h-6 w-px bg-nav-border md:block" />
+          <div className="flex min-w-0 flex-1 flex-col leading-tight md:flex-none">
+            <span className="truncate text-body font-semibold text-nav-text-strong">{user.customer?.name ?? user.name}</span>
+            <span className="truncate text-small text-nav-text">Deliveries from Plant X</span>
           </div>
-          <nav aria-label="Main" className="ml-2 flex items-center gap-1">
-            <TopNavLink to="/orders">{t.nav.orders}</TopNavLink>
-            <TopNavLink to="/notifications">
-              {t.nav.notifications}
+          <nav aria-label="Main" className="flex shrink-0 items-center gap-1 md:ml-4">
+            <TopNavLink to="/orders" icon={Package}>
+              <span className="hidden md:inline">{t.nav.orders}</span>
+              <span className="sr-only md:hidden">{t.nav.orders}</span>
+            </TopNavLink>
+            <TopNavLink to="/notifications" icon={Bell}>
+              <span className="hidden md:inline">{t.nav.notifications}</span>
+              <span className="sr-only md:hidden">{t.nav.notifications}</span>
               <CountBadge count={unread} label={`${unread} unread`} />
             </TopNavLink>
           </nav>
-          <div className="flex-1" />
-          <span className="hidden text-small text-text-muted md:inline">{t.timesInIst}</span>
-          <UserMenu />
+          <div className="hidden flex-1 md:block" />
+          <UserMenu onDark />
         </div>
-        <p className="border-t border-border bg-surface-subtle px-4 py-0.5 text-center text-small text-text-muted">
-          {t.fictionalNotice}
-        </p>
       </header>
+      <ContextStrip className="text-center">
+        {t.fictionalNotice} · {t.timesInIst}
+      </ContextStrip>
       <SyncBanners />
-      <main id="main" className="mx-auto w-full max-w-[1280px] flex-1 px-4 py-6">
+      <main id="main" className="mx-auto w-full max-w-[1280px] flex-1 px-4 py-5 md:py-6">
         <LayoutOutlet />
       </main>
     </div>
   );
 }
 
-/** UI plan §12: mobile-first, compact header, content max 480 px, primary action at the bottom. */
+/** UI plan §12: mobile-first, compact bar, content max 480 px, primary action at the bottom. */
 export function DriverLayout() {
   const user = useCurrentUser();
   return (
     <div className="flex min-h-screen flex-col">
       <SkipLink />
       <MockModeBanner />
-      <header className="sticky top-0 z-20 border-b border-border bg-surface">
-        <div className="mx-auto flex h-14 max-w-[480px] items-center gap-2 px-4">
-          <Factory aria-hidden className="size-5 text-primary" strokeWidth={ICON_STROKE} />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <Wordmark className="!text-body" />
-            <span className="truncate text-small text-text-muted">{user.transporter?.name ?? t.fictionalNotice}</span>
-          </div>
-          <UserMenu />
+      <header className="on-dark sticky top-0 z-20 bg-nav-bg">
+        <div className="mx-auto flex h-14 max-w-[480px] items-center gap-2 px-3">
+          <Wordmark inverse className="!text-body" />
+          <span aria-hidden className="h-5 w-px bg-nav-border" />
+          <span className="min-w-0 flex-1 truncate text-small text-nav-text">{user.transporter?.name ?? t.fictionalNotice}</span>
+          <UserMenu onDark />
         </div>
       </header>
       <SyncBanners />
@@ -114,26 +134,28 @@ export function DriverLayout() {
   );
 }
 
-/** Login layout (UI plan §5): navy brand panel (the only gradient) + form column. */
+/** Login layout (UI plan §5): graphite brand panel + form column on the warm canvas. */
 export function AuthLayout() {
   return (
     <div className="flex min-h-screen flex-col">
       <MockModeBanner />
       <div className="flex flex-1 flex-col lg:flex-row">
-        <aside className="flex h-[120px] shrink-0 flex-col justify-center bg-linear-to-b from-navy-900 to-navy-800 px-6 lg:h-auto lg:w-[45%] lg:justify-between lg:px-12 lg:py-12">
+        <aside className="on-dark relative flex shrink-0 flex-col justify-center overflow-hidden bg-nav-bg px-6 py-6 lg:w-[44%] lg:justify-between lg:px-12 lg:py-12">
           <div>
             <Wordmark inverse className="!text-h2" />
-            <p className="mt-2 hidden max-w-md text-h2 font-normal text-on-primary/90 lg:block">{t.tagline}</p>
+            <p className="mt-3 hidden max-w-md text-h2 font-normal text-nav-text-strong lg:block">{t.tagline}</p>
             <ul className="mt-8 hidden flex-col gap-3 lg:flex">
               {t.login.points.map((p) => (
-                <li key={p} className="flex items-center gap-2 text-body-lg text-on-primary/85">
-                  <span aria-hidden className="size-1.5 rounded-full bg-accent-subtle" />
+                <li key={p} className="flex items-center gap-3 text-body-lg text-nav-text">
+                  <span aria-hidden className="size-1.5 rounded-full bg-accent-fill" />
                   {p}
                 </li>
               ))}
             </ul>
           </div>
-          <p className="hidden text-small text-on-primary/70 lg:block">{t.fictionalDemo}</p>
+          <p className="hidden text-small text-nav-text lg:block">{t.fictionalDemo}</p>
+          <span aria-hidden className="pointer-events-none absolute -right-24 -bottom-24 hidden size-72 rounded-full border border-nav-border lg:block" />
+          <span aria-hidden className="pointer-events-none absolute -right-8 -bottom-8 hidden size-40 rounded-full border border-nav-border lg:block" />
         </aside>
         <main id="main" className="flex flex-1 items-center justify-center px-4 py-10">
           <div className="w-full max-w-[400px]">

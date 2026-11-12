@@ -18,6 +18,7 @@ export function TruckMarker({
   stopped,
   selected,
   dimmed,
+  showLabel = true,
   ariaLabel,
   onSelect,
   onHover,
@@ -27,6 +28,8 @@ export function TruckMarker({
   stopped: boolean;
   selected: boolean;
   dimmed: boolean;
+  /** The code chip; hidden for quiet trucks on busy maps so labels never pile up (the button keeps its name). */
+  showLabel?: boolean;
   ariaLabel: string;
   onSelect: () => void;
   onHover: (hovered: boolean) => void;
@@ -47,9 +50,9 @@ export function TruckMarker({
         onFocus={() => onHover(true)}
         onBlur={() => onHover(false)}
         className={cn(
-          'relative flex items-center justify-center rounded-full border-2 border-surface text-on-primary shadow-sm',
+          'relative flex items-center justify-center rounded-full border-2 border-surface text-on-primary shadow-sm transition-transform duration-[var(--rp-motion-fast)]',
           levelFill[level ?? 'NONE'],
-          selected ? 'size-9 ring-4 ring-primary/40' : 'size-7',
+          selected ? 'size-9 ring-4 ring-map-route-selected/45' : 'size-7 hover:scale-110',
         )}
       >
         <Truck aria-hidden className={selected ? 'size-[18px]' : 'size-3.5'} strokeWidth={2} />
@@ -59,15 +62,17 @@ export function TruckMarker({
           </span>
         ) : null}
       </button>
-      <span
-        aria-hidden
-        className={cn(
-          'mt-0.5 rounded-full border bg-surface px-1.5 text-[11px] leading-4 font-medium code-label shadow-xs',
-          selected ? 'border-primary text-primary' : 'border-border text-text',
-        )}
-      >
-        {code}
-      </span>
+      {showLabel ? (
+        <span
+          aria-hidden
+          className={cn(
+            'mt-0.5 rounded-full px-1.5 text-[11px] leading-4 font-medium code-label shadow-xs',
+            selected ? 'bg-map-route-selected text-on-primary' : 'bg-ink-900 text-on-primary',
+          )}
+        >
+          {code}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -75,10 +80,10 @@ export function TruckMarker({
 export function PlantMarker({ name }: { name: string }) {
   return (
     <div className="flex flex-col items-center" role="img" aria-label={`${name} (plant)`}>
-      <span className="flex size-7 items-center justify-center rounded-sm border-2 border-surface bg-navy-900 text-on-primary shadow-sm">
+      <span className="flex size-7 items-center justify-center rounded-sm border-2 border-surface bg-ink-900 text-on-primary shadow-sm">
         <Factory aria-hidden className="size-4" strokeWidth={ICON_STROKE} />
       </span>
-      <span aria-hidden className="mt-0.5 rounded-full bg-navy-900 px-1.5 text-[11px] leading-4 font-semibold text-on-primary">
+      <span aria-hidden className="mt-0.5 rounded-full bg-ink-900 px-1.5 text-[11px] leading-4 font-semibold text-on-primary">
         {name}
       </span>
     </div>
@@ -89,7 +94,7 @@ export function SiteMarker({ name, city, receivingHours }: { name: string; city:
   const label = `${name}, ${city} · receiving ${receivingHours}`;
   return (
     <div className="group flex flex-col items-center" role="img" aria-label={label} title={label}>
-      <span className="flex size-6 items-center justify-center rounded-full border-2 border-navy-900 bg-surface text-navy-900 shadow-xs">
+      <span className="flex size-6 items-center justify-center rounded-full border-2 border-ink-900 bg-surface text-ink-900 shadow-xs">
         <Building2 aria-hidden className="size-3" strokeWidth={2} />
       </span>
       <span

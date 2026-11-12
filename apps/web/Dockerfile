@@ -4,14 +4,24 @@ FROM node:22-bookworm-slim AS builder
 
 WORKDIR /app
 
+# Prisma requires OpenSSL in the slim Debian image.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openssl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy npm workspace manifests
 COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/package.json
 COPY apps/web/package.json ./apps/web/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
 
-# Install dependencies
-RUN npm ci --include=dev
+# Prisma postinstall needs its schema and configuration.
+COPY apps/api/prisma ./apps/api/prisma
+COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
+
+# Install dependencies for all workspaces.
+RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" \
+    npm ci --include=dev
 
 # Copy source code
 COPY . .

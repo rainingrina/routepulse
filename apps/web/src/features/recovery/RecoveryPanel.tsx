@@ -8,13 +8,15 @@ import { Banner, ErrorState } from '../../components/display/feedback';
 import { Button } from '../../components/primitives/Button';
 import { CircleCheck, RefreshCw } from '../../components/icons';
 import { customerResponseLabel, recoveryKindLabel } from '../../i18n/en';
-import { formatTime, formatTimeRelative } from '../../i18n/format';
+import { formatDayTime, formatTime, formatTimeRelative } from '../../i18n/format';
+import { useToast } from '../../components/primitives/toast';
 import { ConfirmRecoveryDialog } from './ConfirmRecoveryDialog';
 import { RecoveryCard } from './RecoveryCard';
 import { decisionMade, orderOptions } from './order';
 
 /** Full recovery view (UI plan §9): suggestion rule, customer response, ordered cards, choose flow (#29, #30). */
 export function RecoveryPanel({ shipmentId, onlySuggested = false }: { shipmentId: string; onlySuggested?: boolean }) {
+  const { toast } = useToast();
   const { sync } = useSync();
   const options = useRecoveryOptions(shipmentId);
   const alerts = useAlerts({ status: 'active', shipmentId });
@@ -101,6 +103,7 @@ export function RecoveryPanel({ shipmentId, onlySuggested = false }: { shipmentI
               onSuccess: (res) => {
                 setResult(res);
                 setPick(null);
+                toast({ title: `${recoveryKindLabel[res.option.kind]} chosen`, description: `Recalculated at the decision minute${res.option.newEtaAt ? ` · new estimate ${formatDayTime(res.option.newEtaAt)}` : ''}.` });
               },
             },
           );

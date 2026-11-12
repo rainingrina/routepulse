@@ -107,7 +107,7 @@ export function OnTimeBars({ data, ariaLabel }: { data: { name: string; onTimePc
           <XAxis type="number" domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} tick={tick()} stroke={cssToken('--rp-border')} />
           <YAxis type="category" dataKey="name" width={130} tick={tick()} stroke={cssToken('--rp-border')} />
           <Tooltip formatter={(v, _n, p) => [`${pctLabel(v)} of ${(p.payload as { delivered: number }).delivered} arrived`, 'On time']} />
-          <Bar dataKey="onTimePct" fill={cssToken('--rp-primary')} isAnimationActive={false} barSize={18} radius={[0, 3, 3, 0]}>
+          <Bar dataKey="onTimePct" fill={cssToken('--rp-chart-1')} isAnimationActive={false} barSize={18} radius={[0, 3, 3, 0]}>
             <LabelList dataKey="onTimePct" position="right" formatter={pctLabel} fill={cssToken('--rp-text')} fontSize={12} />
           </Bar>
         </BarChart>
@@ -126,7 +126,7 @@ export function WeeklyOnTimeChart({ weeks }: { weeks: DashboardResponse['weeklyT
           <XAxis dataKey="name" tick={tick()} stroke={cssToken('--rp-border')} interval="preserveStartEnd" />
           <YAxis domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} tick={tick()} stroke={cssToken('--rp-border')} width={44} />
           <Tooltip formatter={(v, _n, p) => [`${pctLabel(v)} of ${(p.payload as { delivered: number }).delivered} arrived`, 'On time']} />
-          <Line dataKey="onTimePct" stroke={cssToken('--rp-primary')} strokeWidth={2} dot={{ r: 3 }} connectNulls={false} isAnimationActive={false} />
+          <Line dataKey="onTimePct" stroke={cssToken('--rp-chart-1-strong')} strokeWidth={2} dot={{ r: 3 }} connectNulls={false} isAnimationActive={false} />
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -143,7 +143,7 @@ export function WeeklyVolumeChart({ weeks }: { weeks: DashboardResponse['weeklyT
           <XAxis dataKey="name" tick={tick()} stroke={cssToken('--rp-border')} interval="preserveStartEnd" />
           <YAxis allowDecimals={false} tick={tick()} stroke={cssToken('--rp-border')} width={36} />
           <Tooltip formatter={(v) => [formatInt(Number(v)), 'Arrived']} />
-          <Bar dataKey="delivered" fill={cssToken('--rp-primary')} isAnimationActive={false} barSize={22} radius={[3, 3, 0, 0]}>
+          <Bar dataKey="delivered" fill={cssToken('--rp-chart-1')} isAnimationActive={false} barSize={22} radius={[3, 3, 0, 0]}>
             <LabelList dataKey="delivered" position="top" fill={cssToken('--rp-text')} fontSize={12} />
           </Bar>
         </BarChart>

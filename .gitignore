@@ -13,6 +13,9 @@ coverage/
 .env.*
 !.env.example
 
+# Offline basemap (large, fetched by `npm run basemap:fetch`)
+apps/api/static/basemap/
+
 # Generated Prisma client
 apps/api/src/generated/
 

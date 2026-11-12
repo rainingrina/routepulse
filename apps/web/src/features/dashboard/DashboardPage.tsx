@@ -8,6 +8,7 @@ import { KpiCard } from '../../components/display/KpiCard';
 import { Inbox } from '../../components/icons';
 import { Button } from '../../components/primitives/Button';
 import { Dialog, SegmentedControl, Tooltip } from '../../components/primitives/radix';
+import { selectClassSm } from '../../components/primitives/fieldStyles';
 import { partyLabel, reasonLabel, t } from '../../i18n/en';
 import { formatDayTime, formatDuration, formatInt, formatPct } from '../../i18n/format';
 import { ChartCard, OnTimeBars, PartyShareBars, ReasonBars, SimpleTable, WeeklyOnTimeChart, WeeklyVolumeChart, weekLabel } from './charts';
@@ -43,7 +44,6 @@ export default function DashboardPage() {
     setParams(next, { replace: true });
   };
   const filtered = !!query.laneId || !!query.transporterId;
-  const selectClass = 'h-8 rounded-md border border-border-strong bg-surface px-2 text-body text-text';
 
   return (
     <div className="flex min-w-0 flex-col">
@@ -58,7 +58,7 @@ export default function DashboardPage() {
           />
           <label className="flex items-center gap-1.5 text-small text-text-secondary">
             Lane
-            <select className={selectClass} value={query.laneId ?? ''} onChange={(e) => setFilter('laneId', e.target.value || null)}>
+            <select className={selectClassSm} value={query.laneId ?? ''} onChange={(e) => setFilter('laneId', e.target.value || null)}>
               <option value="">All lanes</option>
               {(reference.data?.lanes ?? []).map((l) => (
                 <option key={l.id} value={l.id}>
@@ -69,7 +69,7 @@ export default function DashboardPage() {
           </label>
           <label className="flex items-center gap-1.5 text-small text-text-secondary">
             Transporter
-            <select className={selectClass} value={query.transporterId ?? ''} onChange={(e) => setFilter('transporterId', e.target.value || null)}>
+            <select className={selectClassSm} value={query.transporterId ?? ''} onChange={(e) => setFilter('transporterId', e.target.value || null)}>
               <option value="">All transporters</option>
               {(reference.data?.transporters ?? []).map((tr) => (
                 <option key={tr.id} value={tr.id}>
@@ -180,7 +180,7 @@ function DashboardBody({ d, filtered, refreshing, onDrill, onClear }: { d: Dashb
               caption="On-time by lane"
               head={['Lane', 'Arrived', 'On time', 'On-time %']}
               rows={d.onTimeByLane.map((l) => [
-                <button key="n" type="button" className="text-primary hover:underline" onClick={() => onDrill({ title: l.laneName, laneId: l.laneId })}>
+                <button key="n" type="button" className="link" onClick={() => onDrill({ title: l.laneName, laneId: l.laneId })}>
                   {l.laneName}
                 </button>,
                 formatInt(l.delivered),
@@ -287,7 +287,7 @@ function TransporterTable({ d, onDrill }: { d: DashboardResponse; onDrill: (x: D
             {d.transporterTable.map((x) => (
               <tr key={x.transporterId} className="border-t border-border">
                 <td className="py-2 pr-3">
-                  <button type="button" className="text-primary hover:underline" onClick={() => onDrill({ title: x.name, transporterId: x.transporterId })}>
+                  <button type="button" className="link" onClick={() => onDrill({ title: x.name, transporterId: x.transporterId })}>
                     {x.name}
                   </button>
                   {x.isSmall ? (

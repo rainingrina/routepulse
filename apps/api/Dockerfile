@@ -2,6 +2,11 @@
 # Node.js runtime for the RoutePulse API
 FROM node:22-bookworm-slim
 
+# Prisma requires OpenSSL in the slim Debian image.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openssl \
+    && rm -rf /var/lib/apt/lists/*
+
 # All workspace commands run from the repository root initially.
 WORKDIR /app
 
@@ -13,11 +18,15 @@ COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/package.json
 COPY apps/web/package.json ./apps/web/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
+# Prisma postinstall needs its schema and configuration available.
+COPY apps/api/prisma ./apps/api/prisma
+COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
 
 # Install dependencies exactly as recorded in package-lock.json.
 # Include dev dependencies because TypeScript, tsx and Prisma CLI
 # are currently needed to run and manage the API.
-RUN npm ci --include=dev
+RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" \
+    npm ci --include=dev
 
 # Copy the application source and configuration.
 COPY . .

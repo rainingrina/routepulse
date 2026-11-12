@@ -8,6 +8,7 @@ export {
   Bell,
   Building2,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
   CircleAlert,
   CircleCheck,
@@ -59,6 +60,10 @@ export {
   ArrowRightLeft,
   Hourglass,
   Diamond,
+  Menu,
+  Package,
+  ListChecks,
+  CircleX,
   type LucideIcon,
 } from 'lucide-react';
 

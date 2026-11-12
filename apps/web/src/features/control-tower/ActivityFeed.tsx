@@ -30,7 +30,7 @@ export function ActivityFeed({ shipmentId }: { shipmentId?: string }) {
             <span className="text-body text-text">{activitySummary(i)}</span>
             <span className="text-small text-text-muted tabular">
               {i.entityType === 'Shipment' && i.entityId && code ? (
-                <Link to={`/shipments/${encodeURIComponent(i.entityId)}`} className="font-medium text-primary hover:underline">
+                <Link to={`/shipments/${encodeURIComponent(i.entityId)}`} className="font-medium link">
                   {code}
                 </Link>
               ) : code ? (

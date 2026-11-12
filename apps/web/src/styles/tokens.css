@@ -1,61 +1,90 @@
 /*
- * RoutePulse design tokens — 07_UI_UX_PLAN.md §2. The only place HEX values appear in the web app.
- * Components use the Tailwind utilities mapped in globals.css (e.g. bg-surface, text-text-secondary).
+ * RoutePulse design tokens — 07_UI_UX_PLAN.md §2 (v2, 2026-11-12: graphite · warm beige · sage).
+ * The only place HEX values appear in the web app. Components use the Tailwind utilities mapped in
+ * globals.css (e.g. bg-surface, text-text-secondary).
+ *
+ * Source palette (approved): graphite #040404 · stone #928B85 · warm beige #F5EEE1 ·
+ * muted sage #BFC2AD · sage green #6D9C7B. Values below are refined from it for contrast
+ * (all text/background pairs ≥ 4.5:1, UI boundaries ≥ 3:1).
  */
 :root {
-  /* §2.1 neutrals and brand */
-  --rp-canvas: #f7f6f3;
+  /* §2.1 neutrals — warm off-white canvas, white working surfaces, graphite ink */
+  --rp-canvas: #f4f1ea;
   --rp-surface: #ffffff;
-  --rp-surface-subtle: #fbfaf8;
-  --rp-surface-sunken: #f1efea;
-  --rp-border: #e5e1da;
-  --rp-border-strong: #cfc9bf;
-  --rp-border-input: #8a94a3;
-  --rp-text: #0f1b2d;
-  --rp-text-secondary: #475467;
-  --rp-text-muted: #5f6b7a;
-  --rp-primary: #1f4fd1;
-  --rp-primary-hover: #1a43b3;
-  --rp-primary-pressed: #163a9c;
-  --rp-primary-subtle: #edf2fe;
-  --rp-accent: #0b7a75;
-  --rp-accent-subtle: #e6f4f3;
-  --rp-navy-900: #0f1b2d;
-  --rp-navy-800: #1b2b45;
+  --rp-surface-subtle: #faf8f4;
+  --rp-surface-sunken: #efebe2;
+  --rp-border: #e4ded2;
+  --rp-border-strong: #cdc5b6;
+  --rp-border-input: #928b85; /* stone */
+  --rp-text: #141412;
+  --rp-text-secondary: #4b4944;
+  --rp-text-muted: #6b665f;
+
+  /* §2.1 interaction — graphite actions, warm-beige selection (as in the reference's selected pill) */
+  --rp-primary: #1b1b18;
+  --rp-primary-hover: #2e2d29;
+  --rp-primary-pressed: #040404;
+  --rp-primary-subtle: #efe6d3; /* warm beige, selected state */
   --rp-on-primary: #ffffff;
 
-  /* §2.2 status (reserved; never chart series) */
-  --rp-success: #2f7a55;
-  --rp-success-tint: #e9f4ee;
-  --rp-warning: #9a5b00;
-  --rp-warning-tint: #fdf3e1;
-  --rp-danger: #b42318;
-  --rp-danger-tint: #fdecea;
-  --rp-late: #7a1e14;
-  --rp-late-tint: #f7e4e1;
-  --rp-info: #475467;
-  --rp-info-tint: #f1efea;
+  /* §2.1 accent — sage. Text on light uses the deep sage; fills use the sage green. */
+  --rp-accent: #3f6b4f;
+  --rp-accent-fill: #6d9c7b;
+  --rp-accent-subtle: #e6ebe0; /* muted sage tint */
+  --rp-sage-muted: #bfc2ad;
 
-  /* §2.3 delay-cause parties (charts only; fixed stack order Plant → Transporter → Customer → External → Unattributed) */
-  --rp-party-plant: #3b5bdb;
-  --rp-party-transporter: #c27c0e;
-  --rp-party-customer: #7c4dcc;
-  --rp-party-external: #00968f;
-  --rp-party-unattributed: #a3a9b3;
-  --rp-chart-raw: #9db3ee;
+  /* §2.1 graphite ink (application frame, dark chips, overlays) */
+  --rp-ink-900: #141412;
+  --rp-ink-800: #26251f;
+  --rp-ink-700: #3a3832;
+
+  /* §3 application frame (graphite navigation bar) */
+  --rp-nav-bg: #141412;
+  --rp-nav-border: #2c2b26;
+  --rp-nav-text: #c9c2b7;
+  --rp-nav-text-strong: #f5eee1;
+  --rp-nav-hover: #26251f;
+  --rp-nav-active: #efe6d3;
+  --rp-nav-active-text: #141412;
+  --rp-focus-on-dark: #bfc2ad;
+
+  /* §2.2 status (reserved; never chart series). Always colour + icon + text. */
+  --rp-success: #35724c; /* 4.9:1 on its tint */
+  --rp-success-tint: #e7f0e6;
+  --rp-warning: #8f5b06;
+  --rp-warning-tint: #f9efd9;
+  --rp-danger: #b03423;
+  --rp-danger-tint: #fae7e2;
+  --rp-late: #7a2416;
+  --rp-late-tint: #f3e0da;
+  --rp-info: #4b4944;
+  --rp-info-tint: #efebe2;
+
+  /* §2.3 delay-cause parties (charts only; fixed order Plant → Transporter → Customer → External →
+     Unattributed). Validated with the dataviz palette checker: CVD ΔE ≥ 11.7, normal ΔE ≥ 21.4,
+     ≥ 3:1 on white; Unattributed is deliberately neutral (no party). */
+  --rp-party-plant: #3b68b5;
+  --rp-party-transporter: #c27e1f;
+  --rp-party-customer: #8e62b8;
+  --rp-party-external: #2a9a82;
+  --rp-party-unattributed: #55504a;
+  /* single-series charts (on-time %, volume) */
+  --rp-chart-1: #6d9c7b;
+  --rp-chart-1-strong: #3f6b4f;
 
   /* §8.1–8.2 map */
-  --rp-map-land: #eeece6;
-  --rp-map-water: #dce6ee;
-  --rp-map-border: #cfc9bf;
-  --rp-map-route: #334155;
-  --rp-map-route-alt: #8a94a3;
+  --rp-map-land: #ede7da;
+  --rp-map-water: #cfdbdc;
+  --rp-map-border: #c4baa8;
+  --rp-map-route: #26251f;
+  --rp-map-route-alt: #928b85;
+  --rp-map-route-selected: #3f6b4f;
 
-  /* §2.5 shadows */
-  --rp-shadow-xs: 0 1px 2px rgba(15, 27, 45, 0.06);
-  --rp-shadow-sm: 0 1px 3px rgba(15, 27, 45, 0.08), 0 1px 2px rgba(15, 27, 45, 0.04);
-  --rp-shadow-md: 0 4px 12px rgba(15, 27, 45, 0.08);
-  --rp-shadow-overlay: 0 12px 32px rgba(15, 27, 45, 0.14);
+  /* §2.5 shadows (warm, low) */
+  --rp-shadow-xs: 0 1px 2px rgba(20, 20, 18, 0.05);
+  --rp-shadow-sm: 0 1px 3px rgba(20, 20, 18, 0.07), 0 1px 2px rgba(20, 20, 18, 0.04);
+  --rp-shadow-md: 0 6px 16px rgba(20, 20, 18, 0.08);
+  --rp-shadow-overlay: 0 16px 40px rgba(20, 20, 18, 0.16);
 
   /* §2.5 motion */
   --rp-motion-fast: 120ms;

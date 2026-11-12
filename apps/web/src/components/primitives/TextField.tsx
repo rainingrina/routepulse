@@ -32,7 +32,7 @@ export function TextField({ label, error, hint, trailing, hideLabel, className, 
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
           className={cn(
-            'h-10 w-full rounded-sm border bg-surface px-3 text-body text-text placeholder:text-text-muted',
+            'h-10 w-full rounded-lg border bg-surface px-3 text-body text-text placeholder:text-text-muted transition-colors hover:border-text-muted',
             'focus-visible:outline-2 focus-visible:outline-offset-0',
             error ? 'border-danger' : 'border-border-input',
             trailing ? 'pr-11' : null,

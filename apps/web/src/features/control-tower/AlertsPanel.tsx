@@ -39,14 +39,14 @@ export function AlertsPanel({ onViewOptions }: { onViewOptions: (shipmentId: str
         </ul>
       )}
       {resolved.data && resolved.data.items.length > 0 ? (
-        <details className="rounded-md border border-border">
+        <details className="rounded-xl border border-border">
           <summary className="cursor-pointer px-3 py-2 text-body font-medium text-text-secondary">
             Recently resolved ({resolved.data.items.length})
           </summary>
           <ul className="divide-y divide-border border-t border-border">
             {(resolved.data.items as AlertDtoCoordinator[]).map((a) => (
               <li key={a.id} className="px-3 py-2 text-small text-text-secondary">
-                <Link to={`/shipments/${encodeURIComponent(a.shipment.id)}`} className="font-medium text-primary hover:underline">
+                <Link to={`/shipments/${encodeURIComponent(a.shipment.id)}`} className="font-medium link">
                   {a.shipment.code}
                 </Link>{' '}
                 · resolved {a.resolvedAt ? formatDayTime(a.resolvedAt) : ''}
@@ -60,15 +60,25 @@ export function AlertsPanel({ onViewOptions }: { onViewOptions: (shipmentId: str
 }
 
 function AlertCard({ alert: a, onViewOptions }: { alert: AlertDtoCoordinator; onViewOptions: () => void }) {
+  const open = a.status === 'OPEN';
   return (
-    <article className="rounded-lg border border-danger/30 bg-surface p-3 shadow-xs" aria-label={`Alert for ${a.shipment.code}`}>
+    <article
+      className="relative overflow-hidden rounded-xl border border-border bg-surface py-3 pr-3 pl-4 shadow-xs transition-colors hover:border-border-strong"
+      aria-label={`Alert for ${a.shipment.code}`}
+    >
+      <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${open ? 'bg-danger' : 'bg-accent-fill'}`} />
       <div className="flex items-start gap-2">
-        <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={2} />
+        {open ? (
+          <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={2} />
+        ) : (
+          <CircleCheck aria-hidden className="mt-0.5 size-4 shrink-0 text-accent" strokeWidth={2} />
+        )}
         <div className="min-w-0 flex-1">
-          <p className="text-body font-semibold text-text">
-            <span className="code-label">{a.shipment.code}</span> · {a.status === 'OPEN' ? 'Open' : a.status === 'ACTION_CHOSEN' ? 'Action chosen' : 'Resolved'}
-          </p>
-          <p className="text-body text-text">{a.summary}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-body font-semibold text-text code-label">{a.shipment.code}</span>
+            <Badge tone={open ? 'danger' : 'accent'}>{open ? 'Open' : a.status === 'ACTION_CHOSEN' ? 'Action chosen' : 'Resolved'}</Badge>
+          </div>
+          <p className="mt-0.5 text-body text-text">{a.summary}</p>
           <p className="mt-0.5 text-small text-text-muted tabular">
             {a.shipment.customerName} · {a.shipment.laneName} · at risk since {formatDayTime(a.openedAt)}
             {a.topReason ? ` · ${reasonLabel[a.topReason]}` : ''}
@@ -96,7 +106,7 @@ function AlertCard({ alert: a, onViewOptions }: { alert: AlertDtoCoordinator; on
         </Button>
         <Link
           to={`/shipments/${encodeURIComponent(a.shipment.id)}`}
-          className="inline-flex h-8 items-center rounded-md border border-border-strong px-3 text-small font-medium text-text hover:bg-surface-subtle"
+          className="inline-flex h-8 items-center rounded-lg border border-border-strong px-3 text-small font-medium text-text hover:bg-surface-subtle"
         >
           Open
         </Link>

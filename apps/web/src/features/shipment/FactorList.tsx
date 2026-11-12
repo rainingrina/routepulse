@@ -27,8 +27,8 @@ export function FactorList({ factors, compact = false }: { factors: Factor[]; co
         if (rows.length === 0) return null;
         return (
           <div key={phase}>
-            <p className="overline mb-1 text-text-muted">{PHASE_LABEL[phase]}</p>
-            <ul className="flex flex-col divide-y divide-border rounded-md border border-border">
+            <p className="eyebrow mb-1 text-text-muted">{PHASE_LABEL[phase]}</p>
+            <ul className="flex flex-col divide-y divide-border rounded-lg border border-border">
               {rows.map((f, i) => (
                 <li key={`${f.code}-${i}`} className={cn('flex flex-col gap-0.5 px-3', compact ? 'py-1.5' : 'py-2')}>
                   <div className="flex items-start gap-2">

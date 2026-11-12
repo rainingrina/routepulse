@@ -27,10 +27,12 @@ export const qk = {
   disruptions: (filters: object) => ['disruptions', filters] as const,
   orders: (filters: OrderListQuery) => ['orders', filters] as const,
   order: (id: Id) => ['order', id] as const,
+  /** Offline basemap file present (HEAD /tiles/…); not world state. */
+  basemap: ['basemap'] as const,
 };
 
 /** Keys that are not world state and must not be refetched on a `worldVersion` change. */
-const NOT_WORLD_STATE = new Set(['me', 'sync', 'rules']);
+const NOT_WORLD_STATE = new Set(['me', 'sync', 'rules', 'basemap']);
 
 export function isWorldStateKey(queryKey: readonly unknown[]): boolean {
   return !NOT_WORLD_STATE.has(String(queryKey[0]));

@@ -69,7 +69,7 @@ export function ShipmentList({
   }
 
   return (
-    <section aria-labelledby="shipments-heading" className="flex min-h-0 flex-col border-border bg-surface lg:border-r">
+    <section aria-labelledby="shipments-heading" className="flex min-h-0 flex-1 flex-col bg-surface">
       <div className="flex flex-col gap-2 border-b border-border px-4 py-3">
         <div className="flex items-center justify-between">
           <h2 id="shipments-heading" className="text-h3 text-text">
@@ -88,7 +88,7 @@ export function ShipmentList({
             maxLength={32}
             onChange={(e) => onQuery(e.target.value)}
             placeholder="Search code, e.g. SHP-1042"
-            className="h-9 w-full rounded-sm border border-border-input bg-surface pr-3 pl-8 text-body placeholder:text-text-muted"
+            className="h-10 w-full rounded-xl border border-border bg-surface-subtle pr-3 pl-8 text-body placeholder:text-text-muted transition-colors hover:border-border-strong focus-visible:bg-surface"
           />
         </label>
         <div role="group" aria-label="Filter by risk level" className="flex flex-wrap gap-1.5">
@@ -99,8 +99,8 @@ export function ShipmentList({
               aria-pressed={level === f}
               onClick={() => onLevel(f)}
               className={cn(
-                'inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-small font-medium',
-                level === f ? 'border-primary bg-primary-subtle text-primary' : 'border-border-strong text-text-secondary hover:bg-surface-subtle',
+                'inline-flex h-8 items-center gap-1 rounded-full border px-3 text-small font-medium transition-colors',
+                level === f ? 'border-transparent bg-primary-subtle text-text shadow-xs' : 'border-border text-text-secondary hover:border-border-strong hover:text-text',
               )}
             >
               {f !== 'ALL'
@@ -127,7 +127,7 @@ export function ShipmentList({
         ) : totalCount === 0 ? (
           <EmptyState icon={Inbox} title="No live shipments" help="New shipments appear here once a truck is assigned." />
         ) : items.length === 0 ? (
-          <EmptyState icon={Search} title="No shipments match these filters" action={<button type="button" className="text-body font-medium text-primary hover:underline" onClick={() => { onLevel('ALL'); onQuery(''); }}>Clear filters</button>} />
+          <EmptyState icon={Search} title="No shipments match these filters" action={<button type="button" className="text-body font-medium link" onClick={() => { onLevel('ALL'); onQuery(''); }}>Clear filters</button>} />
         ) : (
           <ul ref={listRef} onKeyDown={onKeyDown} aria-label="Live shipments, sorted by risk">
             {items.map((s) => (
@@ -178,18 +178,18 @@ function ShipmentRow({
         onMouseEnter={() => onHover(true)}
         onMouseLeave={() => onHover(false)}
         className={cn(
-          'relative flex min-h-[72px] w-full gap-3 py-2.5 pr-3 pl-4 text-left transition-colors',
+          'relative flex min-h-[76px] w-full gap-3 py-3 pr-3 pl-4 text-left transition-colors',
           selected ? 'bg-primary-subtle' : hovered ? 'bg-surface-subtle' : 'hover:bg-surface-subtle',
           highlight && 'animate-pulse',
         )}
       >
-        <span aria-hidden className={cn('absolute inset-y-0 left-0 w-1', bar)} />
+        <span aria-hidden className={cn('absolute inset-y-2 left-1 w-1 rounded-full', bar)} />
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-body font-semibold whitespace-nowrap text-text code-label">{s.code}</span>
             {status ? <StatusBadge status={status} size="sm" /> : null}
-            <span className="text-body font-semibold text-text code-label">{s.code}</span>
             {s.parentShipmentId ? <Badge>Split</Badge> : null}
-            <span className="ml-auto flex items-center gap-1">
+            <span className="ml-auto flex flex-wrap items-center justify-end gap-1">
               {s.hasOpenAlert ? (
                 <Badge tone="danger" icon={TriangleAlert}>
                   Alert
@@ -202,8 +202,11 @@ function ShipmentRow({
               ) : null}
             </span>
           </div>
-          <p className="truncate text-small text-text-secondary">
-            {s.customer.name}, {s.customer.city} · {s.transporter.name}
+          <p className="truncate text-small font-medium text-text-secondary">
+            {s.customer.name}, {s.customer.city}
+          </p>
+          <p className="truncate text-small text-text-muted">
+            {s.lane.name} · {s.transporter.name}
             {s.truckCode ? ` · ${s.truckCode}` : ''}
           </p>
           {s.arrivedAt ? (

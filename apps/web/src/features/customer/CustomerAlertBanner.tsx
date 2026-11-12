@@ -2,7 +2,8 @@ import { CUSTOMER_RESPONSES, type CustomerAlertDto, type CustomerResponse } from
 import { useRespondToAlert } from '../../api/hooks/portal';
 import { useSync } from '../../api/sync';
 import { EtaDisplay } from '../../components/display/EtaDisplay';
-import { Banner, InlineError } from '../../components/display/feedback';
+import { InlineError } from '../../components/display/feedback';
+import { TriangleAlert } from '../../components/icons';
 import { Button } from '../../components/primitives/Button';
 import { customerResponseAction, customerResponseLabel } from '../../i18n/en';
 import { formatDayTime } from '../../i18n/format';
@@ -20,9 +21,14 @@ export function CustomerAlertBanner({ alert }: { alert: CustomerAlertDto }) {
   const send = (response: CustomerResponse) => respond.mutate({ alertId: alert.id, body: { response } });
 
   return (
-    <Banner tone={late ? 'danger' : 'warning'} className="py-3">
+    <section
+      aria-label={`Alert for order ${alert.orderCode}`}
+      className="relative overflow-hidden rounded-xl border border-border bg-surface py-4 pr-4 pl-5 shadow-xs"
+    >
+      <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${late ? 'bg-danger' : 'bg-warning'}`} />
       <div className="flex flex-col gap-2">
-        <p className="text-body font-semibold text-text">
+        <p className="flex items-start gap-2 text-body font-semibold text-text">
+          <TriangleAlert aria-hidden className={`mt-0.5 size-4 shrink-0 ${late ? 'text-danger' : 'text-warning'}`} strokeWidth={2} />
           Order {alert.orderCode} is at risk of missing {formatDayTime(alert.promisedBy)}
         </p>
         <p className="text-body text-text">
@@ -57,6 +63,6 @@ export function CustomerAlertBanner({ alert }: { alert: CustomerAlertDto }) {
         ) : null}
         <InlineError error={respond.error} />
       </div>
-    </Banner>
+    </section>
   );
 }

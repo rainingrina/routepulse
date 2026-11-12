@@ -10,7 +10,10 @@ export function MapLegend({
   showDisruptions,
   illustrativeRoutes = false,
   initiallyOpen = true,
+  basemap = 'checking',
 }: {
+  /** Offline basemap state (architecture §16): installed, missing (land-only fallback) or still checking. */
+  basemap?: 'installed' | 'missing' | 'checking';
   showDisruptions: boolean;
   illustrativeRoutes?: boolean;
   /** Small maps (portals, replay) start collapsed so the legend does not cover the route. */
@@ -18,7 +21,7 @@ export function MapLegend({
 }) {
   const [open, setOpen] = useState(initiallyOpen);
   return (
-    <div className="absolute bottom-3 left-3 z-10 max-w-[240px] rounded-lg border border-border bg-surface/95 text-small shadow-sm">
+    <div className="absolute bottom-8 left-2 z-10 max-w-[240px] rounded-xl border border-border bg-surface/95 text-small shadow-sm backdrop-blur-sm">
       <button
         type="button"
         aria-expanded={open}
@@ -58,7 +61,13 @@ export function MapLegend({
             </li>
           ) : null}
           {illustrativeRoutes ? <li className="pt-1 text-[11px] leading-4 text-text-muted">Route lines are hand-traced illustrations, not routing output</li> : null}
-          <li className="pt-1 text-[11px] leading-4 text-text-muted">Offline map · basemap detail pending</li>
+          <li className="pt-1 text-[11px] leading-4 text-text-muted">
+            {basemap === 'installed'
+              ? 'Offline basemap: © OpenStreetMap contributors (ODbL), state borders only'
+              : basemap === 'missing'
+                ? 'Basemap not installed: showing land only'
+                : 'Offline map'}
+          </li>
         </ul>
       ) : null}
     </div>

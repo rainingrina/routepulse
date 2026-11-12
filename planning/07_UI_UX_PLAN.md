@@ -1,10 +1,12 @@
 # 07 — UI/UX plan: RoutePulse
 
-Version 0.2, 2026-11-12. Status: **approved; revision 0.2 applies the locked decisions L1–L10** (architecture §0.1). All items formerly open in §20 are resolved.
+Version 0.3, 2026-11-12. Status: **approved; revision 0.2 applies the locked decisions L1–L10** (architecture §0.1); **revision 0.3 records the application-wide visual redesign (v2 palette, graphite frame)** requested by the team — tokens, frame and components only, no change to requirements, data, calculations or role rules. All items formerly open in §20 are resolved.
 Inputs: `02_PRODUCT_SPEC.md` (spec), `03_USER_JOURNEYS.md` (journeys), `04_TECH_ARCHITECTURE.md`, `05_DATABASE_SCHEMA.md`, `06_API_SPEC.md`, `08_ETA_AND_RISK_ENGINE.md`. Endpoint numbers like **#14** refer to the API index (API §3).
 This plan does not change product requirements. Items that need a decision are in §20.
 
-**Design direction (approved):** light theme, premium enterprise SaaS. Warm off-white canvas, white surfaces, navy/charcoal text, slate secondary text, a confident blue for actions, restrained teal accents, muted green / amber / red status. Minimal gradients and shadows. Hierarchy comes from type, spacing and alignment, not decoration.
+**Design direction (v2, 2026-11-12):** light, premium enterprise SaaS in a graphite · warm beige · sage palette (team-approved source colours: graphite `#040404`, stone `#928B85`, warm beige `#F5EEE1`, muted sage `#BFC2AD`, sage green `#6D9C7B`; visual reference: a Ronas IT logistics dashboard shot on Dribbble, used for mood only — no assets copied). A graphite application bar frames a warm off-white canvas with white working surfaces; actions are graphite, selection is warm beige, the accent is sage; status keeps muted green / amber / red. Minimal gradients and shadows. Hierarchy comes from type, spacing and alignment, not decoration.
+
+*v1 (navy/blue/teal) is superseded; its values are not kept in this document.*
 
 **Showcase screen:** the coordinator control tower (§6). It opens the demo and carries most of the judging impression.
 
@@ -26,54 +28,58 @@ This plan does not change product requirements. Items that need a decision are i
 
 Contrast values were computed (WCAG 2.1 relative luminance) for the text and status tokens; the delay-cause chart palette was run through a colour-vision validator (adjacent pairs, light surface). Results are noted per table.
 
-### 2.1 Colour — neutrals and brand
+### 2.1 Colour — neutrals and brand (v2)
+Contrast ratios below were computed with the WCAG 2.1 formula from the shipped values; the AA pairs are also asserted by a unit test (`components/primitives/redesign.test.tsx`).
 | Token | HEX | Use | Contrast |
 |---|---|---|---|
-| `canvas` | `#F7F6F3` | App background (warm off-white) | — |
+| `canvas` | `#F4F1EA` | App background (warm off-white) | — |
 | `surface` | `#FFFFFF` | Cards, panels, tables, map frame | — |
-| `surface-subtle` | `#FBFAF8` | Table header rows, nested panels, hover rows | — |
-| `surface-sunken` | `#F1EFEA` | Inputs' read-only fill, skeletons | — |
-| `border` | `#E5E1DA` | Card and divider lines (decorative) | — |
-| `border-strong` | `#CFC9BF` | Table outer borders, segmented controls | — |
-| `border-input` | `#8A94A3` | Input, checkbox and select outlines | 3.07:1 on white (meets 3:1 non-text) |
-| `text` | `#0F1B2D` | Primary text, headings, numbers | 17.3:1 on white · 16.0:1 on canvas |
-| `text-secondary` | `#475467` | Secondary text, labels | 7.7:1 · 7.1:1 |
-| `text-muted` | `#5F6B7A` | Captions, timestamps, placeholders | 5.4:1 · 5.0:1 |
-| `primary` | `#1F4FD1` | Primary buttons, links, focus ring, selected states | 6.8:1 on white; white text on it 6.8:1 |
-| `primary-hover` | `#1A43B3` | Hover | 8.4:1 |
-| `primary-pressed` | `#163A9C` | Active/pressed | — |
-| `primary-subtle` | `#EDF2FE` | Selected row, primary tint backgrounds | `primary` on it 6.1:1 |
-| `accent` (teal) | `#0B7A75` | Simulation badge, replay accents, "Suggested" ribbon, links in charts | 5.2:1 on white |
-| `accent-subtle` | `#E6F4F3` | Teal tint backgrounds | `accent` on it 4.6:1 |
-| `navy-900` | `#0F1B2D` | Login brand panel, top bar text | — |
-| `navy-800` | `#1B2B45` | Login brand panel gradient end (only gradient in the app) | — |
+| `surface-subtle` | `#FAF8F4` | Header rows, nested panels, hover rows, search field | — |
+| `surface-sunken` | `#EFEBE2` | Read-only fills, skeletons, disabled buttons | — |
+| `border` | `#E4DED2` | Card and divider lines (decorative) | — |
+| `border-strong` | `#CDC5B6` | Outer borders, segmented controls, secondary buttons | — |
+| `border-input` | `#928B85` (stone) | Input, checkbox and select outlines | 3.4:1 on white (≥ 3:1 non-text) |
+| `text` | `#141412` | Primary text, headings, numbers | 18.4:1 on white · 16.4:1 on canvas |
+| `text-secondary` | `#4B4944` | Secondary text, labels | 9.0:1 · 8.0:1 |
+| `text-muted` | `#6B665F` | Captions, timestamps, placeholders | 5.7:1 · 5.0:1 · 4.6:1 on `primary-subtle` |
+| `primary` | `#1B1B18` | Primary buttons (graphite), focus ring | white text on it 17.3:1 |
+| `primary-hover` / `primary-pressed` | `#2E2D29` / `#040404` | Hover / pressed | — |
+| `primary-subtle` | `#EFE6D3` (warm beige) | Selected rows, active filter pills, active nav pill, pressed KPI card | `text` on it 14.9:1 |
+| `accent` | `#3F6B4F` (deep sage) | Simulation and suggestion accents, accent text | 6.1:1 on white · 5.1:1 on `accent-subtle` |
+| `accent-fill` | `#6D9C7B` (sage green) | Unread dots, decorative fills, single-series charts (`chart-1`) | 3.1:1 on white (non-text) |
+| `accent-subtle` | `#E6EBE0` | Sage tint backgrounds, keyword highlight | — |
+| `sage-muted` | `#BFC2AD` | Wordmark accent and focus ring on the graphite bar | 10.1:1 on `nav-bg` |
+| `ink-900` / `ink-800` / `ink-700` | `#141412` / `#26251F` / `#3A3832` | Graphite chips, map route, overlays | — |
+| `nav-bg` · `nav-border` · `nav-hover` | `#141412` · `#2C2B26` · `#26251F` | Graphite application bar and mobile navigation sheet (§3) | — |
+| `nav-text` / `nav-text-strong` | `#C9C2B7` / `#F5EEE1` | Bar text / emphasised bar text | 10.4:1 / 16.0:1 on `nav-bg` |
+| `nav-active` / `nav-active-text` | `#EFE6D3` / `#141412` | Active section pill on the bar | 14.9:1 |
 
 ### 2.2 Colour — status (reserved; never used for chart series)
 | Level / status | Text & icon | Background tint | Icon | Label | Contrast (text on tint) |
 |---|---|---|---|---|---|
-| ON_TRACK / success | `#2F7A55` | `#E9F4EE` | check-circle | "On track" | 4.6:1 |
-| WATCH / warning | `#9A5B00` | `#FDF3E1` | eye | "Watch" | 4.9:1 |
-| AT_RISK / danger | `#B42318` | `#FDECEA` | alert-triangle | "At risk" | 5.8:1 |
-| LATE | `#7A1E14` | `#F7E4E1` | clock-alert | "Late" | 8.5:1 |
-| Info / neutral | `#475467` | `#F1EFEA` | info | — | 6.0:1 |
-| Delivered | `#2F7A55` | `#E9F4EE` | package-check | "Delivered" | 4.6:1 |
+| ON_TRACK / success | `#35724C` | `#E7F0E6` | check-circle | "On track" | 4.9:1 |
+| WATCH / warning | `#8F5B06` | `#F9EFD9` | eye | "Watch" | 5.0:1 |
+| AT_RISK / danger | `#B03423` | `#FAE7E2` | alert-triangle | "At risk" | 5.2:1 |
+| LATE | `#7A2416` | `#F3E0DA` | clock-alert | "Late" | 7.9:1 |
+| Info / neutral | `#4B4944` | `#EFEBE2` | info | — | 7.6:1 |
+| Delivered | `#35724C` | `#E7F0E6` | package-check | "Delivered" | 4.9:1 |
 
 Map markers use the same text colours as fills with a white 2 px ring and the icon inside.
 
 ### 2.3 Colour — delay-cause parties (charts)
-Validated as a categorical palette on white, adjacent-pair mode (stacked bars): lightness band, chroma floor, CVD separation (worst adjacent ΔE 14.9 deutan) and normal-vision floor all **PASS**; contrast vs surface ≥ 3:1. The blue/violet pair is close under protanopia when not adjacent, so **the stack order is fixed** (Plant → Transporter → Customer → External → Unattributed) and charts always have a legend, direct labels for ≤ 4 segments, and a table view.
-| Party | HEX | Notes |
-|---|---|---|
-| Plant | `#3B5BDB` | — |
-| Transporter | `#C27C0E` | Ochre; distinct from warning amber by placement (charts only) and labels |
-| Customer | `#7C4DCC` | — |
-| External | `#00968F` | — |
-| Unattributed | `#A3A9B3` + 45° hatch texture | Neutral; texture marks "unknown" |
+Re-validated for v2 with the dataviz palette checker on white, adjacent-pair mode (stacked bars): CVD separation ΔE ≥ 11.7, normal-vision ΔE ≥ 21.4, every hue ≥ 3:1 on white. The chroma floor flags only Unattributed, which is deliberately neutral (it is "no party"). **The stack order is fixed** (Plant → Transporter → Customer → External → Unattributed) and charts always have a legend, direct labels for ≤ 4 segments, and a table view.
+| Party | HEX | Contrast on white | Notes |
+|---|---|---|---|
+| Plant | `#3B68B5` | 5.5:1 | — |
+| Transporter | `#C27E1F` | 3.3:1 | Ochre; distinct from warning amber by placement (charts only) and labels |
+| Customer | `#8E62B8` | 4.6:1 | — |
+| External | `#2A9A82` | 3.5:1 | — |
+| Unattributed | `#55504A` | 8.0:1 | Neutral graphite-brown; marks "no party" |
 
-Single-series charts (on-time % by lane/transporter, weekly trend) use `primary` `#1F4FD1` only. Fair vs raw on-time uses `primary` (fair) and `#9DB3EE` (raw, lighter step of the same hue) — one hue, two steps, labelled.
+Single-series charts (on-time % by lane/transporter, weekly trend, volumes) use `chart-1` `#6D9C7B` (sage, 3.1:1 on white) with `chart-1-strong` `#3F6B4F` for the emphasised series or line. Values and labels stay in text tokens, never the series colour.
 
 ### 2.4 Typography
-- **Family:** Inter (OFL licence), **self-hosted** woff2 files served by the API (no external font request). Fallback: `ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`.
+- **Family:** Inter (OFL licence), **self-hosted**: the variable woff2 from `@fontsource-variable/inter@5.3.0` is bundled by Vite and served from the web app's own origin (no external font request; works with Wi-Fi off). Covered by the L9 "self-hosted Inter" approval. Fallback: `ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`.
 - **Numbers:** `font-variant-numeric: tabular-nums` for times, ETAs, KPIs, tables.
 - **No second font family.** Codes (SHP-1042) use Inter with `letter-spacing: 0.02em` and `font-weight: 500`.
 
@@ -88,7 +94,7 @@ Single-series charts (on-time % by lane/transporter, weekly trend) use `primary`
 | `body` | 14 / 20 | 400 | Default desktop text, tables |
 | `body-strong` | 14 / 20 | 600 | Emphasised values |
 | `small` | 12 / 16 | 500 | Captions, timestamps, chip labels |
-| `overline` | 11 / 16 | 600, uppercase, letter-spacing 0.06em | Section eyebrows ("SO FAR", "EXPECTED") |
+| `overline` | 11 / 16 | 600, uppercase, letter-spacing 0.06em | Section eyebrows ("SO FAR", "EXPECTED"). Utility class **`eyebrow`** — not `overline`, which is Tailwind's built-in text-decoration utility and draws a line above the text. |
 
 Minimum text size: 12 px on desktop, 16 px body on the driver UI.
 
@@ -96,13 +102,13 @@ Minimum text size: 12 px on desktop, 16 px body on the driver UI.
 | Group | Tokens |
 |---|---|
 | Spacing (4 px base) | `0` 0 · `0.5` 2 · `1` 4 · `2` 8 · `3` 12 · `4` 16 · `5` 20 · `6` 24 · `8` 32 · `10` 40 · `12` 48 · `16` 64 |
-| Radii | `sm` 6 (chips, inputs) · `md` 8 (buttons, small cards) · `lg` 12 (cards, panels) · `xl` 16 (modals, driver cards) · `full` 9999 (badges, avatars, markers) |
-| Shadows | `xs` `0 1px 2px rgba(15,27,45,0.06)` · `sm` `0 1px 3px rgba(15,27,45,0.08), 0 1px 2px rgba(15,27,45,0.04)` · `md` `0 4px 12px rgba(15,27,45,0.08)` · `overlay` `0 12px 32px rgba(15,27,45,0.14)` |
+| Radii (v2) | `sm` 6 (small chips) · `md` 8 (wordmark mark, tooltips) · `lg` 12 (buttons, inputs, selects, list rows) · `xl` 16 (cards, panels, map frame, toasts) · `2xl` 20 (dialogs, driver next-step card) · `full` 9999 (badges, nav and filter pills, avatars, markers). The Tailwind scale is reset, so a radius class without a token renders square — guarded by a unit test. |
+| Shadows (v2, warm) | `xs` `0 1px 2px rgba(20,20,18,0.05)` · `sm` `0 1px 3px rgba(20,20,18,0.07), 0 1px 2px rgba(20,20,18,0.04)` · `md` `0 6px 16px rgba(20,20,18,0.08)` · `overlay` `0 16px 40px rgba(20,20,18,0.16)` |
 | Use of shadow | Cards: `border` + `xs`. Popovers/drawers: `md`. Modals: `overlay`. Nothing else. |
-| Focus ring | 2 px `primary` outline + 2 px offset (6.3:1 on canvas) |
-| Motion | `fast` 120 ms · `base` 200 ms · `slow` 320 ms; easing `cubic-bezier(0.2, 0, 0, 1)`. Marker movement interpolates over 1,000 ms linear. All motion off under `prefers-reduced-motion` (markers jump). |
+| Focus ring | 2 px `primary` (graphite) outline + 2 px offset (15.3:1 on canvas); on the graphite bar and sheet (`.on-dark`) the ring is `focus-on-dark` `#BFC2AD` (10.1:1) |
+| Motion | `fast` 120 ms · `base` 200 ms · `slow` 320 ms; easing `cubic-bezier(0.2, 0, 0, 1)`. v2 keyframes: `rp-fade` (overlays), `rp-slide-in` / `rp-slide-in-right` (navigation sheet, drawers), `rp-pop` (dialogs), `rp-rise` (toasts). Marker movement interpolates over 1,000 ms linear. All motion off under `prefers-reduced-motion` (markers jump). |
 | Layout widths | App max content 1600 px; side panel 400 px; shipment list 360 px; driver content max 480 px |
-| Breakpoints | `sm` 360 · `md` 768 · `lg` 1024 · `xl` 1280 · `2xl` 1536 |
+| Breakpoints | `sm` 360 · `md` 768 · `lg` 1024 · `xl` 1280 · `2xl` 1536. `sm` is 360 px (every phone), so phone-hidden content uses `md:`. The coordinator bar also uses a 1440 px query (`BP.wide`) for the full clock. |
 | Z-index | base 0 · map controls 10 · sticky header 20 · drawer 30 · popover 40 · modal 50 · toast 60 |
 
 ### 2.6 Iconography
@@ -110,7 +116,17 @@ Minimum text size: 12 px on desktop, 16 px body on the driver UI.
 - Every icon next to text is `aria-hidden`; icon-only buttons have an `aria-label`.
 
 ### 2.7 Implementation of tokens
-Tokens are CSS custom properties in `apps/web/src/styles/tokens.css` and mapped into the Tailwind theme (architecture §3 lists Tailwind as an assumption). Components never use raw HEX values.
+Tokens are CSS custom properties in `apps/web/src/styles/tokens.css` and mapped into the Tailwind theme in `styles/globals.css` (Tailwind's own colour, radius, shadow, text and breakpoint scales are reset). Components never use raw HEX values. `components/primitives/redesign.test.tsx` checks the approved palette, AA contrast of the text and status pairs, the absence of HEX in `globals.css`, and that every colour, radius, shadow and text-size class used in a component has a theme token.
+
+### 2.8 Component system (v2)
+| Area | Components (all in `apps/web/src`) |
+|---|---|
+| Frame | `app/layouts/shell.tsx`: `Wordmark`, `TopNavLink` (pill; beige when active), `MobileNav` (Radix Dialog sheet below 1024 px), `UserMenu` (initials avatar, name, role, Log out), `ContextStrip`, `SyncBanners`, `SkipLink`; `app/layouts/layouts.tsx`: coordinator, customer, driver and login frames |
+| Primitives | `Button` / `IconButton` (`tone` light · dark · outline), `TextField`, `fieldStyles.ts` (`selectClass`, `selectClassSm`, `textareaClass`), `radix.tsx` (`SegmentedControl` with `tone`, `Tabs`, `Tooltip`, `Dialog`, `Breadcrumbs`), `toast.tsx` (`ToastProvider`, `useToast`) |
+| Display | `Card`, `CardHeader`, `Badge`, `StatusBadge` (colour + icon + text), `ConfidenceChip`, `PartyChip`, `CountBadge`, `KpiCard`, `EmptyState`, `Skeleton`, `Banner`, `ErrorState`, `InlineError` |
+| Toasts | Raised only from a mutation's `onSuccess` (recovery chosen, report confirmed, review saved) — never a fake success. Errors stay inline next to the action. |
+| Pagination | Not used: no API endpoint paginates and the lists are bounded by the demo data, so page controls would be non-functional. |
+
 
 ---
 
@@ -122,11 +138,11 @@ Tokens are CSS custom properties in `apps/web/src/styles/tokens.css` and mapped 
 | Customer | `/orders` · `/orders/:id` · `/notifications` | `/orders` |
 | Driver | `/trip` · `/trip/report` | `/trip` |
 
-**Coordinator top bar (64 px, white, bottom border):** RoutePulse wordmark · nav (Control tower, Dashboard, Driver reports [count badge], Simulation) · **simulation clock** (teal badge "SIMULATION · Thu 11:10" + play/pause + speed) · notification bell [unread] · user menu (name, role, Log out). A thin strip under it reads "Fictional data · Plant X" (muted, 12 px).
+**Coordinator bar (v2: 56 px, graphite):** wordmark · nav pills with icons (Control tower, Dashboard, Driver reports [count badge], Simulation; active = warm-beige pill) · **simulation clock** ("SIMULATION · Thu 11:10" chip, Paused chip, play/pause; speed control from 1440 px) · notification bell [unread] · user menu (initials, name, role, Log out). 1024–1279 px: nav links are icon-only (label kept for assistive technology and as a tooltip). Below 1024 px the sections and the full clock move into a navigation sheet; the Control Tower dock and the Simulation page also carry the clock. A thin strip under the bar reads "Fictional data · Plant X · Rule-based estimates · Times shown in IST" (muted, 12 px).
 
-**Customer top bar:** company name (e.g. "Kestrel Moulders"), nav (Orders, Notifications), user menu. No simulator controls; a muted "Times shown in IST" note.
+**Customer bar (graphite):** wordmark (from 768 px), company name (e.g. "Kestrel Moulders") with "Deliveries from Plant X", nav (Orders, Notifications [unread]; icon-only below 768 px), user menu. No simulator controls; a muted "Fictional data · Plant X · Times shown in IST" strip.
 
-**Driver:** no top nav; a compact header with trip code and a menu (Log out). Bottom area reserved for the primary action.
+**Driver:** no top nav; a compact graphite header with the wordmark, transporter name and the account menu (Log out). Bottom area reserved for the primary action ("Report a problem").
 
 ---
 
@@ -177,7 +193,7 @@ Rules: `components/` has no API calls; `features/` composes components and hooks
 
 ## 5. Login page
 
-**Layout (≥ 1024 px):** two columns. Left 45%: navy brand panel (`navy-900 → navy-800` vertical gradient, the only gradient) with the RoutePulse wordmark, the tagline "Know it will be late hours before it is — know why, and fix it." (spec §1), and three short lines: "Explained ETAs", "Recovery options with trade-offs", "Fair delay attribution". Bottom: "Fictional demo · Plant X is a fictional company". Right 55%: centred form card (max 400 px).
+**Layout (≥ 1024 px):** two columns. Left 45%: graphite brand panel (`nav-bg`, flat; v2 has no gradient, two thin decorative circles) with the RoutePulse wordmark, the tagline "Know it will be late hours before it is — know why, and fix it." (spec §1), and three short lines: "Explained ETAs", "Recovery options with trade-offs", "Fair delay attribution". Bottom: "Fictional demo · Plant X is a fictional company". Right 55%: centred form card (max 400 px).
 **< 1024 px:** brand panel collapses to a 120 px header; form below.
 
 | Element | Detail |
@@ -233,7 +249,7 @@ API: **#1** login · **#3** me (on load; signed-in users are redirected to their
 - Split child shipments are indented under their parent with a "Split" chip.
 
 ### 6.4 Map (centre) — see §8 for details
-Shows all live shipments, routes, sites, plant, active disruptions. Selected shipment: its route highlighted, others dimmed to 40%. A floating **Simulation dock** (bottom-right, teal outline, labelled "SIMULATION") holds: play/pause, speed segmented control (1× / 10× / 60×), "+1 h", "Advance to…" time picker, "Inject event" (opens the disruption form drawer), "Reset demo" (confirm dialog). Map legend bottom-left (collapsible).
+Shows all live shipments, routes, sites, plant, active disruptions. Selected shipment: its route highlighted, others dimmed to 40%. A floating **Simulation dock** (bottom-right; v2: a white card labelled "SIMULATION" from 1280 px, a graphite pill with time and state below that, expandable to the full controls) holds: play/pause, speed segmented control (1× / 10× / 60×), "+1 h", "Advance to…" time picker, "Inject event" (opens the disruption form drawer), "Reset demo" (confirm dialog). Map legend bottom-left (collapsible).
 
 ### 6.5 Right panel
 **Default: tabs "Alerts" and "Activity".**
@@ -279,7 +295,7 @@ Below 1280 px: right column moves under the left column.
 Code (`h1`), customer + city, lane, transporter + truck, driver name (coordinator only), `StatusBadge`, `EtaDisplay`, promise, `ConfidenceChip` with tooltip reason, "Renegotiated" chip if applicable, buttons: **Replay** (→ §10), **Override milestone** (secondary, opens dialog requiring a note; API #17), **Report on behalf of driver** (secondary; same form as the driver's, logged; API #22, #23 — spec §4).
 
 ### 7.3 ETA explanation — `EtaWaterfall`
-- Horizontal waterfall from **Planned arrival** to **Predicted arrival at the receiving gate** (L1), with a vertical **Promised by** line (dashed navy), a **Road arrival** tick (`projectedRoadArrivalAt`) and the applicable receiving window shaded (light teal band; an accepted override is labelled "Agreed window until 19:30") on the time axis.
+- Horizontal waterfall from **Planned arrival** to **Predicted arrival at the receiving gate** (L1), with a vertical **Promised by** line (dashed graphite), a **Road arrival** tick (`projectedRoadArrivalAt`) and the applicable receiving window shaded (light sage band; an accepted override is labelled "Agreed window until 19:30") on the time axis.
 - Bars grouped under overline labels **SO FAR** (INCURRED), **PLAN CHANGE** (only if rerouted) and **EXPECTED**, each bar coloured by **party** (§2.3), labelled "+120 min · Heavy rain on ghat section". WIN bar shows its party split as stacked segments with a "knock-on" label.
 - Pending RPT bars use a dashed outline + "Pending coordinator review" chip.
 - Under the chart, `FactorList` repeats every bar as text rows (accessible equivalent): factor, phase, minutes, party, detail, source link.
@@ -306,7 +322,7 @@ Loading: skeleton header + skeleton waterfall. Not found / out of scope (404): "
 
 ### 8.1 Basemap
 - Offline only (architecture §16): local PMTiles if the spike passes, otherwise the GeoJSON fallback. The visual style is the same in both: land `#EEECE6`, water `#DCE6EE`, state borders `#CFC9BF` 1 px, no POI clutter, no basemap labels except (tiled variant only) major city names in `text-muted`.
-- OpenStreetMap attribution visible bottom-right when tiles are OSM-derived.
+- OpenStreetMap / Protomaps attribution always visible at the bottom-left of every map (custom element, never covered by the legend, dock or panels; checked at 360–1440 px) when the basemap is installed.
 
 ### 8.2 Data layers
 | Layer | Style |
@@ -314,8 +330,8 @@ Loading: skeleton header + skeleton waterfall. Not found / out of scope (404): "
 | Primary route | 3 px `#334155` line, 80% opacity; selected: 4 px `primary` |
 | Alternate route | 2 px dashed `#8A94A3`; shown when its shipment is selected or a reroute option is hovered |
 | Disruption segment | 6 px `danger` line at 35% opacity under a 2 px dashed `danger` line + label pill ("Heavy rain · −65% speed · until 18:30") |
-| Plant | Navy square marker with factory icon, label "Plant X" |
-| Customer sites | White circle with navy border + building icon; label with name and receiving hours on hover |
+| Plant | Graphite square marker with factory icon, label "Plant X" |
+| Customer sites | White circle with graphite border + building icon; label with name and receiving hours on hover |
 | Trucks (`TruckMarker`) | 28 px circle in level colour, white 2 px ring, truck icon (white); code label pill below (`SHP-1042`); stopped: pause glyph badge; selected: 36 px + `primary` halo; focusable `<button>` with `aria-label="SHP-1042, At risk, estimated arrival Friday 08:00"` |
 
 ### 8.3 Interaction
@@ -343,7 +359,7 @@ Shown in the quick panel (Suggested only + "Compare all") and in full on the shi
 ### 9.1 `RecoveryCard`
 | Area | Content |
 |---|---|
-| Top | Kind icon + title ("Replacement truck from Khopoli yard"); **Suggested** ribbon (teal) on one card |
+| Top | Kind icon + title ("Replacement truck from Khopoli yard"); **Suggested** ribbon (sage) on one card |
 | Outcome | New ETA ± range; **Meets promise ✓ / Misses promise ✗** (icon + text, success/danger) |
 | Metrics (3 columns) | Time saved vs Notify only · Estimated extra cost "₹6,100" with "Fictional rate card" caption · CO₂e: value, or "CO₂e — method under verification" (muted) until G-CO2 (AC-S1.1) |
 | Constraints | Bulleted ("Needs TRK-11, free at Khopoli from 11:30") |
@@ -365,13 +381,13 @@ API: **#29**, **#30**, **#27** (customer response shown above the cards: "Custom
 
 ### 10.1 Layout
 ```
-┌ Header: ← SHP-1042 · Replay · First at risk 11:10 · 6 h 50 m before promise (teal callout) ┐
+┌ Header: ← SHP-1042 · Replay · First at risk 11:10 · 6 h 50 m before promise (beige callout on the dark header) ┐
 ├─────────── Map (left 7/12): position at selected snapshot ──┬── Snapshot (right 5/12) ─────┤
 │                                                             │ Level · ETA ± range · slack  │
 │                                                             │ Waterfall at this moment     │
 ├─────────── EtaTimelineChart (full width, 220 px) ───────────────────────────────────────────┤
 │ y = time of day; predicted ETA line (2 px primary) with range band (primary-subtle);       │
-│ promised-by line (dashed navy); x = simulation time; event markers on the x axis            │
+│ promised-by line (dashed graphite); x = simulation time; event markers on the x axis            │
 ├─────────── Scrubber (full width) ──────────────────────────────────────────────────────────┤
 │ ◀ ▶  ━━━━━━━●━━━━━━━━━━  11:10   [Play replay ▷]   markers: gate out · rain · report · alert · recovery │
 └──────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -591,5 +607,6 @@ All items that were open in revision 0.1 are resolved (architecture §0.1).
 | 5 | UI library set | **L9** — React, Vite, TypeScript, Tailwind CSS, Radix UI, TanStack Query, React Router, Recharts, MapLibre GL JS, lucide-react. Nothing else without approval. |
 | 6 | Self-hosted Inter | **L9** — approved |
 | 7 | NEW_WINDOW and receiving hours | **L4** — shipment-specific override; dialog shows the fixed window (§9.2) |
+| 8 | Application-wide visual redesign (2026-11-12) | Team-requested v2: graphite · warm beige · sage tokens (§2.1–2.3), graphite frame (§3), component system (§2.8), toasts on real mutation success only, breadcrumbs on detail pages. No change to requirements, calculations, API contracts or role rules. New dependency `@fontsource-variable/inter@5.3.0` (OFL) implements the already-approved self-hosted Inter (row 6). |
 
 Gated features stay disabled (L10): CO₂e shows "method under verification"; no second language until verified.

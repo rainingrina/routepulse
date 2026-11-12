@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import type { ReplayResponse, ReplaySnapshot, TimelineEvent } from '../../api/contract';
 import { useReplay } from '../../api/hooks/portal';
 import { useShipmentDetail } from '../../api/hooks/world';
 import { useMediaQuery } from '../../app/useMediaQuery';
 import { Card, CardHeader, ConfidenceChip, EmptyState, KeyValue, Skeleton } from '../../components/display/basics';
-import { Banner, ErrorState } from '../../components/display/feedback';
+import { ErrorState } from '../../components/display/feedback';
 import { EtaDisplay } from '../../components/display/EtaDisplay';
 import { StatusBadge } from '../../components/display/StatusBadge';
-import { ArrowLeft, ChevronLeft, ChevronRight, History, ICON_STROKE, Pause, Play } from '../../components/icons';
+import { ChevronLeft, ChevronRight, History, ICON_STROKE, Pause, Play } from '../../components/icons';
 import { Button, IconButton } from '../../components/primitives/Button';
-import { SegmentedControl, Tooltip } from '../../components/primitives/radix';
+import { Breadcrumbs, SegmentedControl, Tooltip } from '../../components/primitives/radix';
 import { riskLabel, t } from '../../i18n/en';
 import { formatDayTime, formatDuration, formatFull, formatSlack, formatTime, formatTimeRelative } from '../../i18n/format';
 import { MiniMap } from '../../map/MiniMap';
@@ -88,19 +88,25 @@ function ReplayView({ r, laneId, routeId }: { r: ReplayResponse; laneId: string 
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 overflow-x-hidden p-4 lg:p-6">
-      <Link to={`/shipments/${encodeURIComponent(r.shipmentId)}`} className="inline-flex items-center gap-1 self-start text-body text-primary hover:underline">
-        <ArrowLeft aria-hidden className="size-4" strokeWidth={ICON_STROKE} />
-        {r.code}
-      </Link>
-      <header className="flex flex-wrap items-center gap-3">
-        <h1 className="text-h1 text-text">
-          <span className="code-label">{r.code}</span> · Replay
+      <Breadcrumbs
+        items={[
+          { label: 'Control tower', to: '/control-tower' },
+          { label: r.code, to: `/shipments/${encodeURIComponent(r.shipmentId)}` },
+          { label: 'Replay' },
+        ]}
+      />
+      <header className="on-dark flex flex-wrap items-center gap-3 rounded-xl bg-nav-bg px-4 py-3 text-nav-text-strong">
+        <History aria-hidden className="size-5 text-sage-muted" strokeWidth={ICON_STROKE} />
+        <h1 className="text-h2">
+          <span className="code-label">{r.code}</span> <span className="font-normal text-nav-text">· Replay</span>
         </h1>
+        <span className="rounded-full border border-nav-border px-2.5 py-0.5 text-small text-nav-text">Historical view, read-only</span>
+        <span className="flex-1" />
         <FirstAtRiskCallout r={r} />
       </header>
-      <Banner tone="info">
-        Historical view, read-only: stored rule-based snapshots for this shipment. Nothing here changes the simulation. Promised by {formatDayTime(r.promisedBy)} · planned arrival {formatDayTime(r.plannedArrivalAt)}.
-      </Banner>
+      <p className="-mt-1 text-small text-text-muted">
+        Stored rule-based snapshots for this shipment. Nothing here changes the simulation. Promised by {formatDayTime(r.promisedBy)} · planned arrival {formatDayTime(r.plannedArrivalAt)}.
+      </p>
 
       {n === 0 || !s ? (
         <Card>
@@ -153,7 +159,7 @@ function ReplayView({ r, laneId, routeId }: { r: ReplayResponse; laneId: string 
                       <span aria-hidden className="h-3 w-5 rounded-sm bg-primary-subtle" /> Range
                     </li>
                     <li className="inline-flex items-center gap-1.5">
-                      <span aria-hidden className="w-5 border-t-2 border-dashed border-navy-900" /> Promised by
+                      <span aria-hidden className="w-5 border-t-2 border-dashed border-ink-900" /> Promised by
                     </li>
                     {r.firstAtRiskAt ? (
                       <li className="inline-flex items-center gap-1.5">
@@ -210,10 +216,10 @@ function ReplayView({ r, laneId, routeId }: { r: ReplayResponse; laneId: string 
 
 function FirstAtRiskCallout({ r }: { r: ReplayResponse }) {
   if (!r.firstAtRiskAt) {
-    return <span className="rounded-md bg-surface-sunken px-2 py-1 text-body text-text-secondary">Never at risk</span>;
+    return <span className="rounded-full border border-nav-border px-3 py-1 text-body text-nav-text-strong">Never at risk</span>;
   }
   return (
-    <span className="rounded-md bg-accent-subtle px-2 py-1 text-body font-medium text-text">
+    <span className="rounded-full bg-nav-active px-3 py-1 text-body font-medium text-nav-active-text">
       First at risk {formatTime(r.firstAtRiskAt)}
       {r.leadTimeMinutes !== null ? ` · ${formatDuration(r.leadTimeMinutes)} before promise` : ''}
     </span>
@@ -271,7 +277,7 @@ function SnapshotTable({ r, selected, onSelect }: { r: ReplayResponse; selected:
           {r.snapshots.map((s, i) => (
             <tr key={s.id} className={i === selected ? 'bg-primary-subtle' : 'border-t border-border'}>
               <td className="py-1 pr-3 tabular">
-                <button type="button" className="text-primary hover:underline" onClick={() => onSelect(i)}>
+                <button type="button" className="link" onClick={() => onSelect(i)}>
                   {formatTime(s.simTime)}
                 </button>
               </td>

@@ -124,7 +124,7 @@ describe('Shipment list (#14)', () => {
 describe('Alerts panel (#26) and activity feed (#37)', () => {
   it('each alert shows the shipment, status, first-at-risk time, reason and the Suggested action; "View options" opens recovery', () => {
     const html = text(renderWithData(<AlertsPanel onViewOptions={() => undefined} />, { data: [[qk.alerts({ status: 'active' }), fx.alerts], [qk.alerts({ status: 'RESOLVED', limit: 5 }), { items: [] }]] }));
-    expect(html).toContain('SHP-1042 · Open');
+    expect(html).toMatch(/SHP-1042\s+Open/); // state shown as a badge next to the code (redesign)
     expect(html).toContain('At risk · top factor at opening: breakdown');
     expect(html).toMatch(/at risk since Thu 11:10/);
     expect(html).toContain('Suggested: Replacement truck');
@@ -133,7 +133,7 @@ describe('Alerts panel (#26) and activity feed (#37)', () => {
 
   it('after the choice the alert stays open as "Action chosen" with the chosen recovery (approved lifecycle)', () => {
     const html = text(renderWithData(<AlertsPanel onViewOptions={() => undefined} />, { data: [[qk.alerts({ status: 'active' }), fx.alertsAfterChoose], [qk.alerts({ status: 'RESOLVED', limit: 5 }), { items: [] }]] }));
-    expect(html).toContain('SHP-1042 · Action chosen');
+    expect(html).toMatch(/SHP-1042\s+Action chosen/);
     expect(html).toContain('Action chosen: Replacement truck');
   });
 

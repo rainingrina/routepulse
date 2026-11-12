@@ -16,4 +16,6 @@ export function useMediaQuery(query: string): boolean {
 export const BP = {
   lg: '(min-width: 1024px)',
   xl: '(min-width: 1280px)',
+  /** Coordinator bar: room for the full clock (speed control) next to the labelled nav. */
+  wide: '(min-width: 1440px)',
 } as const;

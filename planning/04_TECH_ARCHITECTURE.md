@@ -119,7 +119,7 @@ flowchart LR
 | Icons | lucide-react | One outline icon set, tree-shaken | **[DECIDED L9]** |
 | Font | Inter, self-hosted woff2 | Offline | **[DECIDED L9]** |
 | Charts | Recharts | Bar/line/stacked charts; our own table toggle | **[DECIDED L9]** |
-| Map | MapLibre GL JS used directly; local basemap via PMTiles (spike §16.2) or the GeoJSON fallback (§16.3) | Open source, no key, offline | **[DECIDED L9]** (MapLibre) · **[OPEN]** the `pmtiles` browser library is not in the L9 list (§16.2) |
+| Map | MapLibre GL JS used directly; local basemap via PMTiles (spike §16.2) or the GeoJSON fallback (§16.3) | Open source, no key, offline | **[DECIDED L9]** (MapLibre) · **[DECIDED O-11, 2026-11-12]** `pmtiles` browser library approved; self-hosted regional PMTiles (§16.5) |
 | Geometry | Turf `along` / `length` (server) | Position from route distance | **[A]** |
 | Auth | bcrypt hashes + signed JWT in an httpOnly cookie | No session table | **[A]** |
 | Tests | Vitest; integration tests call the real Express app on an ephemeral port with Node's built-in `fetch` (no extra HTTP test library) | Few dependencies | **[A]** |
@@ -694,6 +694,13 @@ flowchart LR
 - Pre-demo checklist item: run the full demo once with Wi-Fi off.
 - OpenStreetMap attribution stays visible when OSM-derived tiles are used.
 
+### 16.5 As implemented (Phase A, approved 2026-11-12)
+- **Data:** a western-India extract (bbox 71.0,16.5 – 80.5,24.5; zoom 0–12 by default — 95,697,248 bytes, SHA-256 `4c8206b3…77cfe3` for build 20261109) of the pinned Protomaps OpenStreetMap build `20261109`, created once by `npm run basemap:fetch` (`scripts/fetch-basemap.sh`, PMTiles CLI `extract`) into `apps/api/static/basemap/western-india.pmtiles` — outside Git (`.gitignore`); `SOURCE.txt` next to it records build, bbox and zoom. Licence: © OpenStreetMap contributors, ODbL 1.0; Natural Earth (public domain) at low zoom. Protomaps keeps daily builds 1 week, Monday builds 1 month, then the last build of each basemap version: if `20261109` has expired, set `BASEMAP_BUILD` to a current build (the change is recorded in `SOURCE.txt`).
+- **Serving:** `express.static` at `/tiles` before the `/api` middleware, public (OSM data), HTTP Range (206, `Accept-Ranges: bytes`, 416 for unsatisfiable ranges), `Content-Type: application/vnd.pmtiles`, 1 h cache; missing file → `404` with a setup hint. Folder configurable with `BASEMAP_DIR` (absolute). CSP unchanged (`connect-src 'self'`, `img-src 'self' data: blob:`).
+- **Rendering:** `map/basemap.ts` registers the `pmtiles://` protocol once and adds four layers below every overlay: `earth` (land), `water` polygons, main roads (`highway`; `major_road` from z9) and **state borders only** (`boundaries`, `kind = region`, never `disputed`; `country` boundaries are not drawn — approved). Colours from `--rp-map-land`, `--rp-map-water`, `--rp-map-border` and `--rp-surface` (roads). No sprites; the only symbol layer is the city labels below. The map is locked to the extract with `maxBounds` (approved). A compact attribution control shows "© OpenStreetMap contributors · Protomaps".
+- **City labels (approved enhancement):** six lane cities from local point data (`map/cities.ts`) as a MapLibre symbol layer placed above the basemap and below every overlay; one Latin glyph range of Noto Sans Regular (SIL OFL 1.1, pinned Protomaps basemaps-assets commit `75683e9c`) is fetched with the basemap and served same-origin at `/glyphs/{fontstack}/{range}.pbf`. This narrows §16.1 ("all text as HTML markers") for these six basemap place names only; shipment, site and plant labels remain HTML markers. Missing glyphs → no labels.
+- **Fallback:** the SPA checks `HEAD /tiles/western-india.pmtiles` and `HEAD /glyphs/Noto%20Sans%20Regular/0-255.pbf`; if it is missing the base style stays land-colour only and the legend says "Basemap not installed: showing land only". Every overlay is unchanged in both cases.
+
 ---
 
 ## 17. Reference data and activity feed
@@ -755,7 +762,7 @@ Status: **Resolved** (by a decision or by design), **Open** (team decision neede
 | 24 | Waiting for manual ARRIVED confirmation | Resolved (L6) | `physicalArrivalAt`; `arrivedAt` = eligible check-in; no ledger booking for confirmation lag |
 | 25 | Activity feed source | Resolved (L7) | `GET /api/audit` |
 | 26 | Hero replacement "transfer ~90 min" vs engine timing | Resolved by calculation | Total stoppage 11:10–12:40 ≈ 90 min = 15 min before the decision + 30 min travel + 45 min transfer; reproduces ETA 17:50 (engine doc Ex 3) |
-| 27 | `pmtiles` browser library needed for the tiled basemap but not in the L9 dependency list | **Open** | Approve `pmtiles`, or use the GeoJSON fallback basemap (no extra dependency) |
+| 27 | `pmtiles` browser library needed for the tiled basemap but not in the L9 dependency list | **Resolved (approved 2026-11-12, O-11)** | `pmtiles` approved; self-hosted Protomaps OSM regional extract (§16.5) |
 | 28 | Manual hero truck had no tracking pings, so confidence would fall in the afternoon | Resolved (O-14, 2026-11-12) | Every truck on the road pings every 30 min; pings never trigger milestones (§9.3) |
 | 29 | Projection gate-queue formula vs the simulated queue | Resolved by design (Milestone 5) | The projection runs the simulation itself (§10.7a); the documented formula is the approximation it reduces to |
 | 30 | Confidence for a shipment that has never sent an update | Interpretation (Milestone 5) | Treated as older than 3 h: LOW, +30 range (engine doc §9) |

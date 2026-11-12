@@ -12,7 +12,7 @@ import { formatDayTime } from '../../i18n/format';
 import type { NotificationDto } from '../../api/contract';
 
 /** Coordinator notification centre (#31–#33). Unread count comes from /api/sync. */
-export function NotificationBell() {
+export function NotificationBell({ onDark = false }: { onDark?: boolean }) {
   const { sync } = useSync();
   const [open, setOpen] = useState(false);
   const unread = sync?.unreadNotifications ?? 0;
@@ -20,7 +20,10 @@ export function NotificationBell() {
     <P.Root open={open} onOpenChange={setOpen}>
       <P.Trigger
         aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
-        className="relative inline-flex size-9 items-center justify-center rounded-md text-text-secondary hover:bg-surface-sunken hover:text-text"
+        className={cn(
+          'relative inline-flex size-10 items-center justify-center rounded-full',
+          onDark ? 'text-nav-text hover:bg-nav-hover hover:text-nav-text-strong' : 'text-text-secondary hover:bg-surface-sunken hover:text-text',
+        )}
       >
         <Bell aria-hidden className="size-[18px]" strokeWidth={ICON_STROKE} />
         <span className="absolute -top-0.5 -right-0.5">
@@ -31,7 +34,7 @@ export function NotificationBell() {
         <P.Content
           align="end"
           sideOffset={8}
-          className="z-40 w-[360px] max-w-[calc(100vw-32px)] rounded-lg border border-border bg-surface shadow-md"
+          className="z-50 w-[380px] max-w-[calc(100vw-24px)] overflow-hidden rounded-xl border border-border bg-surface shadow-md"
         >
           {open ? <NotificationList onNavigate={() => setOpen(false)} /> : null}
         </P.Content>
@@ -48,10 +51,13 @@ export function NotificationList({
   onNavigate,
   linkFor = (n) => (n.shipmentId ? `/shipments/${encodeURIComponent(n.shipmentId)}` : null),
   className,
+  title = 'Notifications',
 }: {
   onNavigate: () => void;
   linkFor?: (n: NotificationDto) => string | null;
   className?: string;
+  /** Header text; a page that already has its own h1 passes a sub-heading. */
+  title?: string;
 }) {
   const list = useNotifications();
   const markRead = useMarkNotificationRead();
@@ -60,7 +66,10 @@ export function NotificationList({
   return (
     <div className={cn('flex flex-col', className ?? 'max-h-[70vh]')}>
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <h2 className="text-h3 text-text">Notifications</h2>
+        <h2 className="text-h3 text-text">
+          {title}
+          {list.data && list.data.unreadCount > 0 ? <span className="ml-2 text-small font-normal text-text-muted tabular">{list.data.unreadCount} unread</span> : null}
+        </h2>
         <Button
           size="sm"
           variant="ghost"
@@ -89,7 +98,7 @@ export function NotificationList({
                 <button
                   type="button"
                   className={cn(
-                    'flex w-full flex-col gap-0.5 px-4 py-3 text-left hover:bg-surface-subtle',
+                    'flex w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-subtle',
                     !n.readAt && 'bg-primary-subtle/50',
                   )}
                   onClick={() => {
@@ -101,13 +110,16 @@ export function NotificationList({
                     }
                   }}
                 >
-                  <span className="flex items-center gap-2 text-body text-text">
-                    {!n.readAt ? <span aria-label="Unread" className="size-2 shrink-0 rounded-full bg-primary" /> : null}
-                    {n.text}
+                  {/* Fixed dot column keeps read and unread text aligned. */}
+                  <span className="flex w-2 shrink-0 pt-2">
+                    {!n.readAt ? <span aria-label="Unread" className="size-2 rounded-full bg-accent-fill" /> : null}
                   </span>
-                  <span className="text-small text-text-muted tabular">
-                    {n.shipmentCode ? `${n.shipmentCode} · ` : ''}
-                    {formatDayTime(n.simTime)}
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className={cn('text-body text-text', !n.readAt && 'font-medium')}>{n.text}</span>
+                    <span className="text-small text-text-muted tabular">
+                      {n.shipmentCode ? `${n.shipmentCode} · ` : ''}
+                      {formatDayTime(n.simTime)}
+                    </span>
                   </span>
                 </button>
               </li>

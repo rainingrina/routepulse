@@ -38,7 +38,7 @@ export function KpiStrip({
   const warningDef = dashboard.data?.definitions.warningLead;
 
   return (
-    <div className="flex gap-3 overflow-x-auto px-4 py-3 xl:px-6" role="group" aria-label="Key figures">
+    <div className="flex gap-3 overflow-x-auto px-3 py-3 xl:px-5" role="group" aria-label="Key figures">
       <KpiCard
         label="Live shipments"
         value={live}
