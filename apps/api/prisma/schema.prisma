@@ -1,0 +1,26 @@
+// RoutePulse database schema — the single source of truth for the data model (decision D9).
+// Design reference: planning/05_DATABASE_SCHEMA.md (v0.3).
+// Milestone 1 contains only the simulation-state singleton; the remaining 19 models and all enums
+// are added in Milestone 2 (PROGRESS.md tasks 2.1–2.2).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Single-row simulation clock (schema §5.20). Raw-SQL CHECKs live in the migration.
+model SimState {
+  id            Int      @id @default(1)
+  simTime       DateTime @db.Timestamptz(3)
+  running       Boolean  @default(false)
+  speed         Int      @default(1)
+  stepMinutes   Int      @default(5)
+  lastSettledAt DateTime @db.Timestamptz(3)
+  worldVersion  Int      @default(0)
+  seedName      String
+  simError      String?
+}

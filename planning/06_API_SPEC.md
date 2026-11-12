@@ -353,6 +353,8 @@ interface GeoJSONLineString { type: 'LineString'; coordinates: [number, number][
 | 37 | GET | `/api/audit` | Coordinator | Audit |
 | 38 | GET | `/api/reference` | Coordinator | M5 filters, X4 form |
 
+**Operational endpoint (added in implementation Milestone 1, 2026-11-12):** `GET /api/health` — public; returns `HealthResponse` (`status`, `database`, `serverTime`, `version`); 200 when the database answers, 503 otherwise. Not a product endpoint; see `09_BACKEND_HANDOFF.md`.
+
 ---
 
 ## 4. Authentication

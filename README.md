@@ -5,7 +5,7 @@ Know it will be late hours before it is — know why, and fix it.
 
 Built for the LYB Mumbai Hackathon 2026, Round 2, Problem Statement 3 (Order-to-Delivery Control Tower). All companies, people and data are **fictional**; "Plant X" is a fictional polymer producer.
 
-> **Project status (2026-11-12): planning complete and decisions locked (L1–L10); implementation not started.** The repository currently contains planning documents only. The commands and configuration below describe the **planned** setup from `planning/04_TECH_ARCHITECTURE.md`; they do not work yet and will be updated to match the real `package.json` scripts when the code exists. See `PROGRESS.md`.
+> **Project status (2026-11-12): planning complete and decisions locked (L1–L10); backend Milestone 1 (foundation) implemented on branch `backend`; other features not yet implemented.** The commands below match the real `package.json` scripts. See `PROGRESS.md` for exact status.
 
 ---
 
@@ -33,7 +33,7 @@ RoutePulse gives three roles one shared view:
 - Disruption simulator on a deterministic simulation clock.
 - Driver problem reporting by typed input with reason confirmation.
 
-None of these is implemented yet.
+None of these features is implemented yet; only the backend foundation (health check, error handling, database setup) exists.
 
 ---
 
@@ -64,32 +64,43 @@ Browser (React SPA)  ──JSON /api/*──▶  Express v5 API  ──Prisma─
 
 ---
 
-## Getting started (planned — not yet available)
+## Getting started (backend — Milestone 1)
 
-The repository has no `package.json`, `.env.example`, Docker Compose file or Prisma schema yet. When they are added, this section will list the exact commands. The planned shape (architecture §4 and §15) is:
+Only the backend foundation exists so far (branch `backend`). The web app is developed separately.
 
-### Prerequisites (planned)
-- Node.js LTS and npm.
-- PostgreSQL (planned via Docker Compose, or a local install).
+### Prerequisites
+- Node.js ≥ 20.19 and npm.
+- PostgreSQL 17: either `docker compose up -d` (uses `docker-compose.yml`, creates `routepulse_dev` and `routepulse_test`) or a local install with those two databases created (`createdb routepulse_dev`, `createdb routepulse_test`).
 
-### Environment variables (planned)
-| Variable | Purpose | Source |
-|---|---|---|
-| `SESSION_SECRET` | Signs the session cookie | Architecture §7.1 |
-| `DEMO_MODE` | Enables simulator, clock and reset endpoints when `true` | Architecture §14 |
-| Database connection URL | Prisma datasource; exact name set in `schema.prisma` at setup | To be defined |
+### Setup
+```bash
+npm install
+cp apps/api/.env.example apps/api/.env   # set DATABASE_URL, TEST_DATABASE_URL, SESSION_SECRET (≥ 32 chars)
+npm run db:migrate                       # apply migrations to DATABASE_URL
+npm run dev:api                          # API on http://localhost:4000 — check GET /api/health
+```
 
-A `.env.example` will be added during setup. Real `.env` files are never committed.
+### Environment variables (`apps/api/.env`)
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection for the API and migrations |
+| `TEST_DATABASE_URL` | Separate database for integration tests (must differ from `DATABASE_URL`) |
+| `SESSION_SECRET` | Signs the session cookie; at least 32 characters |
+| `DEMO_MODE` | `true` enables simulator, clock and reset endpoints (coordinator only) |
+| `PORT` | API port (default 4000) |
+| `NODE_ENV` | `development` · `test` · `production` |
+| `LOG_LEVEL` | `info` · `silent` |
 
-### Database and Prisma (planned)
-- Schema in `apps/api/prisma/schema.prisma`; migrations include hand-added CHECK constraints and partial indexes.
-- A deterministic seed creates fictional customers, lanes, transporters, 60 days of history and the live demo shipments.
+### Scripts (root)
+| Script | What it does |
+|---|---|
+| `npm run dev:api` | Start the API with reload |
+| `npm run typecheck` | TypeScript checks for `packages/shared` and `apps/api` |
+| `npm test` | Typecheck, then all API tests (migrates the test database first) |
+| `npm run db:migrate` | `prisma migrate dev` on `DATABASE_URL` |
+| `npm run db:generate` | Regenerate the Prisma client |
 
-### Development scripts (planned names, architecture §4)
-`dev` · `build` · `typecheck` · `test` · `demo` · `seed` · `reset` — not yet defined in any `package.json`.
-
-### Testing (planned)
-Unit tests for the ETA, risk, attribution and recovery engines; integration tests for authorisation and data isolation; reproducibility tests; and one golden end-to-end hero scenario test. See `planning/04_TECH_ARCHITECTURE.md` §20.
+Planned for later milestones: `seed`, `reset`, `demo`, `build`. The frontend contract for implemented endpoints is in `planning/09_BACKEND_HANDOFF.md`.
 
 ---
 

@@ -7,7 +7,18 @@ No application code has been written yet. Entries below describe documentation o
 ## [Unreleased]
 
 ### Added
-- Nothing yet.
+- **Backend Milestone 1 (foundation), branch `backend`:**
+  - npm workspaces (`apps/api`, `packages/shared`); strict TypeScript base config.
+  - `@routepulse/shared`: enum lists mirroring schema v0.3; `ApiError`, `ErrorCode`, `ValidationIssue`, `ListResponse`, primitives; `HealthResponse`, `SimStateDto`, `SyncResponse`.
+  - `apps/api`: Express v5 app with request id, JSON-only guard (415), 100 kB body limit, helmet with same-origin CSP, single-line JSON logs, error envelope middleware, `GET /api/health`.
+  - Hand-validated environment configuration (`DATABASE_URL`, `SESSION_SECRET` ≥ 32 chars, `DEMO_MODE`, `PORT`, `NODE_ENV`, `LOG_LEVEL`); `apps/api/.env.example`.
+  - Prisma 7.10.1 with the `@prisma/adapter-pg` driver adapter; `prisma.config.ts` loads `.env` with Node's built-in loader (no dotenv).
+  - Migrations: `init_sim_state`, `sim_state_checks` (SimState CHECK constraints).
+  - `docker-compose.yml` (PostgreSQL 17 + test database init script).
+  - Vitest with a global setup that migrates the separate test database; 12 tests (unit + integration against the real app and database).
+  - `planning/09_BACKEND_HANDOFF.md` for the frontend developer.
+- `GET /api/health` recorded in `06_API_SPEC.md` as an operational endpoint.
+- `.gitignore`: `node_modules/`, `dist/`, `.env*` (except `.env.example`), generated Prisma client.
 
 ## [0.0.2] — 2026-11-12 — Decision lock (documentation only)
 

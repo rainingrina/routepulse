@@ -1,3 +1,20 @@
 .agents/
 .claude/
 skills-lock.json
+
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Environment (never commit real secrets)
+.env
+.env.*
+!.env.example
+
+# Generated Prisma client
+apps/api/src/generated/
+
+# OS / editor
+.DS_Store

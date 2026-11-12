@@ -1,6 +1,6 @@
 # PROGRESS — RoutePulse
 
-Last updated: 2026-11-12 (decision lock L1–L10). **No application code exists yet.** Implementation starts only after the team's explicit approval of this documentation baseline.
+Last updated: 2026-11-12 — backend Milestone 1 (foundation) on branch `backend`. Frontend tasks (Dev B) are untouched.
 
 **Status values:** Not Started · In Progress · Implemented · Tested · Verified
 - *Implemented* = code written. *Tested* = automated tests written and passing (ran by us). *Verified* = checked in the running app against the acceptance criteria.
@@ -45,22 +45,22 @@ Last updated: 2026-11-12 (decision lock L1–L10). **No application code exists 
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
-| 1.1 | npm workspaces: `apps/web`, `apps/api`, `packages/shared`; strict `tsconfig` | Dev A | Approval to start | Not Started | N/A |
-| 1.2 | Root scripts: `dev`, `build`, `typecheck`, `test`, `demo`, `seed`, `reset` | Dev A | 1.1 | Not Started | N/A |
-| 1.3 | Docker Compose for PostgreSQL; `.env.example` (`SESSION_SECRET`, `DEMO_MODE`, DB URL) | Dev A | 1.1 | Not Started | N/A |
+| 1.1 | npm workspaces: `apps/api`, `packages/shared` (backend side); strict `tsconfig` — `apps/web` is added by Dev B | Dev A | Approval to start | Tested | `npm run typecheck` + `npm test` pass (12 tests) |
+| 1.2 | Root scripts: `dev:api`, `typecheck`, `test`, `db:migrate`, `db:generate` exist; `build`, `demo`, `seed`, `reset` pending (later milestones) | Dev A | 1.1 | In Progress | Partial — existing scripts run |
+| 1.3 | Docker Compose for PostgreSQL; `apps/api/.env.example` (`DATABASE_URL`, `TEST_DATABASE_URL`, `SESSION_SECRET`, `DEMO_MODE`, `PORT`, `NODE_ENV`, `LOG_LEVEL`) | Dev A | 1.1 | Implemented | Compose file **not run** (Docker daemon off on this machine); development and tests verified against local PostgreSQL 17 |
 | 1.4 | Vite + React app shell; dev proxy for `/api`, `/tiles`, `/glyphs` | Dev B | 1.1 | Not Started | N/A |
-| 1.5 | Express v5 app: helmet, JSON-only + 100 kB limit, requestId, error middleware | Dev A | 1.1 | Not Started | Not tested |
-| 1.6 | Vitest set-up for all workspaces; test DB `routepulse_test` | Dev A | 1.3 | Not Started | N/A |
-| 1.7 | `packages/shared`: enums mirror, P0 API types, fixtures (`satisfies`) | Both | 1.1 | Not Started | Not tested |
+| 1.5 | Express v5 app: helmet (same-origin CSP), JSON-only (415) + 100 kB limit, requestId, error envelope middleware, request log, `GET /api/health` | Dev A | 1.1 | Tested | 7 integration tests pass; a deliberately broken 415 guard made the suite fail (test can fail) |
+| 1.6 | Vitest set-up (api workspace); test DB `routepulse_test` migrated by global setup; guard refuses non-test databases | Dev A | 1.3 | Tested | Runs green; guard proven by refusing the dev DB |
+| 1.7 | `packages/shared`: enum mirror + base types (`ApiError`, primitives, `HealthResponse`, `SimStateDto`, `SyncResponse`) done; endpoint DTOs and fixtures added per milestone | Both | 1.1 | In Progress | Typechecked; Prisma drift check arrives with 2.4 |
 | 1.8 | Design tokens (`tokens.css`), Tailwind theme, self-hosted Inter | Dev B | 1.4 | Not Started | N/A |
-| 1.9 | `.gitignore` covers `.env`, build output, `node_modules`, map assets if large (developers apply) | Dev A | 1.1 | Not Started | N/A |
+| 1.9 | `.gitignore` covers `.env*` (except `.env.example`), `dist/`, `node_modules/`, generated Prisma client (developers commit) | Dev A | 1.1 | Implemented | N/A |
 
 ## 2. Database and Prisma
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
-| 2.1 | `schema.prisma` (20 models, enums) per schema doc v0.3, incl. `physicalArrivalAt` and `receivingWindowOverrideEndAt` | Dev A | 1.3 | Not Started | N/A |
-| 2.2 | Initial migration + raw SQL CHECKs and partial unique indexes | Dev A | 2.1 | Not Started | Not tested |
+| 2.1 | `schema.prisma` (20 models, enums) per schema doc v0.3, incl. `physicalArrivalAt` and `receivingWindowOverrideEndAt` — **SimState model done (M1)**; remaining 19 models in M2 | Dev A | 1.3 | In Progress | SimState covered by tests |
+| 2.2 | Migrations + raw SQL CHECKs and partial unique indexes — `init_sim_state` + `sim_state_checks` applied to dev and test DBs | Dev A | 2.1 | In Progress | SimState CHECKs tested (constraint list + rejected `speed = 7`) |
 | 2.3 | Json column types + hand-written guards (`guards/`) | Dev A | 2.1 | Not Started | Not tested |
 | 2.4 | Enum drift check (`contract-checks.ts`) + CT-1 test | Dev A | 1.7, 2.1 | Not Started | Not tested |
 
