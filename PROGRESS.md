@@ -1,6 +1,6 @@
 # PROGRESS — RoutePulse
 
-Last updated: 2026-11-12 — backend Milestones 1–5 (foundation, schema + seed, auth, deterministic simulation, ETA and risk engine) on branch `backend`; frontend Phases 1–2 (foundation + control tower) on branch `frontend`, built against an in-browser development mock. Nothing is marked Verified. Frontend ↔ backend notes: `docs/FRONTEND_BACKEND_HANDOFF.md`.
+Last updated: 2026-11-12 — backend Milestones 1–6 (foundation, schema + seed, auth, deterministic simulation, ETA and risk engine, delay attribution) on branch `backend`; frontend Phases 1–2 (foundation + control tower) on branch `frontend`, built against an in-browser development mock. Nothing is marked Verified. Frontend ↔ backend notes: `docs/FRONTEND_BACKEND_HANDOFF.md`.
 
 **Status values:** Not Started · In Progress · Implemented · Tested · Verified
 - *Implemented* = code written. *Tested* = automated tests written and passing (ran by us). *Verified* = checked in the running app against the acceptance criteria.
@@ -65,7 +65,7 @@ Last updated: 2026-11-12 — backend Milestones 1–5 (foundation, schema + seed
 |---|---|---|---|---|---|
 | 2.1 | `schema.prisma`: all 20 models and 22 enums per schema doc v0.3 (incl. `physicalArrivalAt`, `receivingWindowOverrideEndAt`); explicit `onDelete: Restrict` except the 5 documented Cascades | Dev A | 1.3 | Tested | `prisma validate` passes; migration applied to dev and test; integration tests query real tables |
 | 2.2 | Migrations `init_sim_state`, `sim_state_checks`, `full_schema`: 49 CHECK constraints + 5 partial unique indexes; `prisma migrate diff` against the schema is empty (Prisma will not drop them) | Dev A | 2.1 | Tested | Constraint and index lists asserted; 10 behavioural rejection tests pass |
-| 2.3 | Json guards: `isLineString`, `isSegmentArray`, `routeProblems` (seed), `isFactorArray` (RiskSnapshot.factors, Milestone 5, run on write); option params and notification params come with their milestones | Dev A | 2.1 | In Progress | Route and factor guards tested |
+| 2.3 | Json guards: `isLineString`, `isSegmentArray`, `routeProblems` (seed), `isFactorArray` (RiskSnapshot.factors), `isReportNeedsReviewParams` (Notification.params, Milestone 6), run on write; option params and other notification params come with their milestones | Dev A | 2.1 | In Progress | Route, factor and report-notification guards exercised by tests |
 | 2.4 | Enum drift check: compile-time equality of 22 shared unions vs Prisma enums (`contract-checks.ts`) + runtime order test (CT-1) | Dev A | 1.7, 2.1 | Tested | Passes; renaming one shared value failed both `tsc` (1 error) and the test |
 
 ## 3. Authentication and authorisation
@@ -108,7 +108,7 @@ Last updated: 2026-11-12 — backend Milestones 1–5 (foundation, schema + seed
 | 6.4 | Clock controls (#5): PLAY, PAUSE, SET_SPEED 1×/10×/60×, ADVANCE, ADVANCE_TO; long-gap guard (12 steps, pause, `simError`) | Dev A | 6.2 | Tested | Speed tests per speed, pause/resume without jump, R8, validation and role tests |
 | 6.5 | Reset (#6): deterministic seed + hero pre-script → Thu 10:25 paused, ≈ 0.5–0.7 s; sessions survive (stable user ids); audit `sim.reset` | Dev A | 4.4, 6.1 | Tested | R7 two-reset digest identical; < 5 s asserted |
 | 6.6 | Disruptions: **effects in the engine and their ledger/ETA booking done** (weather slowdown, road closure at segment entry, truck breakdown hold, gate congestion; L5 precedence; DISR factors). Creating disruptions goes through `simulationService.applyChange('DISRUPTION', …)` (used by tests). Endpoints #7–#9 with the impact summary: not started (next milestones) | Dev A | 6.2, 7.x | In Progress | Effects, ledger and ETA impact tested (unit + integration) |
-| 6.7 | Reproducibility tests: R1 (hero part: reset → 10:30 rain → 11:10 breakdown → 12:00 twice, identical shipments/ledger/snapshots), R2 (mid-step split ≤ 1 mm), R3/R4 (incl. ledger and snapshots), R5 (SET_SPEED 60× → 10× during a run = constant ADVANCE), R6 (action at 11:07 running vs paused, identical; uses a disruption action — the driver-report variant is re-run when reports exist in Milestone 6), R7, R8. R1 for alerts/options waits for those milestones | Dev A | 6.2–6.5 | Tested | All pass against the real engine and test database |
+| 6.7 | Reproducibility tests: R1 (hero part), R2, R3/R4 (incl. ledger and snapshots), R5, **R6 both variants** (disruption action and driver report at 11:07, running vs paused: identical shipments, events, ledger, snapshots, reports, notifications), R7, R8. R1 for alerts/options waits for those milestones | Dev A | 6.2–6.5 | Tested | All pass against the real engine and test database |
 
 ## 7. ETA and risk engines
 
@@ -127,8 +127,8 @@ Last updated: 2026-11-12 — backend Milestones 1–5 (foundation, schema + seed
 |---|---|---|---|---|---|
 | 8.1 | Ledger booking in settle (AT-1) incl. L5 overlap rules (ET-8) — **pulled into Milestone 5** (needed for the incurred bars) | Dev A | 6.2 | Tested | Gate wait, late truck, pace, slowdown, stops, two stops, two slowdowns, split invariance |
 | 8.2 | WIN knock-on split (ET-7) | Dev A | 8.1 | Tested | Incurred and projected split; UNATTRIBUTED without other minutes; never CUSTOMER |
-| 8.3 | Physical arrival, eligible check-in, no booking after eligibility (ET-9) done; finalisation at ARRIVED (FINAL rows), GAP row, but-for rule (AT-2, AT-4) not started | Dev A | 8.1 | In Progress | ET-9 tested |
-| 8.4 | Attribution endpoints (#34, #35) + overrides (AT-3) | Dev A | 8.3 | Not Started | Not tested |
+| 8.3 | Physical arrival, eligible check-in, finalisation at ARRIVED (rows FINAL at `arrivedAt`, never the tap time; idempotent), GAP row (UNATTRIBUTED remainder of arrivedAt − plannedArrival), but-for rule, raw vs fair on-time per transporter (AT-2, AT-4, ET-9) | Dev A | 8.1 | Tested | Hero (manual, tap 5 min after eligibility) and autopilot finalisation; GAP from missing evidence; Example 4; seed table reproduced |
+| 8.4 | Attribution endpoints (#34, #35) + overrides incl. merge (AT-3) | Dev A | 8.3 | Tested | Roles, scoping, validation, merge, LIVE-row override visible in the ETA |
 
 ## 9. Alerts and recovery
 
@@ -138,7 +138,7 @@ Last updated: 2026-11-12 — backend Milestones 1–5 (foundation, schema + seed
 | 9.2 | Alerts (#26, #27) and customer response (#28) | Dev A | 9.1 | Not Started | Not tested |
 | 9.3 | `generateOptions` (5 kinds), Suggested rule (RC-1, RC-2) | Dev A | 7.1 | Not Started | Not tested |
 | 9.4 | Choose (#30) incl. hand-over (D3), staleness 409; NEW_WINDOW acceptance applies the stored override (L4) (RC-4, RC-5, ET-10, AZ-9) | Dev A | 9.3 | Not Started | Not tested |
-| 9.5 | Driver reports: classify (#22), create (#23), queue (#24), review (#25) (CL-1) | Dev A | 7.5 | Not Started | Not tested |
+| 9.5 | Driver reports: classify (#22), create (#23), queue (#24), review (#25) (CL-1); RPT pending → confirmed; review re-tags attribution. Driver trip endpoint #21 itself is task 5.4 (the `DriverTripShipment` DTO is built and returned by #23) | Dev A | 7.5 | Tested | 29 integration + classifier unit tests; driver scope and role checks |
 | 9.6 | CO₂e on options — only if G-CO2 passes (RC-3 must pass either way) | Dev A | O-9 (gate) | Not Started | Not tested |
 
 ## 10. Map
@@ -191,7 +191,7 @@ Last updated: 2026-11-12 — backend Milestones 1–5 (foundation, schema + seed
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
 | 15.1 | Day-1 go/no-go gate (IDEA_HUNT §7.6) by build hour 5 | Both | 4.4, 6.3, 7.5, 3.2, 10.3 | Not Started | Not tested |
-| 15.2 | Golden hero test G0–G8 — G0 (10:25: 14:20 ON_TRACK, GATE 40) and G1 (10:30 rain: 16:20 WATCH, DISR 120) through the services; the 11:10 checkpoint with a simulator breakdown (Fri 08:00, AT_RISK, WIN split). G2–G8 need reports, alerts and recovery (Milestones 6–7) | Dev A | 6.x–9.x | In Progress | G0, G1 and the 11:10 engine checkpoint pass |
+| 15.2 | Golden hero test G0–G8 — G0, G1 (M5); **G2** report path (RPT 180 pending, AT_RISK Fri 08:00, ±85 MEDIUM, WIN 84/423/253) and **G4** review (CONFIRMED, ±60 HIGH) through the services; arrival finalisation for the no-recovery path (Fri 08:00, 1,120 min reconciled). G2's alert/customer notification, G3, G5, G6, G7 (17:50 after recovery) and G8 need alerts and recovery (Milestone 7) | Dev A | 6.x–9.x | In Progress | G0, G1, G2 (engine part), G4 pass |
 | 15.3 | Full suite green: unit + integration + typecheck | Both | All | Not Started | Not tested |
 | 15.4 | Acceptance-criteria walk-through (spec §6) in the running app | Both | 11–14 | Not Started | Not tested |
 | 15.5 | Visual QA checklist (UI plan §19) | Dev B | 11–14 | Not Started | Not tested |

@@ -499,6 +499,8 @@ Proof (departed): `plannedArrival + I + P + E = plannedDep + B_primary + (now �
 - At ARRIVED the ledger becomes FINAL (nothing after arrival affects the promise). A GAP row (UNATTRIBUTED) holds `delayMinutes − (rounded attributed minutes beyond the promise)` if they differ — in the simulation this is normally 0; it exists for honesty if data ever disagrees (AC-F1.1).
 - **Which minutes count as "delay" for fair attribution:** only the lateness beyond the promise matters for on-time. The but-for rule (spec §5.9) uses the shipment's final attributed minutes: `countsAgainstTransporter = delayMinutes > 0 && delayMinutes − transporterMinutes ≤ 0`, where `transporterMinutes` = final incurred + plan-change minutes attributed to TRANSPORTER.
 
+**As implemented (Milestone 6):** `attributionService.finalizeArrival` runs in the same transaction as the ARRIVED milestone (settle step for autopilot, the tap for manual shipments): rows → FINAL stamped with `arrivedAt`, GAP = `(arrivedAt − plannedArrivalAt) − Σ(TIME_LOST + PLAN_CHANGE)` (spec §5.9; engine doc §4.5 records why this replaces the `delayMinutes` wording), idempotent. The but-for rule and raw/fair on-time are computed on read from the FINAL rows (`getAttribution`, `transporterOnTime`), so an override is reflected on the next request. Reports, reviews and overrides go through `simulationService.applyChange` (triggers REPORT, REVIEW, OVERRIDE — the last stored on snapshots as REVIEW).
+
 ### 10.5 Ledger booking during settle (same decomposition as the projection)
 For each settled sub-interval of `Δ` seconds:
 | Situation | Lost seconds | Booked to |
@@ -756,6 +758,11 @@ Status: **Resolved** (by a decision or by design), **Open** (team decision neede
 | 30 | Confidence for a shipment that has never sent an update | Interpretation (Milestone 5) | Treated as older than 3 h: LOW, +30 range (engine doc §9) |
 | 31 | Ledger needed before Milestone 6 for the incurred bars | Resolved (Milestone 5) | Task 8.1 pulled forward; finalisation, GAP row, but-for and overrides stay in Milestone 6 |
 | 32 | L5 "earliest created" with wall-clock `createdAt` would be non-deterministic | Interpretation (Milestone 5) | Disruption simulation start time, then id |
+| 33 | GAP defined against `delayMinutes` (architecture/schema) vs against planned arrival (spec §5.9) | Resolved (Milestone 6) | Spec wording: GAP = arrival − planned arrival − attributed; documented in engine doc §4.5 |
+| 34 | API §7.6 said attribution is finalised at DELIVERED; L1/L6 and §10.4 say ARRIVED | Resolved (Milestone 6) | ARRIVED (locked decisions win); API spec note added |
+| 35 | Classifier word list not specified | Interpretation (Milestone 6) | Fixed English list `KEYWORD_LIST_V1` recorded in engine doc §9 for team review |
+| 36 | "Reject" a driver report | Resolved by design (Milestone 6) | No REJECTED status exists; the coordinator changes reason/party (e.g. OTHER / UNATTRIBUTED) with a note |
+| 37 | Reviewing a report after delivery: the review response must carry a live ETA | Interpretation (Milestone 6) | 409 INVALID_TRANSITION; post-delivery corrections use the attribution override (#35) |
 
 ---
 

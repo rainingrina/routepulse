@@ -76,6 +76,8 @@ export interface SimShipment {
   overrideEndS: number | null;
   hours: ReceivingHours;
   unloadingMin: number;
+  /** Confirmed "waiting to unload" minutes (spec §5.8): extend deliveredAt only, never the promise (L1). */
+  extraUnloadMin: number;
   pace: Rational;
   progressMm: number;
   stoppedUntilS: number | null;
@@ -300,7 +302,7 @@ export function simulate(input: SimInput): SimResult {
             changed = true;
           }
         }
-        if (sh.autopilot && sh.milestone === 'ARRIVED' && sh.deliveredS === null && sh.arrivedS !== null && sh.arrivedS + sh.unloadingMin * 60 <= t) {
+        if (sh.autopilot && sh.milestone === 'ARRIVED' && sh.deliveredS === null && sh.arrivedS !== null && sh.arrivedS + (sh.unloadingMin + sh.extraUnloadMin) * 60 <= t) {
           sh.deliveredS = t;
           milestone(sh, 'DELIVERED', t);
           delivered.push(sh.id);
@@ -337,7 +339,7 @@ export function simulate(input: SimInput): SimResult {
         }
       }
       if (sh.autopilot && sh.milestone === 'IN_TRANSIT' && sh.physicalArrivalS !== null && sh.arrivedS === null) consider(eligibleCheckInS(sh));
-      if (sh.autopilot && sh.milestone === 'ARRIVED' && sh.arrivedS !== null && sh.deliveredS === null) consider(sh.arrivedS + sh.unloadingMin * 60);
+      if (sh.autopilot && sh.milestone === 'ARRIVED' && sh.arrivedS !== null && sh.deliveredS === null) consider(sh.arrivedS + (sh.unloadingMin + sh.extraUnloadMin) * 60);
     }
     for (const d of disruptions) {
       consider(d.startS);

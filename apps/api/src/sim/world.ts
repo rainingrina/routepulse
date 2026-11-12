@@ -88,18 +88,32 @@ const LIVE_SELECT = {
   pingIntervalMinutes: true,
   silentFrom: true,
   order: { select: { customer: { select: { receivingOpenMin: true, receivingCloseMin: true, unloadingMinutes: true } } } },
-  attributions: { where: { status: 'LIVE' }, select: { sourceKey: true, party: true, kind: true, delaySeconds: true } },
-  reports: {
-    orderBy: { simTime: 'desc' },
-    take: 1,
-    select: { id: true, party: true, simTime: true },
-  },
+  // LIVE and FINAL rows: after ARRIVED the rows are FINAL but the shipment is still shown until delivery.
+  attributions: { select: { sourceKey: true, party: true, kind: true, delaySeconds: true } },
+  reports: { select: { id: true, party: true, simTime: true, appliedMinutes: true, reason: true, status: true } },
 } as const;
 
 /**
  * Disruptions that can still matter after `afterS`. "Earliest created" for the L5 tie-break uses
  * the simulation start time (then id), never the wall-clock createdAt, so results are reproducible.
  */
+/**
+ * The cause of a `stoppedUntil` hold: the driver report whose stop ends exactly at stoppedUntil
+ * (stoppedUntil = the latest end of the holding reports, L5); tie → earliest report, then id.
+ * Null when not stopped.
+ */
+export function stopCauseOf(
+  stoppedUntil: Date | null,
+  reports: readonly { id: string; party: Party; simTime: Date; appliedMinutes: number }[],
+): StopCause | null {
+  if (!stoppedUntil) return null;
+  const end = toS(stoppedUntil);
+  const match = reports
+    .filter((x) => toS(x.simTime) + x.appliedMinutes * 60 === end)
+    .sort((a, b) => a.simTime.getTime() - b.simTime.getTime() || (a.id < b.id ? -1 : 1))[0];
+  return match ? { sourceKey: `RPT:${match.id}`, party: match.party, createdS: toS(match.simTime) } : null;
+}
+
 export async function loadDisruptions(db: Db, afterS: number): Promise<SimDisruption[]> {
   const rows = await db.disruption.findMany({ orderBy: { id: 'asc' } });
   return rows
@@ -135,9 +149,12 @@ export async function loadLiveShipments(db: Db, world: StaticWorld, disruptions:
       if (a.kind === 'TIME_LOST') ledger[`${a.sourceKey}|${a.party}`] = a.delaySeconds;
       else if (a.kind === 'PLAN_CHANGE') planChangeByParty[a.party] = (planChangeByParty[a.party] ?? 0) + a.delaySeconds;
     }
-    const report = r.reports[0];
-    const stopCause: StopCause | null =
-      r.stoppedUntil && report ? { sourceKey: `RPT:${report.id}`, party: report.party, createdS: toS(report.simTime) } : null;
+    const stopCause = stopCauseOf(r.stoppedUntil, r.reports);
+    const physicalS = optS(r.physicalArrivalAt);
+    // Confirmed "waiting to unload" reports made at the customer extend deliveredAt only (spec §5.8, L1).
+    const extraUnloadMin = r.reports
+      .filter((x) => x.reason === 'UNLOADING_WAIT' && x.status === 'CONFIRMED' && physicalS !== null && toS(x.simTime) >= physicalS)
+      .reduce((a, x) => a + x.appliedMinutes, 0);
     return {
       id: r.id,
       code: r.code,
@@ -151,6 +168,7 @@ export async function loadLiveShipments(db: Db, world: StaticWorld, disruptions:
       overrideEndS: optS(r.receivingWindowOverrideEndAt),
       hours: { openMin: r.order.customer.receivingOpenMin, closeMin: r.order.customer.receivingCloseMin },
       unloadingMin: r.order.customer.unloadingMinutes,
+      extraUnloadMin,
       pace: world.pace(r.transporterId, r.laneId),
       progressMm: r.progressM * 1000 + r.progressCarryMm,
       stoppedUntilS: optS(r.stoppedUntil),

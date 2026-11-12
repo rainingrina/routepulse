@@ -723,7 +723,7 @@ model DelayAttribution {
 ```
 - Holds **incurred** time (`kind = TIME_LOST`) and **plan-change** time from a reroute (`kind = PLAN_CHANGE`, `sourceKey = "ROUTE:<disruptionId>"`, party of the avoided disruption). Expected time lives only in `RiskSnapshot.factors`. This split is what prevents double counting (architecture §10.2).
 - The settle operation upserts on `(shipmentId, sourceKey, party)` and adds seconds. WIN knock-on writes one row per receiving party (architecture §10.3–10.5).
-- At ARRIVED: rows become `FINAL` (nothing after arrival affects the promise, L1/L6); a `kind = GAP` row with party `UNATTRIBUTED` stores any difference between `Shipment.delayMinutes` and the attributed minutes (AC-F1.1).
+- At ARRIVED: rows become `FINAL` (nothing after arrival affects the promise, L1/L6); a `kind = GAP` row with party `UNATTRIBUTED` stores any unexplained remainder (AC-F1.1). **Implemented (Milestone 6)** as `(arrivedAt − plannedArrivalAt) − Σ(TIME_LOST + PLAN_CHANGE)` seconds, per spec §5.9 (engine doc §4.5). No column or constraint changed.
 - Override: the whole row moves to a new party; `originalParty`, note, user and time are stored; an `AuditLog` row is written (AC-F1.3). If a row with the target party already exists, the service merges the seconds into it.
 - **Constraints [RAW SQL]:** `CHECK ("delaySeconds" >= 0)`; `CHECK (("originalParty" IS NULL) = ("overrideNote" IS NULL))`; `CHECK ("sourceKey" NOT LIKE 'DISR:%' OR "disruptionId" IS NOT NULL)`; `CHECK ("sourceKey" NOT LIKE 'ROUTE:%' OR ("disruptionId" IS NOT NULL AND kind = 'PLAN_CHANGE'))`; `CHECK ("sourceKey" NOT LIKE 'RPT:%' OR "driverReportId" IS NOT NULL)`; `CHECK ((kind = 'GAP') = ("sourceKey" = 'GAP'))`; `CHECK (kind <> 'GAP' OR party = 'UNATTRIBUTED')`.
 

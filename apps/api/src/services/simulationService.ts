@@ -25,6 +25,13 @@ import {
 } from '../sim/world.js';
 import { writeAudit } from './auditService.js';
 import { recalculate, type RecalcContext, type RecalcTrigger } from './etaService.js';
+import { finalizeArrival } from './attributionService.js';
+
+/** Ledger rows become FINAL (plus GAP) for every shipment that reached ARRIVED in these events. */
+async function finalizeArrivals(tx: Prisma.TransactionClient, events: readonly SimEvent[]): Promise<void> {
+  const ids = [...new Set(events.filter((e) => e.type === 'MILESTONE' && e.milestone === 'ARRIVED').map((e) => e.shipmentId))].sort();
+  for (const id of ids) await finalizeArrival(tx, id);
+}
 
 /**
  * Simulation service (architecture §6.3, §9). Owns the clock and the mutation pipeline:
@@ -164,6 +171,7 @@ export function createSimulationService(deps: SimulationServiceDeps) {
           await persistShipments(tx, before, result.shipments);
           await persistLedger(tx, before, result.shipments, disruptions, targetS);
           await persistEvents(tx, result.events, 'SIMULATION');
+          await finalizeArrivals(tx, result.events);
           await releaseTrucks(tx, result.delivered);
           c.lastSettledS = targetS;
           if (c.simMs < targetS * 1000) c.simMs = targetS * 1000;
@@ -303,7 +311,7 @@ export function createSimulationService(deps: SimulationServiceDeps) {
           }
           case 'DELIVERED': {
             if (sh.milestone !== 'ARRIVED' || sh.arrivedS === null) throw new DomainError('INVALID_TRANSITION', 'Delivery can only be confirmed after arrival.');
-            const done = sh.arrivedS + sh.unloadingMin * 60;
+            const done = sh.arrivedS + (sh.unloadingMin + sh.extraUnloadMin) * 60;
             if (done > actionS) throw new DomainError('INVALID_TRANSITION', `Unloading finishes at ${istHm(done)}.`);
             sh.milestone = 'DELIVERED';
             sh.deliveredS = done; // completion time, not the tap time (L6)
@@ -328,6 +336,7 @@ export function createSimulationService(deps: SimulationServiceDeps) {
         await persistEvents(tx, driverEvents, actor.role === 'COORDINATOR' ? 'COORDINATOR' : 'DRIVER', actor.userId, { tappedAt: fromS(actionS).toISOString() });
         await persistEvents(tx, systemEvents, 'SYSTEM');
         await persistEvents(tx, settled.events, 'SIMULATION');
+        await finalizeArrivals(tx, [...driverEvents, ...settled.events]);
         await releaseTrucks(tx, [...delivered, ...settled.delivered]);
         await writeAudit(tx, { actorUserId: actor.userId, actorRole: actor.role, action: 'milestone.record', entityType: 'Shipment', entityId: shipmentId, data: { milestone: m } });
         c.lastSettledS = actionS;

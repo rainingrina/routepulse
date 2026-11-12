@@ -26,7 +26,7 @@ export function heroAtGateOut(over: Partial<SimShipment> = {}): SimShipment {
   return {
     id: 'shp_1042', code: 'SHP-1042', autopilot: false, milestone: 'IN_TRANSIT', truckId: 'trk_07', routeId: 'rt',
     plannedGateS: s(hm(8, 10)), plannedDepS: s(hm(8, 50)), promisedByS: s(hm(18, 0)), overrideEndS: null,
-    hours: { openMin: 480, closeMin: 1080 }, unloadingMin: 60, pace: PACE, progressMm: 0, stoppedUntilS: null,
+    hours: { openMin: 480, closeMin: 1080 }, unloadingMin: 60, extraUnloadMin: 0, pace: PACE, progressMm: 0, stoppedUntilS: null,
     gateQueuedS: s(hm(8, 10)), loadingStartedS: s(hm(8, 50)), loadingEndS: s(hm(9, 30)), gateOutS: s(hm(9, 30)),
     physicalArrivalS: null, arrivedS: null, deliveredS: null, delayMinutes: null, onTime: null,
     lastUpdateS: s(hm(9, 30)), pingIntervalMin: 30, silentFromS: null, stopCause: null,

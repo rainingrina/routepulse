@@ -10,7 +10,8 @@ import { SIM_CONFIG, fromS, loadDisruptions, loadLiveShipments, toS, type Db, ty
  * an ETA is never written without the state it was computed from.
  */
 
-export type RecalcTrigger = 'STEP' | 'MILESTONE' | 'RESET' | 'SEED' | 'DISRUPTION' | 'REPORT' | 'REVIEW' | 'RECOVERY';
+/** OVERRIDE (attribution override) is stored on snapshots as REVIEW — the schema's closest trigger. */
+export type RecalcTrigger = 'STEP' | 'MILESTONE' | 'RESET' | 'SEED' | 'DISRUPTION' | 'REPORT' | 'REVIEW' | 'OVERRIDE' | 'RECOVERY';
 
 export interface RecalcContext {
   simTimeS: number;
@@ -69,6 +70,7 @@ const TRIGGER_FOR_SNAPSHOT: Record<RecalcTrigger, SnapshotTrigger> = {
   DISRUPTION: 'DISRUPTION',
   REPORT: 'REPORT',
   REVIEW: 'REVIEW',
+  OVERRIDE: 'REVIEW',
   RECOVERY: 'RECOVERY',
 };
 

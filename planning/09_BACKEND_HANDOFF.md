@@ -2,7 +2,7 @@
 
 Living document maintained by the backend (branch `backend`). It lists **only what is implemented and tested**. The full target contract is `06_API_SPEC.md`; types live in `packages/shared`.
 
-Last updated: 2026-11-12 — **Milestone 5 (ETA and risk engine)**.
+Last updated: 2026-11-12 — **Milestone 6 (delay attribution, driver reports)**.
 
 ---
 
@@ -62,6 +62,21 @@ Status per code: `VALIDATION_ERROR` 400 · `UNAUTHENTICATED` 401 · `FORBIDDEN`/
 | POST | `/api/sim/reset` (#6) | Coordinator + `DEMO_MODE` | Implemented + tested |
 | GET | `/api/shipments/:shipmentId/eta` (#18) | Coordinator, Customer (own) | Implemented + tested |
 | GET | `/api/engine/rules` (#20) | Session (any role) | Implemented + tested |
+| POST | `/api/driver-reports/classify` (#22) | Driver, Coordinator | Implemented + tested |
+| POST | `/api/shipments/:shipmentId/driver-reports` (#23) | Driver (own shipment), Coordinator | Implemented + tested |
+| GET | `/api/driver-reports` (#24) | Coordinator | Implemented + tested |
+| POST | `/api/driver-reports/:reportId/review` (#25) | Coordinator | Implemented + tested |
+| GET | `/api/shipments/:shipmentId/attribution` (#34) | Coordinator | Implemented + tested |
+| POST | `/api/shipments/:shipmentId/attribution/overrides` (#35) | Coordinator | Implemented + tested |
+
+### Driver reports and attribution (Milestone 6) — what the SPA must do
+- **Classify while typing (#22):** `POST /api/driver-reports/classify` `{ "text": "tyre puncture near Lonavala" }` → `ClassifyResponse` `{ suggestedReason: "BREAKDOWN", matchedKeywords: ["tyre","puncture"], strength: "STRONG", defaultMinutes: 180, defaultParty: "TRANSPORTER", method: "KEYWORD_LIST_V1" }`. Writes nothing. Show "Suggested: Breakdown — matched: tyre, puncture. Is this right?"; with `suggestedReason: null` show "No suggestion — please pick a reason". `defaultParty` is null for Documents (depends on gate-out). Text 1–280 chars after trim. Customers → 403.
+- **Create (#23):** `POST /api/shipments/:id/driver-reports` with `CreateDriverReportRequest` — at least one of `chipReason` / `text`; `reason` is one of the 8 chips; `estimatedMinutes` ∈ 30 / 60 / 120 / 240 (optional; otherwise the reason default); unknown fields → 400. **201** → `{ report: DriverReportDto, trip: DriverTripShipment | null }` (`trip` for drivers; null for coordinators). Errors: another driver's shipment → 404; before the truck is at the plant gate or after delivery → 409 `INVALID_TRANSITION` with a plain message. The server re-classifies the text itself. Effects: the truck is held (`trip.stopped: true`), the ETA gains an RPT bar with `reviewStatus: "PENDING_REVIEW"` (label "Pending coordinator review"), range +20 and confidence MEDIUM; refetch on `worldVersion`.
+- **Review queue (#24):** `GET /api/driver-reports?status=PENDING_REVIEW|CONFIRMED&shipmentId=…&limit=1..200` (defaults: pending, 50), newest first.
+- **Review (#25):** `POST /api/driver-reports/:id/review` `{ reason, party, note? }` — `note` (5–280) is required when reason or party changes; `party: "UNATTRIBUTED"` only with `reason: "OTHER"`. 200 → `{ report, eta }` (`eta` = coordinator explanation; the RPT bar now says CONFIRMED). Second review → 409 `ALREADY_DONE`; report on a delivered shipment → 409 `INVALID_TRANSITION` (use #35). There is no "reject" button in the contract: changing the reason/party with a note is the correction path.
+- **Attribution (#34):** `GET /api/shipments/:id/attribution` → `AttributionResponse`. `status` LIVE while travelling, FINAL from arrival; `delayMinutes` and `countsAgainstTransporter` are null until arrival. Row `minutes` add up exactly to the shipment total; GAP rows (`kind: "GAP"`, Unattributed) mean "no recorded cause" — show them, never hide them. Show `ruleText` under the but-for result. Wording: "attributed to", never "fault".
+- **Override (#35):** `POST /api/shipments/:id/attribution/overrides` `{ attributionId, newParty, note }` (note 5–280) → updated `AttributionResponse`; same party → 409 `ALREADY_DONE`; a row of another shipment → 404. The row keeps `originalParty`, `overrideNote`, `overriddenBy`, `overriddenAt`. Overriding a live row also changes that bar's party in the ETA explanation.
+- **Hero values (report path):** 11:10 report → Fri 08:00, AT_RISK, ±85 MEDIUM; after the 11:20 review → ±60 HIGH. Without recovery the hero's final attribution is 1,120 min: Plant 124, Transporter 623, External 373; delay 840; does not count against Ghatline.
 
 ### ETA and risk (Milestone 5) — what the SPA must do
 - **`GET /api/shipments/:shipmentId/eta`** → `EtaResponse` (`{ eta }`). Coordinator gets `EtaExplanationCoordinator`, customer (own order) gets `EtaSummaryCustomer`; driver → 403; another customer's or unknown id → 404; delivered → 409 `INVALID_TRANSITION` (show the shipment outcome instead). Refetch when `worldVersion` changes. Read-only: never moves the clock.
@@ -117,6 +132,9 @@ Type: `HealthResponse`. `serverTime` is wall-clock time, not simulation time.
 | `ApiError`, `ErrorCode`, `ValidationIssue`, `ListResponse<T>`, `Id`, `ISODateTime`, `Minutes`, `Pct` | All | |
 | `SimStateDto`, `SyncResponse`, `SimClockRequest`, `SimClockResponse`, `SimResetRequest`, `SimResetResponse` | #4, #5, #6 | **Implemented** (Milestone 4) |
 | `Factor`, `FactorPhase` (`FACTOR_PHASES`), `PartyMinutes`, `EtaExplanationCoordinator`, `EtaSummaryCustomer`, `EtaResponse`, `EngineRulesResponse`, `RULE_VERSION` | #18, #20 (and later #19 replay, #23, #30) | **Implemented** (Milestone 5) |
+| `DriverReportDto`, `DriverTripShipment`, `DriverHandover`, `ClassifyRequest`, `ClassifyResponse`, `CreateDriverReportRequest`, `CreateDriverReportResponse`, `DriverReportListResponse`, `ReviewDriverReportRequest`, `ReviewDriverReportResponse`, `REPORT_ESTIMATE_MINUTES`, `AttributionRowDto`, `AttributionResponse`, `AttributionOverrideRequest` | #21 (DTO only), #22–#25, #34, #35 | **Implemented** (Milestone 6). `CreateDriverReportRequest` narrows `chipReason`/`reason` to `DriverReasonCode` (the documented validation). `DriverTripShipment.instruction` is always null until recovery (Milestone 7) |
+
+**Action for the web app (type collisions):** `apps/web/src/api/contract/pending.ts` still declares 20 types that are now published here, so `npm run typecheck -w @routepulse/web` fails with "already exported" errors: `AttributionOverrideRequest`, `AttributionResponse`, `AttributionRowDto`, `ClassifyRequest`, `ClassifyResponse`, `CreateDriverReportRequest`, `CreateDriverReportResponse`, `DriverHandover`, `DriverReportDto`, `DriverTripShipment`, `EngineRulesResponse`, `EtaExplanationCoordinator`, `EtaSummaryCustomer`, `Factor`, `PartyMinutes`, `ReviewDriverReportRequest`, `ReviewDriverReportResponse`, `SimClockRequest`, `SimClockResponse`, `SimResetResponse`. Delete them from `pending.ts` and import them from `@routepulse/shared` where the remaining pending types use them. (The backend does not edit `apps/web`.)
 | `UserDto`, `LoginRequest`, `LoginResponse`, `MeResponse`, `HomePath`, `SESSION_COOKIE_NAME` | #1–#3 | **Implemented** (Milestone 3) |
 
 You may build against these with fixtures; field names will not change without a note here.
@@ -147,7 +165,7 @@ Log in with these accounts through `/api/auth/login` (Milestone 3). Right after 
 
 ## 7. Known incomplete functionality
 
-Implemented: `/api/health`, authentication (#1–#3), the simulation clock (#4–#6), ETA explanation (#18) and engine rules (#20). Not yet implemented: shipments/orders lists and detail, timeline, replay (#19), map layers and positions, disruption endpoints (#7–#9), driver reports, alerts, recovery, notifications, attribution endpoints, analytics. Next: Milestone 6, after approval.
+Implemented: `/api/health`, authentication (#1–#3), the simulation clock (#4–#6), ETA explanation (#18), engine rules (#20), driver reports (#22–#25) and attribution (#34, #35). Not yet implemented: shipments/orders lists and detail, timeline, replay (#19), driver trip (#21), map layers and positions, disruption endpoints (#7–#9), alerts, recovery, notifications endpoints (the `REPORT_NEEDS_REVIEW` row is already written), analytics (raw/fair on-time is computed in the service, not yet exposed). Next: Milestone 7, after approval.
 
 ## 8. Contract change log
 
@@ -156,5 +174,6 @@ Implemented: `/api/health`, authentication (#1–#3), the simulation clock (#4�
 | 2026-11-12 | Initial publish: enums, base types, `HealthResponse`, `SimStateDto`, `SyncResponse` | — |
 | 2026-11-12 | Added `Segment`, `GeoJSONLineString`, `GeometrySource`, `PLANT`, `DISPLAY_TIME_ZONE`, `RISK_THRESHOLDS`, `SMALL_FLEET_MAX` | No |
 | 2026-11-12 | Added `SimClockRequest`, `SimClockResponse`, `SimResetRequest`, `SimResetResponse` (as specified in API §5); #4–#6 implemented | No |
+| 2026-11-12 | Added driver-report, driver-trip and attribution types (API §2.2, §9, §12); #22–#25, #34, #35 implemented; attribution final at arrival (L1); ETA bars follow the ledger party | No |
 | 2026-11-12 | Added `Factor`, `FactorPhase`, `FACTOR_PHASES`, `PartyMinutes`, `EtaExplanationCoordinator`, `EtaSummaryCustomer`, `EtaResponse`, `EngineRulesResponse`, `RULE_VERSION` (as specified in API §2 and §8); #18 and #20 implemented; manual hero truck now refreshes `lastUpdateAt` via simulated GPS (O-14) | No |
 | 2026-11-12 | Added `UserDto`, `HomePath`, `LoginRequest`, `LoginResponse`, `MeResponse`, `SESSION_COOKIE_NAME` (already specified in API §2.2/§4; now published). Unauthenticated calls to unknown `/api` paths now return 401 instead of 404 | No (new types); behaviour change for unknown paths only |

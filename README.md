@@ -5,7 +5,7 @@ Know it will be late hours before it is — know why, and fix it.
 
 Built for the LYB Mumbai Hackathon 2026, Round 2, Problem Statement 3 (Order-to-Delivery Control Tower). All companies, people and data are **fictional**; "Plant X" is a fictional polymer producer.
 
-> **Project status (2026-11-12): planning complete and decisions locked (L1–L10); backend Milestones 1–5 (foundation, schema + seed, authentication and authorisation, deterministic simulation clock, rule-based ETA and risk engine) implemented on branch `backend`; alerts, driver reports, recovery and analytics not yet implemented.** The commands below match the real `package.json` scripts. See `PROGRESS.md` for exact status.
+> **Project status (2026-11-12): planning complete and decisions locked (L1–L10); backend Milestones 1–6 (foundation, schema + seed, authentication and authorisation, deterministic simulation clock, rule-based ETA and risk engine, delay attribution with driver reports) implemented on branch `backend`; alerts, recovery and analytics not yet implemented.** The commands below match the real `package.json` scripts. See `PROGRESS.md` for exact status.
 
 ---
 
@@ -64,7 +64,7 @@ Browser (React SPA)  ──JSON /api/*──▶  Express v5 API  ──Prisma─
 
 ---
 
-## Getting started (backend — Milestones 1–5)
+## Getting started (backend — Milestones 1–6)
 
 The backend foundation, full database schema, deterministic seed and authentication (login, logout, session, roles, data scoping) exist (branch `backend`). Product data endpoints arrive in later milestones. The web app is developed separately.
 

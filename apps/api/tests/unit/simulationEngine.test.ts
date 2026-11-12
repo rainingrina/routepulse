@@ -23,7 +23,7 @@ function ship(over: Partial<SimShipment> = {}): SimShipment {
   return {
     id: 'shp_x', code: 'SHP-X', autopilot: true, milestone: 'IN_TRANSIT', truckId: 'trk', routeId: 'rt',
     plannedGateS: s(8 * 60 + 10), plannedDepS: s(8 * 60 + 50), promisedByS: s(18 * 60), overrideEndS: null,
-    hours: { openMin: 480, closeMin: 1080 }, unloadingMin: 60, pace: PACE, progressMm: 0, stoppedUntilS: null,
+    hours: { openMin: 480, closeMin: 1080 }, unloadingMin: 60, extraUnloadMin: 0, pace: PACE, progressMm: 0, stoppedUntilS: null,
     gateQueuedS: null, loadingStartedS: null, loadingEndS: null, gateOutS: s(9 * 60 + 30), physicalArrivalS: null,
     arrivedS: null, deliveredS: null, delayMinutes: null, onTime: null, lastUpdateS: null, pingIntervalMin: 30, silentFromS: null,
     stopCause: null, ledger: {}, planChangeByParty: {},

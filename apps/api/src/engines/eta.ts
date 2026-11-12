@@ -149,8 +149,11 @@ export const hhmm = (s: number): string => {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 };
 
+/** One bar: a source and its party (WIN: one bar for all parties, with a split). */
 interface Group {
   sourceKey: string;
+  /** null only for WIN */
+  party: Party | null;
   code: FactorCode;
   seconds: number;
   byParty: Map<Party, number>;
@@ -168,13 +171,15 @@ function groupsOf(ledger: Ledger, disruptions: ReadonlyMap<string, DisruptionInf
   for (const [key, sec] of Object.entries(ledger)) {
     if (sec <= 0) continue;
     const { sourceKey, party } = parseLedgerKey(key);
-    let g = map.get(sourceKey);
+    const code = codeOf(sourceKey);
+    // Bars follow the ledger's party, so an override or review is visible in the explanation.
+    const groupKey = code === 'WIN' ? 'WIN' : key;
+    let g = map.get(groupKey);
     if (!g) {
-      const code = codeOf(sourceKey);
       const d = code === 'DISR' ? disruptions.get(sourceKey.slice(5)) : undefined;
       const tie = d ? `${String(d.startS).padStart(12, '0')}:${d.id}` : sourceKey;
-      g = { sourceKey, code, seconds: 0, byParty: new Map(), sortKey: `${CODE_ORDER[code]}:${tie}` };
-      map.set(sourceKey, g);
+      g = { sourceKey, party: code === 'WIN' ? null : party, code, seconds: 0, byParty: new Map(), sortKey: `${CODE_ORDER[code]}:${tie}:${PARTY_ORDER.indexOf(party)}` };
+      map.set(groupKey, g);
     }
     g.seconds += sec;
     g.byParty.set(party, (g.byParty.get(party) ?? 0) + sec);
@@ -228,7 +233,7 @@ export function explainEta(input: EtaInput): EtaResult {
     const pc = Object.entries(sh.planChangeByParty).filter(([, v]) => (v ?? 0) > 0);
     add(
       'PLAN_CHANGE',
-      pc.map(([party, v]) => ({ sourceKey: 'ROUTE', code: 'DISR' as FactorCode, seconds: v ?? 0, byParty: new Map([[party as Party, v ?? 0]]), sortKey: party })),
+      pc.map(([party, v]) => ({ sourceKey: 'ROUTE', party: party as Party, code: 'DISR' as FactorCode, seconds: v ?? 0, byParty: new Map([[party as Party, v ?? 0]]), sortKey: party })),
       planChange,
     );
   }
@@ -305,7 +310,7 @@ function toFactor(phase: FactorPhase, g: Group, minutes: number, input: EtaInput
     case 'GATE':
       return {
         ...base,
-        party: 'PLANT',
+        party: g.party ?? 'PLANT',
         reason: 'PLANT_GATE_WAIT',
         label: 'Plant gate wait and loading',
         detail: incurred ? `Gate queue and loading after the planned departure · +${minutes} min` : `Projected gate queue and loading · +${minutes} min`,
@@ -314,7 +319,7 @@ function toFactor(phase: FactorPhase, g: Group, minutes: number, input: EtaInput
       const pct = Math.round((Number(input.now.pace.num) / Number(input.now.pace.den)) * 1000) / 10;
       return {
         ...base,
-        party: 'TRANSPORTER',
+        party: g.party ?? 'TRANSPORTER',
         reason: 'TRANSPORTER_PACE',
         label: 'Transporter pace (from delivered history)',
         detail: `${incurred ? 'So far' : 'Remaining baseline'} at ${pct}% of baseline speed · +${minutes} min`,
@@ -322,12 +327,12 @@ function toFactor(phase: FactorPhase, g: Group, minutes: number, input: EtaInput
     }
     case 'DISR': {
       if (phase === 'PLAN_CHANGE') {
-        const party = [...g.byParty.keys()][0] ?? 'UNATTRIBUTED';
+        const party = g.party ?? 'UNATTRIBUTED';
         return { ...base, party, reason: null, label: 'Plan change (reroute)', detail: `Longer route baseline · +${minutes} min` };
       }
       const id = g.sourceKey.slice(5);
       const d = input.disruptions.get(id);
-      const party = d?.party ?? [...g.byParty.keys()][0] ?? 'UNATTRIBUTED';
+      const party = g.party ?? d?.party ?? 'UNATTRIBUTED';
       const what =
         d?.kind === 'WEATHER_SLOWDOWN'
           ? `${d.segmentCodes.join(', ')} ${d.slowdownPct ?? 0}% slower until ${hhmm(d.endS)}`
@@ -352,7 +357,7 @@ function toFactor(phase: FactorPhase, g: Group, minutes: number, input: EtaInput
       const r = input.reports.get(id);
       return {
         ...base,
-        party: r?.party ?? [...g.byParty.keys()][0] ?? 'UNATTRIBUTED',
+        party: g.party ?? r?.party ?? 'UNATTRIBUTED',
         reason: r?.reason ?? null,
         label: r ? `Driver report: ${REASON_SHORT[r.reason]}` : 'Driver report',
         detail: `${incurred ? 'Stopped so far' : `Stopped until ${input.now.stoppedUntilS === null ? '—' : hhmm(input.now.stoppedUntilS)}`} · +${minutes} min`,

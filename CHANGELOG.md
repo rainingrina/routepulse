@@ -19,6 +19,20 @@ Entries below describe the backend (branch `backend`) and frontend (branch `fron
   - 72 unit tests (API client, retry/session rules, role guard, formatting, login validation, status badges, list filters, activity summaries, recovery ordering, map geometry, mock fixture identity checks).
   - `docs/FRONTEND_BACKEND_HANDOFF.md`.
 
+### Added (Milestone 6)
+- **Backend Milestone 6 (delay attribution), branch `backend`:**
+  - Ledger lifecycle completed on the one existing ledger (`DelayAttribution`): rows become FINAL at ARRIVED (autopilot in the settle step, manual on the tap) stamped with `arrivedAt` = eligible check-in of the physical arrival, never the tap time; an UNATTRIBUTED **GAP** row records any remainder of `arrivedAt − plannedArrivalAt` (spec §5.9); idempotent finalisation; a negative remainder is treated as an invariant violation, never hidden.
+  - But-for rule and raw vs fair on-time per transporter from the persisted FINAL ledger (`engines/attribution.ts`, `attributionService.transporterOnTime`); reproduces the documented seed table exactly (Bluehill 70.0 → 90.0 %, Ghatline 79.1 → 88.4 %, …).
+  - Overrides (AC-F1.3): the whole row moves with a mandatory note; the first original party, user and simulation time are kept; merge into an existing row of the same source; event `ATTRIBUTION_OVERRIDDEN` and audit `attribution.override`.
+  - Driver reports (F2/F3): keyword classifier `KEYWORD_LIST_V1` (fixed English word list, suggestion only); report creation with server-side reclassification, reason defaults (DOCUMENTS: Plant before gate-out, External after), stop until the latest end (L5), `DRIVER_REPORT` event, coordinator notification `REPORT_NEEDS_REVIEW`, audit `report.create`; RPT factor "Pending coordinator review" (+20 range, MEDIUM).
+  - Coordinator review: confirm, or change reason/party with a note (UNATTRIBUTED only with OTHER); the report keeps the driver's original values; its ledger rows are re-tagged; event `REPORT_REVIEWED`, audit `report.review`. Confirmed "waiting to unload" reports extend `deliveredAt` only.
+  - Endpoints #22 classify, #23 create report, #24 review queue, #25 review, #34 attribution, #35 override; all through `simulationService.applyChange` (one transaction, one pipeline).
+  - Shared contracts: `DriverReportDto`, `DriverTripShipment`, `DriverHandover`, `ClassifyRequest/Response`, `CreateDriverReportRequest/Response`, `DriverReportListResponse`, `ReviewDriverReportRequest/Response`, `REPORT_ESTIMATE_MINUTES`, `AttributionRowDto`, `AttributionResponse`, `AttributionOverrideRequest`; guard for `REPORT_NEEDS_REVIEW` notification params.
+  - Tests: 273 passing (new: 10 attribution/classifier unit tests, 29 attribution integration tests incl. G2/G4 report path, physical-arrival finalisation, GAP, overlaps, overrides, roll-back, fair on-time, R6 driver-report variant, HTTP roles/scoping/validation); GAP, but-for, review re-tag and driver-scope mutations each caught.
+
+### Fixed (Milestone 6)
+- ETA explanation bars now follow the ledger's party per source (an override or review is visible in the waterfall); previously GATE/HIST bars always showed their default party. No approved golden value changes.
+
 ### Added (Milestone 5)
 - **Backend Milestone 5 (ETA and risk engine), branch `backend`:**
   - Four-term ETA (L3) at the receiving gate (L1): `predicted = planned + incurred (I) + plan change (P) + expected (E)`; I from the clock, P from route baselines (0 without a reroute), E from a forward projection; largest-remainder rounding so the bars always add up (`identityHolds`).

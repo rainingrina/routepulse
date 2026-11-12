@@ -595,7 +595,7 @@ interface GeoJSONLineString { type: 'LineString'; coordinates: [number, number][
   - `ARRIVED` requires a recorded physical arrival and `simTime ≥` the eligible check-in time ("Truck is 38 km from the destination" / "Receiving opens at 08:00"). `arrivedAt` is set to the eligible check-in time, never the tap time (L6).
   - `DELIVERED` requires `ARRIVED` and `simTime ≥ arrivedAt + unloadingMinutes` ("Unloading finishes at 18:50"). `deliveredAt` = that completion time, not the tap time.
 - **Errors:** `403 FORBIDDEN` (customer; or driver posting a coordinator-only milestone), `404 NOT_FOUND`, `409 INVALID_TRANSITION` with a plain reason (AC-M2.6), `409 ALREADY_DONE`.
-- **Side effects:** event, `lastUpdateAt`, recalculation; on `DELIVERED`: delivery fields, attribution finalised, alert resolved, notifications; audit `milestone.record` (`milestone.override` for coordinators).
+- **Side effects:** event, `lastUpdateAt`, recalculation; on `DELIVERED`: delivery fields, attribution finalised (**implemented at ARRIVED** per L1/L6 and architecture §10.4 — Milestone 6), alert resolved, notifications; audit `milestone.record` (`milestone.override` for coordinators).
 
 ---
 
@@ -720,6 +720,7 @@ interface DriverHandover {
 - **Validation:** at least one of `chipReason` or `text`; `reason` must be a driver-chip reason (not `TRANSPORTER_PACE` / `RECEIVING_WINDOW`); shipment must be live and past `TRUCK_ASSIGNED`. The server re-runs the classifier on `text` and stores its own `suggestedReason` and `matchedKeywords` (it does not trust client values). `appliedMinutes` = `estimatedMinutes` or the reason default; `party` = reason default.
 - **Errors:** `403 FORBIDDEN` (customer), `404 NOT_FOUND`, `409 INVALID_TRANSITION` (delivered shipment).
 - **Side effects:** event `DRIVER_REPORT`, `lastUpdateAt`, `stoppedUntil` for stopping reasons, recalculation, coordinator notification `REPORT_NEEDS_REVIEW`, audit `report.create`.
+- **As implemented (Milestone 6):** reportable from AT_GATE to ARRIVED (earlier → `409 INVALID_TRANSITION`); every report on a moving truck sets `stoppedUntil` to the latest end (architecture §19 #15, L5); `reporter` is the caller (a coordinator reporting on behalf is recorded as reporter, event source COORDINATOR, audit `onBehalf: true`); report ids are deterministic (`rpt_<shipment>_<epochSeconds>`). Shared type `CreateDriverReportRequest` narrows `chipReason`/`reason` to the driver-chip reasons this validation allows.
 
 ### 9.4 `GET /api/driver-reports`
 - **Purpose:** coordinator review queue.
@@ -739,6 +740,7 @@ interface DriverHandover {
 - **Validation:** `note` required (5–280 chars) if `reason` or `party` differs from the report; `party` cannot be `UNATTRIBUTED` unless `reason = 'OTHER'`.
 - **Errors:** `403 FORBIDDEN`, `404 NOT_FOUND`, `409 ALREADY_DONE` (already confirmed).
 - **Side effects:** event `REPORT_REVIEWED`, attribution rows re-tagged, recalculation, audit `report.review`.
+- **As implemented (Milestone 6):** a report on a delivered shipment → `409 INVALID_TRANSITION` (the response must carry a live ETA; use #35 after delivery). There is no reject status: changing reason/party with a note is the documented way to correct a report.
 
 ---
 
@@ -870,6 +872,7 @@ interface AttributionResponse {
 - **Validation:** `note` 5–280 chars; `newParty` ≠ current party; the row belongs to the shipment; `GAP` rows can be re-attributed.
 - **Errors:** `403 FORBIDDEN`, `404 NOT_FOUND`, `409 ALREADY_DONE` (same party).
 - **Side effects:** event `ATTRIBUTION_OVERRIDDEN`, audit `attribution.override`, analytics reflect it on the next request.
+- **As implemented (Milestone 6):** `status`, `delayMinutes` and `countsAgainstTransporter` become final at **arrival** (L1), not delivery; GAP = arrival − planned arrival − attributed (spec §5.9). A merge into an existing row of the same source keeps the first original party. Overrides of LIVE rows also change the ETA bar's party immediately.
 
 ---
 
