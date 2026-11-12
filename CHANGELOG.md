@@ -7,6 +7,17 @@ No application code has been written yet. Entries below describe documentation o
 ## [Unreleased]
 
 ### Added
+- **Frontend Phases 1–2 (foundation + control tower), branch `frontend`:**
+  - `apps/web` (`@routepulse/web`) added to the npm workspace: React 19, Vite 8, strict TypeScript 5.9, Tailwind CSS 4, Radix UI, TanStack Query, React Router, MapLibre GL JS, lucide-react, Recharts (installed, not yet used); Vitest 4. All from the L9 approved list. Root configuration unchanged.
+  - Design tokens from UI plan §2 in `styles/tokens.css`, mapped into the Tailwind theme with the default palette disabled (no raw HEX in components).
+  - Typed API client with the error envelope (`ApiRequestError`), a `RoutePulseApi` service interface for endpoints #1–#38 with an HTTP implementation, TanStack Query hooks, 1 s `/api/sync` polling with `worldVersion` invalidation, retry and session-expiry rules (architecture §5.2, §13).
+  - App shell: coordinator, customer, driver and login layouts; role guard; one error boundary per route tree; skeleton loading; reconnecting and simulation-error banners; top-bar simulation clock; notification bell.
+  - Login page (UI plan §5).
+  - Coordinator control tower (UI plan §6): KPI strip, risk-sorted shipment list with chips, search and keyboard navigation, offline MapLibre map with routes, disruption segments and HTML truck/site/plant markers, alerts and activity tabs (activity from `GET /api/audit`, L7), selected-shipment quick panel, recovery cards with confirm and new-window dialogs and stale/conflict handling, simulation dock with reset dialog.
+  - Development mock (`npm run dev:mock -w @routepulse/web`): in-browser, fictional fixtures following the documented SHP-1042 scenario; excluded from the production build.
+  - DTOs not yet published in `@routepulse/shared` are transcribed verbatim from `06_API_SPEC.md` into `apps/web/src/api/contract/pending.ts` as a temporary, single-file exception (see handoff §3).
+  - 72 unit tests (API client, retry/session rules, role guard, formatting, login validation, status badges, list filters, activity summaries, recovery ordering, map geometry, mock fixture identity checks).
+  - `docs/FRONTEND_BACKEND_HANDOFF.md`.
 - **Backend Milestone 1 (foundation), branch `backend`:**
   - npm workspaces (`apps/api`, `packages/shared`); strict TypeScript base config.
   - `@routepulse/shared`: enum lists mirroring schema v0.3; `ApiError`, `ErrorCode`, `ValidationIssue`, `ListResponse`, primitives; `HealthResponse`, `SimStateDto`, `SyncResponse`.

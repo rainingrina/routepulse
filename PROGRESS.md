@@ -1,6 +1,6 @@
 # PROGRESS — RoutePulse
 
-Last updated: 2026-11-12 — backend Milestone 1 (foundation) on branch `backend`. Frontend tasks (Dev B) are untouched.
+Last updated: 2026-11-12 — backend Milestone 1 (foundation) on branch `backend`; frontend Phases 1–2 (foundation + control tower) on branch `frontend`. Frontend work runs against an in-browser development mock until the API endpoints exist; nothing frontend is **Verified** against the real API yet. Frontend ↔ backend contract notes: `docs/FRONTEND_BACKEND_HANDOFF.md`.
 
 **Status values:** Not Started · In Progress · Implemented · Tested · Verified
 - *Implemented* = code written. *Tested* = automated tests written and passing (ran by us). *Verified* = checked in the running app against the acceptance criteria.
@@ -48,11 +48,11 @@ Last updated: 2026-11-12 — backend Milestone 1 (foundation) on branch `backend
 | 1.1 | npm workspaces: `apps/api`, `packages/shared` (backend side); strict `tsconfig` — `apps/web` is added by Dev B | Dev A | Approval to start | Tested | `npm run typecheck` + `npm test` pass (12 tests) |
 | 1.2 | Root scripts: `dev:api`, `typecheck`, `test`, `db:migrate`, `db:generate` exist; `build`, `demo`, `seed`, `reset` pending (later milestones) | Dev A | 1.1 | In Progress | Partial — existing scripts run |
 | 1.3 | Docker Compose for PostgreSQL; `apps/api/.env.example` (`DATABASE_URL`, `TEST_DATABASE_URL`, `SESSION_SECRET`, `DEMO_MODE`, `PORT`, `NODE_ENV`, `LOG_LEVEL`) | Dev A | 1.1 | Implemented | Compose file **not run** (Docker daemon off on this machine); development and tests verified against local PostgreSQL 17 |
-| 1.4 | Vite + React app shell; dev proxy for `/api`, `/tiles`, `/glyphs` | Dev B | 1.1 | Not Started | N/A |
+| 1.4 | Vite + React app shell; dev proxy for `/api`, `/tiles`, `/glyphs` — `apps/web` joined the workspace; scripts `dev`, `dev:mock`, `build`, `typecheck`, `test` (run with `-w @routepulse/web`) | Dev B | 1.1 | Implemented | Typecheck + production build pass; mock dev server serves every module; not yet run against the API |
 | 1.5 | Express v5 app: helmet (same-origin CSP), JSON-only (415) + 100 kB limit, requestId, error envelope middleware, request log, `GET /api/health` | Dev A | 1.1 | Tested | 7 integration tests pass; a deliberately broken 415 guard made the suite fail (test can fail) |
 | 1.6 | Vitest set-up (api workspace); test DB `routepulse_test` migrated by global setup; guard refuses non-test databases | Dev A | 1.3 | Tested | Runs green; guard proven by refusing the dev DB |
 | 1.7 | `packages/shared`: enum mirror + base types (`ApiError`, primitives, `HealthResponse`, `SimStateDto`, `SyncResponse`) done; endpoint DTOs and fixtures added per milestone | Both | 1.1 | In Progress | Typechecked; Prisma drift check arrives with 2.4 |
-| 1.8 | Design tokens (`tokens.css`), Tailwind theme, self-hosted Inter | Dev B | 1.4 | Not Started | N/A |
+| 1.8 | Design tokens (`tokens.css`), Tailwind theme, self-hosted Inter | Dev B | 1.4 | In Progress | Tokens (UI plan §2) and Tailwind theme done; default palette disabled; Inter files not added yet (handoff Q5) |
 | 1.9 | `.gitignore` covers `.env*` (except `.env.example`), `dist/`, `node_modules/`, generated Prisma client (developers commit) | Dev A | 1.1 | Implemented | N/A |
 
 ## 2. Database and Prisma
@@ -71,7 +71,7 @@ Last updated: 2026-11-12 — backend Milestone 1 (foundation) on branch `backend
 | 3.1 | Login / logout / me (#1–#3), bcrypt, JWT cookie, in-memory login rate limit | Dev A | 2.2 | Not Started | Not tested |
 | 3.2 | `requireRole`, `scopeForUser`, 404-for-out-of-scope | Dev A | 3.1 | Not Started | Not tested |
 | 3.3 | Validation helpers (`validation/`) + CT-2 | Dev A | 1.5 | Not Started | Not tested |
-| 3.4 | Login page, role guard, three route trees (UI plan §3, §5) | Dev B | 1.8, 3.1 | Not Started | Not tested |
+| 3.4 | Login page, role guard, three route trees (UI plan §3, §5) | Dev B | 1.8, 3.1 | Implemented | Guard decision, login validation and session-expiry rule unit-tested; not run against #1–#3 (task 3.1 not built) |
 | 3.5 | AZ-1 … AZ-8 integration tests | Dev A | 3.2, 5.x | Not Started | Not tested |
 
 ## 4. Seed data
@@ -142,21 +142,21 @@ Last updated: 2026-11-12 — backend Milestone 1 (foundation) on branch `backend
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
 | 10.1 | One-hour offline tiles spike (architecture §16.2) — record PASS/FAIL | Dev B | 1.4 | Not Started | N/A |
-| 10.2 | Basemap (PMTiles, if O-11 approved) or GeoJSON fallback; CSP check | Dev B | 10.1, O-11 | Not Started | Not tested |
-| 10.3 | Layers, HTML truck/site markers, legend, selection sync | Dev B | 10.2, 5.3 | Not Started | Not tested |
+| 10.2 | Basemap (PMTiles, if O-11 approved) or GeoJSON fallback; CSP check | Dev B | 10.1, O-11 | In Progress | Offline style without tiles/glyphs (land colour only); basemap data pending (handoff Q8); MapLibre worker served same-origin (Q4) |
+| 10.3 | Layers, HTML truck/site markers, legend, selection sync | Dev B | 10.2, 5.3 | Implemented | Segment slicing unit-tested; runs on mock data only; not checked in a browser yet |
 | 10.4 | Marker interpolation, reduced-motion behaviour | Dev B | 10.3 | Not Started | Not tested |
 
 ## 11. Coordinator screens
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
-| 11.1 | Control tower layout, KPI strip, shipment list (UI plan §6) | Dev B | 3.4, 5.1, 10.3 | Not Started | Not tested |
-| 11.2 | Alerts tab and activity feed from `GET /api/audit` (L7) | Dev B | 9.2, 5.5 | Not Started | Not tested |
-| 11.3 | Quick panel + shipment detail page (UI plan §6.5, §7) | Dev B | 7.5 | Not Started | Not tested |
-| 11.4 | ETA waterfall (four terms, road-arrival tick, receiving window band) + factor list | Dev B | 7.5 | Not Started | Not tested |
-| 11.5 | Recovery cards, confirm/new-window dialogs, stale/conflict states (UI plan §9) | Dev B | 9.4 | Not Started | Not tested |
+| 11.1 | Control tower layout, KPI strip, shipment list (UI plan §6) | Dev B | 3.4, 5.1, 10.3 | Implemented | List filter/search and at-risk detection unit-tested; mock data only; not checked in a browser yet |
+| 11.2 | Alerts tab and activity feed from `GET /api/audit` (L7) | Dev B | 9.2, 5.5 | Implemented | Domain-action filter and summaries unit-tested; audit `data` keys unconfirmed (handoff Q2) |
+| 11.3 | Quick panel + shipment detail page (UI plan §6.5, §7) | Dev B | 7.5 | In Progress | Quick panel done; detail page not started |
+| 11.4 | ETA waterfall (four terms, road-arrival tick, receiving window band) + factor list | Dev B | 7.5 | In Progress | Factor list (text equivalent) done; waterfall chart not started |
+| 11.5 | Recovery cards, confirm/new-window dialogs, stale/conflict states (UI plan §9) | Dev B | 9.4 | Implemented | Card order unit-tested; choose flow and 409 handling exercised only against the mock |
 | 11.6 | Replay page (UI plan §10) | Dev B | 7.5 | Not Started | Not tested |
-| 11.7 | Simulation dock + page; reset dialog | Dev B | 6.4–6.6 | Not Started | Not tested |
+| 11.7 | Simulation dock + page; reset dialog | Dev B | 6.4–6.6 | In Progress | Top-bar clock, map dock (play/pause/speed/+1 h) and reset dialog done; Simulation page and "Advance to" not started |
 | 11.8 | Driver reports queue; attribution tab with overrides | Dev B | 8.4, 9.5 | Not Started | Not tested |
 
 ## 12. Customer portal

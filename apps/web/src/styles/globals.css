@@ -1,0 +1,164 @@
+@import 'tailwindcss';
+@import './tokens.css';
+@import 'maplibre-gl/dist/maplibre-gl.css';
+
+/*
+ * Tailwind theme = UI plan §2 tokens only. Default colour palette, breakpoints, radii and shadows are
+ * cleared so a raw Tailwind colour (e.g. bg-red-500) cannot be used by accident.
+ */
+@theme {
+  --color-*: initial;
+  --breakpoint-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --text-*: initial;
+
+  /* §2.5 breakpoints */
+  --breakpoint-sm: 360px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+
+  /* §2.5 radii */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* §2.4 typography — Inter first (self-hosted per L9; files pending, see handoff), then system fallback */
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --text-display: 32px;
+  --text-display--line-height: 40px;
+  --text-display--font-weight: 600;
+  --text-kpi: 28px;
+  --text-kpi--line-height: 32px;
+  --text-kpi--font-weight: 600;
+  --text-h1: 24px;
+  --text-h1--line-height: 32px;
+  --text-h1--font-weight: 600;
+  --text-h2: 20px;
+  --text-h2--line-height: 28px;
+  --text-h2--font-weight: 600;
+  --text-h3: 16px;
+  --text-h3--line-height: 24px;
+  --text-h3--font-weight: 600;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+  --text-small: 12px;
+  --text-small--line-height: 16px;
+  --text-overline: 11px;
+  --text-overline--line-height: 16px;
+}
+
+@theme inline {
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-canvas: var(--rp-canvas);
+  --color-surface: var(--rp-surface);
+  --color-surface-subtle: var(--rp-surface-subtle);
+  --color-surface-sunken: var(--rp-surface-sunken);
+  --color-border: var(--rp-border);
+  --color-border-strong: var(--rp-border-strong);
+  --color-border-input: var(--rp-border-input);
+  --color-text: var(--rp-text);
+  --color-text-secondary: var(--rp-text-secondary);
+  --color-text-muted: var(--rp-text-muted);
+  --color-primary: var(--rp-primary);
+  --color-primary-hover: var(--rp-primary-hover);
+  --color-primary-pressed: var(--rp-primary-pressed);
+  --color-primary-subtle: var(--rp-primary-subtle);
+  --color-on-primary: var(--rp-on-primary);
+  --color-accent: var(--rp-accent);
+  --color-accent-subtle: var(--rp-accent-subtle);
+  --color-navy-900: var(--rp-navy-900);
+  --color-navy-800: var(--rp-navy-800);
+  --color-success: var(--rp-success);
+  --color-success-tint: var(--rp-success-tint);
+  --color-warning: var(--rp-warning);
+  --color-warning-tint: var(--rp-warning-tint);
+  --color-danger: var(--rp-danger);
+  --color-danger-tint: var(--rp-danger-tint);
+  --color-late: var(--rp-late);
+  --color-late-tint: var(--rp-late-tint);
+  --color-info: var(--rp-info);
+  --color-info-tint: var(--rp-info-tint);
+  --color-party-plant: var(--rp-party-plant);
+  --color-party-transporter: var(--rp-party-transporter);
+  --color-party-customer: var(--rp-party-customer);
+  --color-party-external: var(--rp-party-external);
+  --color-party-unattributed: var(--rp-party-unattributed);
+  --color-map-land: var(--rp-map-land);
+
+  --shadow-xs: var(--rp-shadow-xs);
+  --shadow-sm: var(--rp-shadow-sm);
+  --shadow-md: var(--rp-shadow-md);
+  --shadow-overlay: var(--rp-shadow-overlay);
+
+  --ease-rp: var(--rp-ease);
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--rp-canvas);
+    color: var(--rp-text);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* §2.5 focus ring: 2 px primary outline + 2 px offset */
+  :focus-visible {
+    outline: 2px solid var(--rp-primary);
+    outline-offset: 2px;
+  }
+  button,
+  [role='button'] {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility code-label {
+  letter-spacing: 0.02em;
+  font-weight: 500;
+}
+
+@utility overline {
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* §16 motion: everything off under prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* MapLibre HTML markers must not inherit the default marker cursor styling. */
+.maplibregl-marker {
+  cursor: default;
+}

@@ -1,0 +1,71 @@
+/*
+ * RoutePulse design tokens — 07_UI_UX_PLAN.md §2. The only place HEX values appear in the web app.
+ * Components use the Tailwind utilities mapped in globals.css (e.g. bg-surface, text-text-secondary).
+ */
+:root {
+  /* §2.1 neutrals and brand */
+  --rp-canvas: #f7f6f3;
+  --rp-surface: #ffffff;
+  --rp-surface-subtle: #fbfaf8;
+  --rp-surface-sunken: #f1efea;
+  --rp-border: #e5e1da;
+  --rp-border-strong: #cfc9bf;
+  --rp-border-input: #8a94a3;
+  --rp-text: #0f1b2d;
+  --rp-text-secondary: #475467;
+  --rp-text-muted: #5f6b7a;
+  --rp-primary: #1f4fd1;
+  --rp-primary-hover: #1a43b3;
+  --rp-primary-pressed: #163a9c;
+  --rp-primary-subtle: #edf2fe;
+  --rp-accent: #0b7a75;
+  --rp-accent-subtle: #e6f4f3;
+  --rp-navy-900: #0f1b2d;
+  --rp-navy-800: #1b2b45;
+  --rp-on-primary: #ffffff;
+
+  /* §2.2 status (reserved; never chart series) */
+  --rp-success: #2f7a55;
+  --rp-success-tint: #e9f4ee;
+  --rp-warning: #9a5b00;
+  --rp-warning-tint: #fdf3e1;
+  --rp-danger: #b42318;
+  --rp-danger-tint: #fdecea;
+  --rp-late: #7a1e14;
+  --rp-late-tint: #f7e4e1;
+  --rp-info: #475467;
+  --rp-info-tint: #f1efea;
+
+  /* §2.3 delay-cause parties (charts only; fixed stack order Plant → Transporter → Customer → External → Unattributed) */
+  --rp-party-plant: #3b5bdb;
+  --rp-party-transporter: #c27c0e;
+  --rp-party-customer: #7c4dcc;
+  --rp-party-external: #00968f;
+  --rp-party-unattributed: #a3a9b3;
+  --rp-chart-raw: #9db3ee;
+
+  /* §8.1–8.2 map */
+  --rp-map-land: #eeece6;
+  --rp-map-water: #dce6ee;
+  --rp-map-border: #cfc9bf;
+  --rp-map-route: #334155;
+  --rp-map-route-alt: #8a94a3;
+
+  /* §2.5 shadows */
+  --rp-shadow-xs: 0 1px 2px rgba(15, 27, 45, 0.06);
+  --rp-shadow-sm: 0 1px 3px rgba(15, 27, 45, 0.08), 0 1px 2px rgba(15, 27, 45, 0.04);
+  --rp-shadow-md: 0 4px 12px rgba(15, 27, 45, 0.08);
+  --rp-shadow-overlay: 0 12px 32px rgba(15, 27, 45, 0.14);
+
+  /* §2.5 motion */
+  --rp-motion-fast: 120ms;
+  --rp-motion-base: 200ms;
+  --rp-motion-slow: 320ms;
+  --rp-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* §2.5 layout widths */
+  --rp-content-max: 1600px;
+  --rp-side-panel: 400px;
+  --rp-list-width: 360px;
+  --rp-driver-max: 480px;
+}
