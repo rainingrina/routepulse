@@ -2,7 +2,7 @@
 
 Living document maintained by the backend (branch `backend`). It lists **only what is implemented and tested**. The full target contract is `06_API_SPEC.md`; types live in `packages/shared`.
 
-Last updated: 2026-11-12 — **Milestone 2 (schema + deterministic seed)**.
+Last updated: 2026-11-12 — **Milestone 3 (authentication and authorisation)**.
 
 ---
 
@@ -54,6 +54,26 @@ Status per code: `VALIDATION_ERROR` 400 · `UNAUTHENTICATED` 401 · `FORBIDDEN`/
 | Method | Path | Auth | Status |
 |---|---|---|---|
 | GET | `/api/health` | Public | Implemented + tested |
+| POST | `/api/auth/login` (#1) | Public | Implemented + tested |
+| POST | `/api/auth/logout` (#2) | Session | Implemented + tested |
+| GET | `/api/auth/me` (#3) | Session | Implemented + tested |
+
+### Authentication behaviour (what the SPA must do)
+- **Login:** `POST /api/auth/login` with `LoginRequest` (`{ email, password }`, JSON). 200 → `LoginResponse` (`user`, `homePath`) and an httpOnly cookie `rp_session` (8 h). The SPA never sees or stores the token; `fetch` must run same-origin (Vite proxy in dev) so the browser sends the cookie.
+  ```json
+  { "user": { "id": "usr_cust_arjun", "name": "Arjun", "email": "buyer@kestrel.test", "role": "CUSTOMER",
+              "customer": { "id": "cus_kestrel", "name": "Kestrel Moulders" }, "transporter": null },
+    "homePath": "/orders" }
+  ```
+- **Wrong credentials:** 401 `UNAUTHENTICATED`, message "Email or password is incorrect." (identical for unknown email, wrong password, inactive account). Show the message as-is.
+- **Too many attempts:** 429 `RATE_LIMITED` (10 per minute per IP).
+- **Bad input:** 400 `VALIDATION_ERROR` with `details[]` (`{ path, message }`); unknown fields are rejected — send exactly `email` and `password`.
+- **Route guard:** call `GET /api/auth/me` on app start → `MeResponse` or 401 (go to `/login`). Use `user.role` only for UX; the server enforces every rule.
+- **Logout:** `POST /api/auth/logout` with body `{}` → 204; the cookie is cleared and that session is revoked.
+- **Any 401 from any endpoint** means "not signed in or session ended" → redirect to login ("Your session ended. Please sign in again.").
+- **403 `FORBIDDEN`** = signed in but wrong role; **404 `NOT_FOUND`** also covers "exists but not yours" — show "This item is not available."
+- **Deny by default:** every `/api` route except login and health needs a session, including unknown paths (401).
+- **Three cookie jars for the demo (D2):** one browser profile per role; one cookie per origin.
 
 ### `GET /api/health`
 Operational check (not one of the 38 product endpoints). 200 when the database answers, 503 otherwise.
@@ -69,6 +89,7 @@ Type: `HealthResponse`. `serverTime` is wall-clock time, not simulation time.
 | All enum lists and unions (`ROLES`, `MILESTONES`, `RISK_LEVELS`, `PARTIES`, `REASON_CODES`, `DRIVER_REASON_CODES`, `NOTIFICATION_KINDS`, …) | All | Mirror of schema v0.3 (incl. `PHYSICAL_ARRIVAL`, `RECOVERY_APPLIED`, `ARRIVED_LATE`) |
 | `ApiError`, `ErrorCode`, `ValidationIssue`, `ListResponse<T>`, `Id`, `ISODateTime`, `Minutes`, `Pct` | All | |
 | `SimStateDto`, `SyncResponse` | #4 `GET /api/sync`, #5, #6 | Shape is final per API spec; endpoint arrives in Milestone 4 |
+| `UserDto`, `LoginRequest`, `LoginResponse`, `MeResponse`, `HomePath`, `SESSION_COOKIE_NAME` | #1–#3 | **Implemented** (Milestone 3) |
 
 You may build against these with fixtures; field names will not change without a note here.
 
@@ -90,7 +111,7 @@ Run `npm run seed` (needs `SEED_DEMO_PASSWORD` in `apps/api/.env`). Clock: **Thu
 | `driver.suresh@ghatline.test` | DRIVER | replacement truck TRK-11 (D3 hand-over) |
 | 6 more drivers (`driver.*@*.test`) | DRIVER | their live shipments |
 
-Login endpoints arrive in Milestone 3. Live shipments have **no ETA/risk yet** (`etaAt`, `riskLevel` are null) until the simulation and engine milestones; build empty/"calculating" states for that.
+Log in with these accounts through `/api/auth/login` (Milestone 3). Live shipments have **no ETA/risk yet** (`etaAt`, `riskLevel` are null) until the simulation and engine milestones; build empty/"calculating" states for that.
 
 ## 6. Polling and freshness (planned behaviour, API §15)
 
@@ -98,7 +119,7 @@ Login endpoints arrive in Milestone 3. Live shipments have **no ETA/risk yet** (
 
 ## 7. Known incomplete functionality
 
-Everything except `/api/health` — auth, shipments, simulation, ETA, alerts, recovery, analytics — is not yet implemented. The database and seed exist (Milestone 2). Next: Milestone 3 (auth), after approval.
+Implemented: `/api/health` and authentication (#1–#3). Not yet implemented: shipments, orders, map, simulation, ETA, alerts, recovery, notifications, analytics. Next: Milestone 4 (simulation), after approval.
 
 ## 8. Contract change log
 
@@ -106,3 +127,4 @@ Everything except `/api/health` — auth, shipments, simulation, ETA, alerts, re
 |---|---|---|
 | 2026-11-12 | Initial publish: enums, base types, `HealthResponse`, `SimStateDto`, `SyncResponse` | — |
 | 2026-11-12 | Added `Segment`, `GeoJSONLineString`, `GeometrySource`, `PLANT`, `DISPLAY_TIME_ZONE`, `RISK_THRESHOLDS`, `SMALL_FLEET_MAX` | No |
+| 2026-11-12 | Added `UserDto`, `HomePath`, `LoginRequest`, `LoginResponse`, `MeResponse`, `SESSION_COOKIE_NAME` (already specified in API §2.2/§4; now published). Unauthenticated calls to unknown `/api` paths now return 401 instead of 404 | No (new types); behaviour change for unknown paths only |

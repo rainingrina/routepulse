@@ -28,11 +28,11 @@ describe('Milestone 1 foundation', () => {
     expect(id).not.toBe('spoofed');
   });
 
-  it('returns the error envelope for an unknown /api route', async () => {
+  it('returns the error envelope for an unknown /api route (401 first: deny by default, Milestone 3)', async () => {
     const res = await fetch(`${srv.baseUrl}/api/does-not-exist`);
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(401);
     const body = (await res.json()) as ApiError;
-    expect(body.error.code).toBe('NOT_FOUND');
+    expect(body.error.code).toBe('UNAUTHENTICATED');
     expect(body.error.requestId).toBe(res.headers.get('x-request-id'));
   });
 

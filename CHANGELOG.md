@@ -7,6 +7,25 @@ No application code has been written yet. Entries below describe documentation o
 ## [Unreleased]
 
 ### Added
+- **Backend Milestone 3 (authentication and authorisation), branch `backend`:**
+  - `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` (#1–#3).
+  - HS256 session tokens with `node:crypto` (no JWT dependency): exact-header check (rejects `alg=none`), constant-time signature check, 8 h real-time expiry, per-session id; httpOnly SameSite=Lax cookie, `Secure` in production.
+  - Logout revocation via an in-memory deny-list (AZ-6); deactivated or deleted users lose access on the next request.
+  - Session middleware that loads the user from the database on every request (role and scope never taken from the token or the client); `requireAuth` (deny by default for every `/api` route except login and health), `requireRole`, `requireDemoMode`.
+  - Scope policies for shipments, orders, alerts, notifications, customers and driver reports, plus 404-for-out-of-scope guards.
+  - Uniform login failure (wrong password / unknown email / inactive) with a dummy bcrypt comparison against timing leaks; in-memory login rate limit 10/min/IP (429).
+  - Audit rows `auth.login`, `auth.login.failed` (email only), `auth.logout`.
+  - Hand-written request validator (`apps/api/src/validation/validator.ts`, CT-2).
+  - Shared contracts published from API spec §2.2/§4: `UserDto`, `HomePath`, `LoginRequest`, `LoginResponse`, `MeResponse`, `SESSION_COOKIE_NAME`.
+  - Tests: 135 passing in total (new: session/cookie/rate-limit/validator units, 23 auth HTTP tests, 12 authorisation tests); three injected security regressions were each caught.
+
+### Changed
+- **O-12 decided:** an accepted receiving-window override accepts any road arrival up to its end, including before normal opening (`engines/receivingWindow.ts`; tested). Gate access, unloading availability and on-time eligibility are documented as separate concepts.
+- **Historical pace:** the engine and Milestone 5 golden tests use the history-derived pace (Pune/Ghatline r = 0.0741), recorded in the engine doc, seed facts and PROGRESS (O-13).
+- **O-11 (`pmtiles`)** deferred for frontend coordination; not a backend dependency.
+- Unauthenticated requests to unknown `/api` paths now return 401 instead of 404 (deny by default); the foundation test was updated accordingly.
+
+### Added (Milestone 2)
 - **Backend Milestone 2 (schema + deterministic seed), branch `backend`:**
   - Complete `schema.prisma`: 20 models, 22 enums (schema doc v0.3), all documented relations and indexes; explicit `onDelete: Restrict` except the 5 documented Cascades.
   - Migration `full_schema` with 49 CHECK constraints and 5 partial unique indexes; `prisma migrate diff` confirms Prisma will not drop them.

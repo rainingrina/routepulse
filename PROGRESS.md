@@ -1,6 +1,6 @@
 # PROGRESS — RoutePulse
 
-Last updated: 2026-11-12 — backend Milestones 1 (foundation) and 2 (schema + deterministic seed) on branch `backend`. Frontend tasks (Dev B) are untouched. Nothing is marked Verified.
+Last updated: 2026-11-12 — backend Milestones 1 (foundation), 2 (schema + deterministic seed) and 3 (authentication and authorisation) on branch `backend`. Frontend tasks (Dev B) are untouched. Nothing is marked Verified.
 
 **Status values:** Not Started · In Progress · Implemented · Tested · Verified
 - *Implemented* = code written. *Tested* = automated tests written and passing (ran by us). *Verified* = checked in the running app against the acceptance criteria.
@@ -37,8 +37,9 @@ Last updated: 2026-11-12 — backend Milestones 1 (foundation) and 2 (schema + d
 | O-8 | Schema simplification S-1 | **Rejected — L8** (relational schema retained) |
 | O-9 | G-CO2: verified emissions factor | **Gate closed (L10)** — CO₂e stays disabled until verified; does not block implementation |
 | O-10 | G-LANG: verified second language | **Gate closed (L10)** — English only until verified; does not block implementation |
-| O-11 | `pmtiles` browser library for the tiled basemap (not in the L9 list) | **Open** — approve it, or use the GeoJSON fallback basemap (architecture §16.2, §19 #27); blocks only task 10.2's tiled variant |
-| O-12 | Receiving override: an arrival **before** the default opening time on the override day still waits for opening (implemented interpretation of L4, `engines/receivingWindow.ts`) | **Confirm** — the docs say "any road arrival up to the override end"; the implementation keeps the opening time |
+| O-11 | `pmtiles` browser library for the tiled basemap (not in the L9 list) | **Deferred** (2026-11-12) — frontend coordination; not a backend dependency. GeoJSON fallback basemap remains available (architecture §16.3) |
+| O-12 | Receiving override and arrivals before normal opening | **Decided (2026-11-12): literal rule** — an accepted override accepts any road arrival up to its end, including before opening. Implemented in `engines/receivingWindow.ts`, tested. Gate access, unloading availability and on-time eligibility are separate concepts |
+| O-13 | Historical pace for the engine | **Decided (2026-11-12):** derive from seeded history (Pune/Ghatline r = 0.0741); Milestone 5 golden tests use the derived pace |
 
 ---
 
@@ -69,11 +70,11 @@ Last updated: 2026-11-12 — backend Milestones 1 (foundation) and 2 (schema + d
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
-| 3.1 | Login / logout / me (#1–#3), bcrypt, JWT cookie, in-memory login rate limit | Dev A | 2.2 | Not Started | Not tested |
-| 3.2 | `requireRole`, `scopeForUser`, 404-for-out-of-scope | Dev A | 3.1 | Not Started | Not tested |
-| 3.3 | Validation helpers (`validation/`) + CT-2 | Dev A | 1.5 | Not Started | Not tested |
+| 3.1 | Login / logout / me (#1–#3): bcrypt verification with dummy-hash timing guard, HS256 session cookie (`node:crypto`), 8 h expiry, logout revocation (in-memory deny-list), in-memory login rate limit 10/min/IP, audit `auth.login` / `auth.login.failed` / `auth.logout` | Dev A | 2.2 | Tested | 23 HTTP integration tests + 13 unit tests; smoke-tested on the dev server; revocation mutation caught |
+| 3.2 | `requireAuth` (deny by default), `requireRole`, `requireDemoMode`, session middleware loading the DB user; scope policies for shipments, orders, alerts, notifications, customers, driver reports; 404-for-out-of-scope guards | Dev A | 3.1 | Tested | 12 authorisation tests against the seeded DB; scope and token-role mutations caught |
+| 3.3 | Validation helpers (`validation/validator.ts`) + CT-2 | Dev A | 1.5 | Tested | 8 unit tests |
 | 3.4 | Login page, role guard, three route trees (UI plan §3, §5) | Dev B | 1.8, 3.1 | Not Started | Not tested |
-| 3.5 | AZ-1 … AZ-8 integration tests | Dev A | 3.2, 5.x | Not Started | Not tested |
+| 3.5 | AZ-1 … AZ-8 integration tests — **AZ-6, AZ-7 (middleware level), AZ-8 (validation/415) done**; AZ-1 (full role matrix), AZ-2/3/5 (per endpoint), AZ-4 (deep key scan per endpoint) are written as each product endpoint lands, using the tested scope policies | Dev A | 3.2, 5.x | In Progress | Identity endpoints and scope layer covered |
 
 ## 4. Seed data
 

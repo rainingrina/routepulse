@@ -5,7 +5,7 @@ Know it will be late hours before it is — know why, and fix it.
 
 Built for the LYB Mumbai Hackathon 2026, Round 2, Problem Statement 3 (Order-to-Delivery Control Tower). All companies, people and data are **fictional**; "Plant X" is a fictional polymer producer.
 
-> **Project status (2026-11-12): planning complete and decisions locked (L1–L10); backend Milestone 1 (foundation) implemented on branch `backend`; other features not yet implemented.** The commands below match the real `package.json` scripts. See `PROGRESS.md` for exact status.
+> **Project status (2026-11-12): planning complete and decisions locked (L1–L10); backend Milestones 1–3 (foundation, schema + seed, authentication and authorisation) implemented on branch `backend`; other features not yet implemented.** The commands below match the real `package.json` scripts. See `PROGRESS.md` for exact status.
 
 ---
 
@@ -64,9 +64,9 @@ Browser (React SPA)  ──JSON /api/*──▶  Express v5 API  ──Prisma─
 
 ---
 
-## Getting started (backend — Milestones 1–2)
+## Getting started (backend — Milestones 1–3)
 
-The backend foundation, full database schema and deterministic seed exist (branch `backend`); API features start in Milestone 3. The web app is developed separately.
+The backend foundation, full database schema, deterministic seed and authentication (login, logout, session, roles, data scoping) exist (branch `backend`). Product data endpoints arrive in later milestones. The web app is developed separately.
 
 ### Prerequisites
 - Node.js ≥ 20.19 and npm.
@@ -120,7 +120,7 @@ Planned for later milestones: `reset`, `demo`, `build`. Route lines in the seed 
 - All data is fictional and simulated; there is no real GPS, telematics, traffic or weather integration.
 - The ETA and risk are deterministic rules with hand-set values, not a trained model; a pilot would fit the rates on real history.
 - CO₂e is shown only after an emissions factor is verified (gate G-CO2); a second language only after a team member verifies it (gate G-LANG).
-- Prototype security limits: no token revocation, no MFA, single-process lock, local database.
+- Prototype security limits: logout revocation is held in memory (a restart forgets it until tokens expire, ≤ 8 h), no MFA, single-process lock, local database.
 - Remaining open item: whether to add the `pmtiles` browser library for the tiled basemap or use the GeoJSON fallback (`PROGRESS.md` §0).
 
 ## Generative AI declaration

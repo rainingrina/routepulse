@@ -1,5 +1,8 @@
 import express, { type Express } from 'express';
 import helmet from 'helmet';
+import { requireAuth, sessionMiddleware } from './auth/middleware.js';
+import { LOGIN_RATE_LIMIT, RateLimiter } from './auth/rateLimit.js';
+import { RevokedSessions } from './auth/session.js';
 import type { AppConfig } from './config/env.js';
 import type { PrismaClient } from './db/prisma.js';
 import type { Logger } from './logging/logger.js';
@@ -7,19 +10,30 @@ import { apiNotFound, errorHandler } from './middleware/errorHandler.js';
 import { jsonOnly } from './middleware/jsonOnly.js';
 import { requestId } from './middleware/requestId.js';
 import { requestLog } from './middleware/requestLog.js';
+import { authRouter } from './routes/auth.js';
 import { healthRouter } from './routes/health.js';
+import { createAuthService } from './services/authService.js';
 
 export interface AppDeps {
   config: AppConfig;
   prisma: PrismaClient;
   logger: Logger;
+  /** Real-time clock for sessions and rate limits (injectable for tests). Never simulation time. */
+  now?: () => number;
+  /** Login rate limit override (tests). */
+  loginRateLimit?: { limit: number; windowMs: number };
 }
 
 /** Builds the Express app. No listening here, so tests can mount it on an ephemeral port. */
-export function createApp({ prisma, logger }: AppDeps): Express {
+export function createApp({ config, prisma, logger, now = Date.now, loginRateLimit = LOGIN_RATE_LIMIT }: AppDeps): Express {
   const app = express();
   app.disable('x-powered-by');
   app.set('etag', false);
+
+  const revoked = new RevokedSessions();
+  const loginLimiter = new RateLimiter(loginRateLimit.limit, loginRateLimit.windowMs);
+  const authService = createAuthService({ prisma, sessionSecret: config.sessionSecret, revoked, loginLimiter, now });
+  const secureCookies = config.nodeEnv === 'production';
 
   app.use(requestId);
   app.use(requestLog(logger));
@@ -38,7 +52,16 @@ export function createApp({ prisma, logger }: AppDeps): Express {
   );
 
   app.use('/api', jsonOnly, express.json({ limit: '100kb' }));
+  app.use('/api', sessionMiddleware({ config, prisma, revoked, now }));
+
+  // Public endpoints.
   app.use('/api', healthRouter(prisma));
+  app.use('/api', authRouter(authService, { secureCookies }));
+
+  // Deny by default: every other /api route requires a valid session. Unauthenticated callers get
+  // 401 even for unknown paths, so the API surface cannot be enumerated without signing in.
+  app.use('/api', requireAuth);
+  // (Protected routers are mounted here in later milestones, each with requireRole + scope policies.)
   app.use('/api', apiNotFound);
 
   app.use(errorHandler(logger));

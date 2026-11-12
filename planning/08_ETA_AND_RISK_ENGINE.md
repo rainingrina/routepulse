@@ -49,7 +49,7 @@ All values live in `apps/api/src/config/`. Values marked **[A]** are fictional a
 | `R` | Baseline minutes **remaining**: `B(current route) − C` |
 | `promisedBy` | The **agreed** promise (D4) for **arrival at the receiving gate** (L1). Starts as the order's promise; moves only when a NEW_WINDOW is accepted. `originalPromisedBy` never changes |
 | Road arrival | When the truck reaches the customer's gate: `projectedRoadArrivalAt` (projected) / `physicalArrivalAt` (actual) |
-| Applicable receiving window | The customer's default hours; after an accepted NEW_WINDOW, additionally any road arrival up to `Shipment.receivingWindowOverrideEndAt` (L4) |
+| Applicable receiving window | The customer's default hours; after an accepted NEW_WINDOW, additionally any road arrival up to `Shipment.receivingWindowOverrideEndAt` (L4) — **literally any**, including arrivals before the default opening time (decision O-12, 2026-11-12) |
 | Eligible check-in time | Road arrival if inside the applicable window, otherwise the next default opening after it |
 | ETA / `predictedArrivalAt` | Predicted arrival at the receiving gate = eligible check-in time of the projected road arrival (L1) |
 | `arrivedAt` | Eligible check-in time of `physicalArrivalAt`; confirmed by the ARRIVED milestone, never the tap time (L6) |
@@ -164,7 +164,8 @@ The same precedence is applied by the settle step (incurred) and by the forward 
 ### 5.1 Historical transporter performance (HIST) and proration (D6)
 - **Pace** `p` for (transporter, lane) comes from delivered history: `r` = median over those shipments of (TRANSPORTER-attributed TIME_LOST seconds ÷ baseline seconds); `p = 1 ÷ (1 + r)`, clamped to `[0.80, 1.00]`. Fallbacks in §1.
 - **Proration:** HIST applies only to the **remaining** baseline time: `E_HIST = Σ over remaining pieces b·(1/p − 1) = R·r` when no slowdown applies.
-- Examples with `r = 0.0753` (p = 0.93) on a 270-minute route:
+- **Decided 2026-11-12:** the pace used by the engine and by the Milestone 5 golden tests is the one **derived from the seeded history**, not a designed value. For Ghatline on the Pune lane this is **r = 20 / 270 = 0.0741** (p ≈ 0.931), not 0.0753. The worked examples in §10 below still show the designed p = 0.93; their expected-HIST minutes are unchanged (20 at R = 270, 16 at R = 214, 13 at R = 179), and any one-minute differences elsewhere will be fixed by recomputing the golden values with the derived pace in Milestone 5.
+- Examples with `r = 0.0753` (p = 0.93) on a 270-minute route (illustrative; see the note above):
 
 | Remaining baseline R | Expected HIST |
 |---|---|
@@ -182,6 +183,8 @@ The same precedence is applied by the settle step (incurred) and by the forward 
 - Default receiving hours come from `Customer.receivingOpenMin` / `receivingCloseMin` in local time (Asia/Kolkata). They are never modified by a recovery (L4).
 - Eligibility is decided by **arrival** time (L1). If the road arrival is outside the applicable window (default hours, or this shipment's accepted override), WIN extra = eligible check-in time − road arrival.
 - Unloading may finish after the window closes if arrival was inside it (L1).
+- **O-12 (decided 2026-11-12):** an accepted override accepts any road arrival up to its end, including before the customer's normal opening time; the opening time is not an extra restriction.
+- **Separate concepts:** physical gate access, unloading availability and on-time eligibility are kept apart. The receiving-window rule decides only on-time eligibility (`arrivedAt`); it does not model when the gate physically opens or when unloading crews are available.
 - Settlement and projection use the same window rule.
 - **Split (spec §5.9, AC-F1.4):** WIN minutes are divided across parties in proportion to each party's other minutes on the shipment (I + P + E, excluding WIN). Rounded with largest remainder. If no other minutes exist → UNATTRIBUTED. **Never to the customer by default.**
 - The same split applies when WIN time is actually incurred (truck holding at the destination).
@@ -278,7 +281,7 @@ All companies are fictional. Times are simulation time (Thursday unless stated).
 | Primary route baseline B | 270 min; ghat segment = baseline minutes 90–150 |
 | Planned departure / arrival | 08:50 / **13:20** |
 | Promise | 18:00 · receiving 08:00–18:00 |
-| Transporter pace p | 0.93 (r = 0.0753) |
+| Transporter pace p | 0.93 (r = 0.0753) in this illustration; the implementation and golden tests use the history-derived r = 0.0741 (§5.1) |
 | Rain (simulator) | ghat segment, slowdown s = 0.65, 10:30–18:30 **[A]** |
 
 **09:30 — gate-out after a 40-minute gate wait.** I = 09:30 − 08:50 − 0 = **40** (GATE, PLANT). R = 270. E_HIST = 270 × 0.0753 = 20.3 → **20**. Predicted = 13:20 + 40 + 20 = **14:20**. Slack 220 → **ON_TRACK**.

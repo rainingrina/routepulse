@@ -7,7 +7,8 @@ import { DAY_MINUTES, addMinutes, istMidnight, istMinuteOfDay } from './time.js'
  *
  * - Eligibility is decided by ARRIVAL time at the customer's gate.
  * - Applicable window = the customer's default hours, OR (after an accepted NEW_WINDOW) any road
- *   arrival up to this shipment's `receivingWindowOverrideEndAt`.
+ *   arrival up to this shipment's `receivingWindowOverrideEndAt` — literally any, including before
+ *   the default opening time (decision O-12).
  * - Eligible check-in = the road arrival if inside the applicable window, otherwise the next
  *   default opening time after it.
  * The same function is used by settlement, projection and the seed so the rule is identical.
@@ -24,8 +25,11 @@ export function isInsideDefaultWindow(at: Date, hours: ReceivingHours): boolean 
 
 export function eligibleCheckIn(roadArrival: Date, hours: ReceivingHours, overrideEndAt: Date | null = null): Date {
   if (isInsideDefaultWindow(roadArrival, hours)) return roadArrival;
-  if (overrideEndAt && roadArrival.getTime() <= overrideEndAt.getTime() && istMinuteOfDay(roadArrival) >= hours.openMin) {
-    // Override extends the same day's acceptance up to its end (L4); it never moves the opening time.
+  if (overrideEndAt && roadArrival.getTime() <= overrideEndAt.getTime()) {
+    // O-12 (decided 2026-11-12): an accepted shipment-specific window accepts ANY road arrival up
+    // to its end, including arrivals before the customer's normal opening time. This governs
+    // on-time eligibility only; physical gate access and unloading availability are separate
+    // concepts and are not modelled by this function.
     return roadArrival;
   }
   const midnight = istMidnight(roadArrival);

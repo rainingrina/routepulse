@@ -57,6 +57,13 @@ describe('receiving window (L1, L4)', () => {
     expect(HOURS).toEqual({ openMin: 480, closeMin: 1080 });
     expect(eligibleCheckIn(istAt(THU, 19 * 60 + 40), HOURS, override).getTime()).toBe(istAt(FRI, 480).getTime());
   });
+
+  it('O-12: the override accepts a road arrival before normal opening time (literal rule)', () => {
+    const early = istAt(THU, 6 * 60);
+    expect(eligibleCheckIn(early, HOURS, istAt(THU, 19 * 60 + 30)).getTime()).toBe(early.getTime());
+    // Without an override the same arrival waits for opening.
+    expect(eligibleCheckIn(early, HOURS).getTime()).toBe(istAt(THU, 480).getTime());
+  });
 });
 
 describe('knock-on split of WIN (engine doc Example 2)', () => {
