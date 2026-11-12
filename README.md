@@ -64,9 +64,9 @@ Browser (React SPA)  ──JSON /api/*──▶  Express v5 API  ──Prisma─
 
 ---
 
-## Getting started (backend — Milestone 1)
+## Getting started (backend — Milestones 1–2)
 
-Only the backend foundation exists so far (branch `backend`). The web app is developed separately.
+The backend foundation, full database schema and deterministic seed exist (branch `backend`); API features start in Milestone 3. The web app is developed separately.
 
 ### Prerequisites
 - Node.js ≥ 20.19 and npm.
@@ -77,6 +77,7 @@ Only the backend foundation exists so far (branch `backend`). The web app is dev
 npm install
 cp apps/api/.env.example apps/api/.env   # set DATABASE_URL, TEST_DATABASE_URL, SESSION_SECRET (≥ 32 chars)
 npm run db:migrate                       # apply migrations to DATABASE_URL
+npm run seed                             # deterministic fictional demo data (clock: Thu 08:00, paused)
 npm run dev:api                          # API on http://localhost:4000 — check GET /api/health
 ```
 
@@ -86,6 +87,7 @@ npm run dev:api                          # API on http://localhost:4000 — chec
 | `DATABASE_URL` | PostgreSQL connection for the API and migrations |
 | `TEST_DATABASE_URL` | Separate database for integration tests (must differ from `DATABASE_URL`) |
 | `SESSION_SECRET` | Signs the session cookie; at least 32 characters |
+| `SEED_DEMO_PASSWORD` | Password for all seeded demo accounts (fictional `.test` users); at least 12 characters; keep it local |
 | `DEMO_MODE` | `true` enables simulator, clock and reset endpoints (coordinator only) |
 | `PORT` | API port (default 4000) |
 | `NODE_ENV` | `development` · `test` · `production` |
@@ -99,8 +101,9 @@ npm run dev:api                          # API on http://localhost:4000 — chec
 | `npm test` | Typecheck, then all API tests (migrates the test database first) |
 | `npm run db:migrate` | `prisma migrate dev` on `DATABASE_URL` |
 | `npm run db:generate` | Regenerate the Prisma client |
+| `npm run seed` | Re-create the deterministic demo data (idempotent; see `planning/10_SEED_DATA.md`) |
 
-Planned for later milestones: `seed`, `reset`, `demo`, `build`. The frontend contract for implemented endpoints is in `planning/09_BACKEND_HANDOFF.md`.
+Planned for later milestones: `reset`, `demo`, `build`. Route lines in the seed are hand-traced demo geometry, not routing-engine output. The frontend contract for implemented endpoints is in `planning/09_BACKEND_HANDOFF.md`.
 
 ---
 

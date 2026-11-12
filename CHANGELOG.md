@@ -7,6 +7,26 @@ No application code has been written yet. Entries below describe documentation o
 ## [Unreleased]
 
 ### Added
+- **Backend Milestone 2 (schema + deterministic seed), branch `backend`:**
+  - Complete `schema.prisma`: 20 models, 22 enums (schema doc v0.3), all documented relations and indexes; explicit `onDelete: Restrict` except the 5 documented Cascades.
+  - Migration `full_schema` with 49 CHECK constraints and 5 partial unique indexes; `prisma migrate diff` confirms Prisma will not drop them.
+  - Enum drift check: compile-time equality of shared unions vs Prisma enums (`apps/api/src/contract-checks.ts`) + runtime order test.
+  - Pure helpers reused by later engines: largest-remainder rounding, IST time helpers, receiving-window eligibility and knock-on WIN split.
+  - Hand-written Json guards for route geometry and segments.
+  - Deterministic, idempotent seed (`npm run seed`): 6 customers, 5 transporters, 15 users, 20 trucks, 6 lanes, 9 routes with **hand-traced demo geometry** (labelled `HAND_TRACED_DEMO`), 177-shipment 60-day history with an exactly reconciling attribution ledger, 12 live shipments incl. hero SHP-1042 at Thu 08:00 (paused).
+  - Shared: `Segment`, `GeoJSONLineString`, `GeometrySource`, `PLANT`, `DISPLAY_TIME_ZONE`, `RISK_THRESHOLDS`, `SMALL_FLEET_MAX`.
+  - `SEED_DEMO_PASSWORD` environment variable (gitignored `.env`); `bcryptjs` 3.0.3 dependency.
+  - `planning/10_SEED_DATA.md` (seed facts and assumptions, task 4.5).
+  - Tests: 80 passing (enum drift, helpers, pure seed data, two-reset reproducibility digest, idempotency, SQL invariants, constraint presence, 10 constraint-rejection cases, time-zone regression).
+
+### Fixed
+- **Time-zone storage bug:** with a PostgreSQL server whose default time zone is not UTC (here Asia/Kolkata), timestamps written through the Prisma pg adapter were stored shifted by the server offset while still round-tripping through Prisma. Every API database session now sets `TimeZone=UTC`; regression test reads stored values with SQL.
+
+### Changed
+- Seed code lives in `apps/api/src/seed/` (not `apps/api/prisma/seed/` as sketched in architecture §4) so the Milestone 4 reset service can import it.
+- Foundation test for SimState CHECKs now targets the existing singleton row (the old version could pass on the primary-key error instead of the CHECK).
+
+### Added (Milestone 1)
 - **Backend Milestone 1 (foundation), branch `backend`:**
   - npm workspaces (`apps/api`, `packages/shared`); strict TypeScript base config.
   - `@routepulse/shared`: enum lists mirroring schema v0.3; `ApiError`, `ErrorCode`, `ValidationIssue`, `ListResponse`, primitives; `HealthResponse`, `SimStateDto`, `SyncResponse`.

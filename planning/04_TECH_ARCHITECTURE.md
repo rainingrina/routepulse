@@ -146,8 +146,9 @@ Dependencies deliberately **not** used: Zod or any schema-validation library (D9
 │     ├─ prisma/
 │     │  ├─ schema.prisma         ← single source of truth for the data model (D9)
 │     │  ├─ migrations/           generated SQL + hand-added CHECKs / partial indexes
-│     │  └─ seed/                 deterministic seed + hero pre-script (§9.6)
+│     │  (seed code lives in src/seed/ — see below)
 │     └─ src/
+│        ├─ seed/                 deterministic seed (+ hero pre-script, §9.6); importable by the reset service
 │        ├─ controllers/          one file per resource; validate → authorise → service → serializer
 │        ├─ validation/           hand-written helpers (§8.2); enum lists from Prisma Client
 │        ├─ services/             use cases; transactions; world lock

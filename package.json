@@ -15,6 +15,7 @@
     "typecheck": "npm run typecheck -w @routepulse/shared && npm run typecheck -w @routepulse/api",
     "test": "npm run typecheck && npm run test -w @routepulse/api",
     "db:migrate": "npm run db:migrate -w @routepulse/api",
-    "db:generate": "npm run db:generate -w @routepulse/api"
+    "db:generate": "npm run db:generate -w @routepulse/api",
+    "seed": "npm run seed -w @routepulse/api"
   }
 }

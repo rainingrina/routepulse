@@ -89,11 +89,17 @@ describe('migrations', () => {
     ]);
   });
 
-  it('enforces the SimState speed CHECK at the database', async () => {
+  it('enforces the SimState speed and singleton CHECKs at the database', async () => {
+    const now = new Date();
+    // Make sure the singleton row exists, so the speed check (not the primary key) is what rejects.
+    await srv.prisma.simState.upsert({
+      where: { id: 1 },
+      create: { id: 1, simTime: now, lastSettledAt: now, seedName: 'test' },
+      update: {},
+    });
+    await expect(srv.prisma.simState.update({ where: { id: 1 }, data: { speed: 7 } })).rejects.toThrow(/SimState_speed_chk/);
     await expect(
-      srv.prisma.simState.create({
-        data: { id: 1, simTime: new Date(), lastSettledAt: new Date(), seedName: 't', speed: 7 },
-      }),
-    ).rejects.toThrow();
+      srv.prisma.simState.create({ data: { id: 2, simTime: now, lastSettledAt: now, seedName: 'test' } }),
+    ).rejects.toThrow(/SimState_singleton_chk/);
   });
 });

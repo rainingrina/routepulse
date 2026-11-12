@@ -2,7 +2,7 @@
 
 Living document maintained by the backend (branch `backend`). It lists **only what is implemented and tested**. The full target contract is `06_API_SPEC.md`; types live in `packages/shared`.
 
-Last updated: 2026-11-12 — **Milestone 1 (foundation)**.
+Last updated: 2026-11-12 — **Milestone 2 (schema + deterministic seed)**.
 
 ---
 
@@ -72,16 +72,37 @@ Type: `HealthResponse`. `serverTime` is wall-clock time, not simulation time.
 
 You may build against these with fixtures; field names will not change without a note here.
 
+### Added in Milestone 2 (types only; endpoints come later)
+| Type / constant | For | Notes |
+|---|---|---|
+| `Segment`, `GeoJSONLineString`, `GeometrySource` | #10 map layers, #38 reference | Route geometry is **hand-traced demo data** (`x_source: "HAND_TRACED_DEMO"` in the stored GeoJSON). Show a small "Illustrative routes" note on the map. |
+| `PLANT`, `DISPLAY_TIME_ZONE`, `RISK_THRESHOLDS`, `SMALL_FLEET_MAX` | Map, formatting, badges | UI-safe constants |
+
+## 5a. Seeded demo data (for building screens)
+Run `npm run seed` (needs `SEED_DEMO_PASSWORD` in `apps/api/.env`). Clock: **Thu 2026-11-19 08:00 IST, paused**. Full list: `planning/10_SEED_DATA.md`.
+
+| Account (all share `SEED_DEMO_PASSWORD`) | Role | Scope |
+|---|---|---|
+| `coordinator@plantx.test` (Meera) | COORDINATOR | everything |
+| `buyer@kestrel.test` (Arjun) | CUSTOMER | Kestrel Moulders, Pune (hero customer) |
+| `buyer@osprey.test`, `buyer@plover.test`, `buyer@avocet.test`, `buyer@merlin.test`, `buyer@shrike.test` | CUSTOMER | one customer each |
+| `driver.ramesh@ghatline.test` | DRIVER | hero SHP-1042 (TRK-07) |
+| `driver.suresh@ghatline.test` | DRIVER | replacement truck TRK-11 (D3 hand-over) |
+| 6 more drivers (`driver.*@*.test`) | DRIVER | their live shipments |
+
+Login endpoints arrive in Milestone 3. Live shipments have **no ETA/risk yet** (`etaAt`, `riskLevel` are null) until the simulation and engine milestones; build empty/"calculating" states for that.
+
 ## 6. Polling and freshness (planned behaviour, API §15)
 
 - Poll `GET /api/sync` every 1 s; refetch affected queries when `worldVersion` changes. Not yet implemented.
 
 ## 7. Known incomplete functionality
 
-Everything except `/api/health` — auth, shipments, simulation, ETA, alerts, recovery, analytics — is not yet implemented. Order of delivery follows `PROGRESS.md` (next: Milestone 2 schema + seed, then Milestone 3 auth).
+Everything except `/api/health` — auth, shipments, simulation, ETA, alerts, recovery, analytics — is not yet implemented. The database and seed exist (Milestone 2). Next: Milestone 3 (auth), after approval.
 
 ## 8. Contract change log
 
 | Date | Change | Breaking? |
 |---|---|---|
 | 2026-11-12 | Initial publish: enums, base types, `HealthResponse`, `SimStateDto`, `SyncResponse` | — |
+| 2026-11-12 | Added `Segment`, `GeoJSONLineString`, `GeometrySource`, `PLANT`, `DISPLAY_TIME_ZONE`, `RISK_THRESHOLDS`, `SMALL_FLEET_MAX` | No |
