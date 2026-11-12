@@ -112,7 +112,7 @@ export async function createReport(tx: Prisma.TransactionClient, actionS: number
     action: 'report.create',
     entityType: 'DriverReport',
     entityId: id,
-    data: { shipmentId: sh.id, reason: input.reason, appliedMinutes: applied, party, onBehalf: input.user.role === 'COORDINATOR' },
+    data: { shipmentId: sh.id, shipmentCode: sh.code, reason: input.reason, appliedMinutes: applied, party, onBehalf: input.user.role === 'COORDINATOR' },
   });
   return id;
 }
@@ -147,7 +147,7 @@ export async function reviewReport(tx: Prisma.TransactionClient, actionS: number
   const r = await tx.driverReport.findUnique({ where: { id: input.reportId } });
   if (!r) throw notFound();
   if (r.status === 'CONFIRMED') throw new DomainError('ALREADY_DONE', 'This report has already been reviewed.');
-  const sh = await tx.shipment.findUniqueOrThrow({ where: { id: r.shipmentId }, select: { currentMilestone: true } });
+  const sh = await tx.shipment.findUniqueOrThrow({ where: { id: r.shipmentId }, select: { currentMilestone: true, code: true } });
   // The review response carries the live ETA (API §9.5); a delivered shipment has none — corrections
   // after delivery use the attribution override (#35) instead.
   if (sh.currentMilestone === 'DELIVERED') throw new DomainError('INVALID_TRANSITION', 'This shipment is delivered; use an attribution override instead.');
@@ -187,7 +187,7 @@ export async function reviewReport(tx: Prisma.TransactionClient, actionS: number
   await tx.shipmentEvent.create({
     data: { id: `sev_${r.id}_REVIEWED`, shipmentId: r.shipmentId, type: 'REPORT_REVIEWED', simTime: fromS(actionS), source: 'COORDINATOR', actorUserId: input.actor.userId, data },
   });
-  await writeAudit(tx, { actorUserId: input.actor.userId, actorRole: input.actor.role, action: 'report.review', entityType: 'DriverReport', entityId: r.id, data: { ...data, note: input.note ?? null } });
+  await writeAudit(tx, { actorUserId: input.actor.userId, actorRole: input.actor.role, action: 'report.review', entityType: 'DriverReport', entityId: r.id, data: { ...data, shipmentId: r.shipmentId, shipmentCode: sh.code, note: input.note ?? null } });
   return r.shipmentId;
 }
 

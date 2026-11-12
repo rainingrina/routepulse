@@ -571,6 +571,8 @@ stateDiagram-v2
 - Proposed action for the customer = the Suggested option at opening; if none meets the promise, the smallest-delay feasible option; if none, "Plant X team is reviewing options".
 - Coordinator notifications have one shared read state (D8).
 
+**As implemented (Combined Milestone 1):** `services/alertService.evaluateAlerts` runs at the end of `etaService.recalculate` (same transaction) on the fresh results; `onArrived` runs in `finalizeArrivals` (resolve at `arrivedAt`, ARRIVED_LATE). "At risk" for alerts = AT_RISK or LATE. Ids are deterministic (`alr_<shipment>_<epochSeconds>`, `ntf_<alert>_<KIND>`), so R1 digests include alerts and notifications. Customer responses and notification reads go through `simulationService.commitAction` (lock + action minute + one transaction + worldVersion, no recalculation).
+
 ---
 
 ## 12. Recovery engine
@@ -762,7 +764,11 @@ Status: **Resolved** (by a decision or by design), **Open** (team decision neede
 | 34 | API §7.6 said attribution is finalised at DELIVERED; L1/L6 and §10.4 say ARRIVED | Resolved (Milestone 6) | ARRIVED (locked decisions win); API spec note added |
 | 35 | Classifier word list not specified | Interpretation (Milestone 6) | Fixed English list `KEYWORD_LIST_V1` recorded in engine doc §9 for team review |
 | 36 | "Reject" a driver report | Resolved by design (Milestone 6) | No REJECTED status exists; the coordinator changes reason/party (e.g. OTHER / UNATTRIBUTED) with a note |
-| 37 | Reviewing a report after delivery: the review response must carry a live ETA | Interpretation (Milestone 6) | 409 INVALID_TRANSITION; post-delivery corrections use the attribution override (#35) |
+| 37 | Reviewing a report after delivery: the review response must carry a live ETA | Interpretation (Milestone 6) | 409 INVALID_TRANSITION; post-delivery corrections use the attribution override (#35) — approved |
+| 38 | A LATE shipment that never passed AT_RISK would get no alert | Interpretation (Combined M1) | Alerts open on AT_RISK or LATE |
+| 39 | "Returns to On track" notification vs resolution when the level drops to WATCH | Interpretation (Combined M1) | Resolution at WATCH or ON_TRACK sends BACK_ON_TRACK ("no longer at risk") |
+| 40 | Alert state diagram resolves ACTION_CHOSEN when the level drops, but G5/Example 3 keep the hero's alert ACTION_CHOSEN at WATCH after recovery | **Open (decide in M8)** | Current code follows the diagram (no ACTION_CHOSEN exists before M8) |
+| 41 | DELIVERED notification kind has no documented trigger or audience | Open | Not sent |
 
 ---
 

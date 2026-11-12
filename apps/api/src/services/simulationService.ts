@@ -26,11 +26,15 @@ import {
 import { writeAudit } from './auditService.js';
 import { recalculate, type RecalcContext, type RecalcTrigger } from './etaService.js';
 import { finalizeArrival } from './attributionService.js';
+import { onArrived } from './alertService.js';
 
 /** Ledger rows become FINAL (plus GAP) for every shipment that reached ARRIVED in these events. */
 async function finalizeArrivals(tx: Prisma.TransactionClient, events: readonly SimEvent[]): Promise<void> {
   const ids = [...new Set(events.filter((e) => e.type === 'MILESTONE' && e.milestone === 'ARRIVED').map((e) => e.shipmentId))].sort();
-  for (const id of ids) await finalizeArrival(tx, id);
+  for (const id of ids) {
+    await finalizeArrival(tx, id);
+    await onArrived(tx, id);
+  }
 }
 
 /**
@@ -338,7 +342,7 @@ export function createSimulationService(deps: SimulationServiceDeps) {
         await persistEvents(tx, settled.events, 'SIMULATION');
         await finalizeArrivals(tx, [...driverEvents, ...settled.events]);
         await releaseTrucks(tx, [...delivered, ...settled.delivered]);
-        await writeAudit(tx, { actorUserId: actor.userId, actorRole: actor.role, action: 'milestone.record', entityType: 'Shipment', entityId: shipmentId, data: { milestone: m } });
+        await writeAudit(tx, { actorUserId: actor.userId, actorRole: actor.role, action: 'milestone.record', entityType: 'Shipment', entityId: shipmentId, data: { milestone: m, shipmentId, shipmentCode: sh.code } });
         c.lastSettledS = actionS;
         await recalc(tx, { simTimeS: actionS, trigger: 'MILESTONE', world: w, actionShipmentIds: [shipmentId], eventShipmentIds: [...new Set(settled.events.map((e) => e.shipmentId))] });
         await persistClock(tx, c, true);
@@ -480,6 +484,40 @@ export function createSimulationService(deps: SimulationServiceDeps) {
       apply: Parameters<typeof applyChangeInternal<T>>[1],
     ): Promise<{ result: T; actionS: number }> {
       return lock.run(() => applyChangeInternal(trigger, apply));
+    },
+
+    /**
+     * Read-only access with the current continuous simulation time (positions extrapolate between
+     * grid steps from the last settled state). Writes nothing.
+     */
+    async readNow<T>(fn: (db: PrismaClient, world: StaticWorld, settledS: number, nowS: number) => Promise<T>): Promise<T> {
+      return lock.run(async () => {
+        const c = await loadClock();
+        return fn(prisma, await staticWorld(prisma), c.lastSettledS, Math.floor(c.simMs / 1000));
+      });
+    },
+
+    /**
+     * An action that changes no ETA input (customer response, notification read state): lock →
+     * settle to the action minute → apply → worldVersion, in one transaction. No recalculation.
+     */
+    async commitAction<T>(apply: (tx: Prisma.TransactionClient, actionS: number) => Promise<T>): Promise<T> {
+      return lock.run(async () => {
+        const c = await loadClock();
+        const actionS = await settleForAction();
+        const snapshot = { ...c };
+        try {
+          return await prisma.$transaction(async (tx) => {
+            const out = await apply(tx, actionS);
+            c.lastSettledS = actionS;
+            await persistClock(tx, c, true);
+            return out;
+          });
+        } catch (err) {
+          Object.assign(c, snapshot);
+          throw err;
+        }
+      });
     },
 
     /**

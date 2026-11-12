@@ -471,6 +471,7 @@ interface GeoJSONLineString { type: 'LineString'; coordinates: [number, number][
 - **Validation:** `segmentCodes` 1–10 codes that exist on at least one route; `slowdownPct` 10–90; `durationMinutes` 15–1440, multiple of 5; `extraMinutesPerTruck` 5–240; `repairMinutes` 15–720; `shipmentId` must be a live, in-transit shipment; `label` ≤ 80 chars (default label generated from kind and segment names). The event starts at the current `simTime`. Party and reason are set by the server from the kind (weather → EXTERNAL/HEAVY_RAIN, closure → EXTERNAL/ROAD_CLOSED, gate → PLANT/PLANT_GATE_WAIT, breakdown → TRANSPORTER/BREAKDOWN).
 - **Errors:** `403 FORBIDDEN`, `403 DEMO_MODE_OFF`, `404 NOT_FOUND` (shipment), `400 VALIDATION_ERROR` (unknown segment code), `409 INVALID_TRANSITION` (shipment not in transit).
 - **Side effects:** `ShipmentEvent DISRUPTION_STARTED` on affected shipments, recalculation pipeline, alerts/notifications per rules, audit `disruption.create`.
+- **As implemented (Combined M1):** "affected" = live shipments that have not yet passed one of the segments (weather/closure), shipments not yet departed (gate congestion), the shipment itself (breakdown); whether the ETA changes is decided by the engine. `levelChanges` lists every live shipment whose level changed in the same recalculation. Ids `dis_<epochSeconds>_<n>`.
 
 ### 5.6 `POST /api/disruptions/:disruptionId/end`
 - **Purpose:** end an active event early.
@@ -497,6 +498,8 @@ interface GeoJSONLineString { type: 'LineString'; coordinates: [number, number][
   }
   ```
 - **Errors:** common only.
+
+- **As implemented (Combined M1):** route `geometry` keeps the foreign member `x_source: "HAND_TRACED_DEMO"` (`GeoJSONLineString.x_source?`); `receivingHours` is "HH:MM–HH:MM".
 
 ### 6.2 `GET /api/tracking/positions`
 - **Purpose:** current marker positions; polled every 1 s while the clock runs (AC-M2.1, AC-M2.2).
@@ -563,6 +566,8 @@ interface GeoJSONLineString { type: 'LineString'; coordinates: [number, number][
 - **Response 200:** `{ items: ShipmentListItem[] }` (`view` matches the caller's role).
 - **Validation:** enums checked; `customerId` from a customer → `400`.
 - **Errors:** `403 FORBIDDEN` (driver).
+
+- **As implemented (Combined M1):** `limit` default 200; `status=live` includes ARRIVED (unloading) shipments; `sort=risk` = score desc (nulls last), then promise, then code. Customer `plainStatus` is derived from the milestone and stored times ("On the way · expected 14:20").
 
 ### 7.4 `GET /api/shipments/:shipmentId`
 - **Purpose:** shipment panel: milestones, items, alert, ETA summary (AC-M2.4).
@@ -753,6 +758,8 @@ interface DriverHandover {
 - **Response 200:** `{ items: AlertDto[] }` (newest first; `view` per role).
 - **Errors:** `403 FORBIDDEN` (driver).
 
+- **As implemented (Combined M1):** an alert opens when the level is AT_RISK **or LATE** and the shipment has no active alert; it resolves when the level drops below AT_RISK (BACK_ON_TRACK to coordinator and customer) or at arrival (ARRIVED_LATE if after the promise). Coordinator `summary` = current level + top factor at opening; `proposedOption`/`chosenOption` are null until recovery (M8); customer `action` is null → "Plant X team is reviewing options".
+
 ### 10.2 `GET /api/alerts/:alertId`
 - **Purpose:** alert detail (J4, J5).
 - **Roles:** coordinator, customer (own).
@@ -766,7 +773,7 @@ interface DriverHandover {
 - **Response 200:** `{ alert: CustomerAlertDto }`
 - **Validation:** alert must be `OPEN` or `ACTION_CHOSEN` and `canRespond`; one response per alert (a later response replaces the earlier one only while the alert is `OPEN` **[A]**). When the alert's chosen option is a NEW_WINDOW, `ACCEPT_PROPOSAL` is valid only while that option is still `AWAITING_CUSTOMER`.
 - **Errors:** `403 FORBIDDEN`, `404 NOT_FOUND`, `409 INVALID_TRANSITION` (alert resolved), `409 STALE_OPTIONS` (the NEW_WINDOW option was superseded; nothing applied).
-- **Side effects:** coordinator notification `CUSTOMER_RESPONDED`; event `CUSTOMER_RESPONDED`; audit `alert.customerResponse`. If the chosen option is `NEW_WINDOW` in `AWAITING_CUSTOMER` and the response is `ACCEPT_PROPOSAL` (L4): `promisedBy` and `receivingWindowOverrideEndAt` set to the option's stored `newWindowEnd`; `renegotiated = true`; `originalPromisedBy` and the customer's default hours unchanged; option `CHOSEN`; event `RECOVERY_APPLIED`; audit `recovery.apply`; recalculation of ETA, WIN, slack and risk; customer notification `PLAN_UPDATED`.
+- **Side effects:** coordinator notification `CUSTOMER_RESPONDED`; event `CUSTOMER_RESPONDED`; audit `alert.customerResponse`. **Implemented (Combined M1) without the NEW_WINDOW acceptance branch, which arrives with recovery (M8).** If the chosen option is `NEW_WINDOW` in `AWAITING_CUSTOMER` and the response is `ACCEPT_PROPOSAL` (L4): `promisedBy` and `receivingWindowOverrideEndAt` set to the option's stored `newWindowEnd`; `renegotiated = true`; `originalPromisedBy` and the customer's default hours unchanged; option `CHOSEN`; event `RECOVERY_APPLIED`; audit `recovery.apply`; recalculation of ETA, WIN, slack and risk; customer notification `PLAN_UPDATED`.
 
 ### 10.4 `GET /api/shipments/:shipmentId/recovery-options`
 - **Purpose:** the latest option set for a WATCH or AT_RISK shipment (AC-M4.3, AC-M4.4, AC-X3.1). Read-only: sets are generated by the recalculation pipeline.

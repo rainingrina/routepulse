@@ -5,6 +5,7 @@ import { useSync } from '../sync';
 import type {
   AlertStatus,
   AuditQuery,
+  CreateDisruptionRequest,
   DashboardQuery,
   Id,
   ReportStatus,
@@ -156,6 +157,48 @@ export function useSimClock() {
         ...state,
         unreadNotifications: prev?.unreadNotifications ?? 0,
       }));
+      void queryClient.invalidateQueries({ predicate: (q) => isWorldStateKey(q.queryKey) });
+    },
+  });
+}
+
+/** #16 */
+export function useTimeline(id: Id | null) {
+  return useQuery({ queryKey: qk.timeline(id ?? ''), queryFn: () => api().getTimeline(id!), enabled: !!id });
+}
+
+/** #34 — coordinator only. */
+export function useAttribution(id: Id | null) {
+  return useQuery({ queryKey: qk.attribution(id ?? ''), queryFn: () => api().getAttribution(id!), enabled: !!id });
+}
+
+/** #38 — reference lists (segments for the disruption form). */
+export function useReference() {
+  return useQuery({ queryKey: qk.reference, queryFn: () => api().reference(), staleTime: 60_000 });
+}
+
+/** #7 */
+export function useDisruptions(filters: { active?: 'true' | 'false' } = {}) {
+  return useQuery({ queryKey: qk.disruptions(filters), queryFn: () => api().listDisruptions(filters) });
+}
+
+/** #8 — coordinator + DEMO_MODE. The server runs the recalculation pipeline; everything world-state is refetched. */
+export function useCreateDisruption() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateDisruptionRequest) => api().createDisruption(body),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ predicate: (q) => isWorldStateKey(q.queryKey) });
+    },
+  });
+}
+
+/** #9 — coordinator + DEMO_MODE. */
+export function useEndDisruption() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: Id) => api().endDisruption(id),
+    onSettled: () => {
       void queryClient.invalidateQueries({ predicate: (q) => isWorldStateKey(q.queryKey) });
     },
   });

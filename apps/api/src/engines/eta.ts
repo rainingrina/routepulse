@@ -108,6 +108,8 @@ export interface EtaResult {
   confidenceReason: string;
   summary: string;
   plainReason: string | null;
+  /** Largest factor (both phases of one cause; WIN only when nothing else) — used by the alert engine. */
+  topFactor: { code: FactorCode; reason: ReasonCode | null } | null;
   factors: Factor[];
   totals: { incurredMinutes: number; planChangeMinutes: number; expectedMinutes: number };
   identityHolds: boolean;
@@ -117,8 +119,8 @@ const CODE_ORDER: Record<FactorCode, number> = { GATE: 0, HIST: 1, DISR: 2, RPT:
 const PHASE_ORDER: Record<FactorPhase, number> = { INCURRED: 0, PLAN_CHANGE: 1, EXPECTED: 2 };
 const PARTY_ORDER: readonly Party[] = ['PLANT', 'TRANSPORTER', 'CUSTOMER', 'EXTERNAL', 'UNATTRIBUTED'];
 
-const LEVEL_TEXT: Record<RiskLevel, string> = { ON_TRACK: 'On track', WATCH: 'Watch', AT_RISK: 'At risk', LATE: 'Late' };
-const REASON_SHORT: Record<ReasonCode, string> = {
+export const LEVEL_TEXT: Record<RiskLevel, string> = { ON_TRACK: 'On track', WATCH: 'Watch', AT_RISK: 'At risk', LATE: 'Late' };
+export const REASON_SHORT: Record<ReasonCode, string> = {
   BREAKDOWN: 'breakdown',
   PLANT_GATE_WAIT: 'plant gate wait',
   TRAFFIC: 'traffic',
@@ -131,7 +133,7 @@ const REASON_SHORT: Record<ReasonCode, string> = {
   RECEIVING_WINDOW: 'receiving window',
 };
 /** Customer wording: no parties, no factor codes, no driver identity (AC-M1.6). */
-const REASON_PLAIN: Record<ReasonCode, string> = {
+export const REASON_PLAIN: Record<ReasonCode, string> = {
   BREAKDOWN: 'Vehicle breakdown on the route',
   PLANT_GATE_WAIT: 'Waiting at the dispatch plant',
   TRAFFIC: 'Heavy traffic on the route',
@@ -252,15 +254,15 @@ export function explainEta(input: EtaInput): EtaResult {
   const range = rangeMinutes(predictedMin - nowS / 60, age, input.pendingReports);
 
   // Summary names the largest factor (both phases of one cause together; WIN is a knock-on).
-  const bySource = new Map<string, { minutes: number; reason: ReasonCode | null; label: string }>();
+  const bySource = new Map<string, { minutes: number; reason: ReasonCode | null; label: string; code: FactorCode }>();
   for (const f of factors) {
     if (f.code === 'WIN') continue;
     const k = `${f.code}:${f.sourceRef?.id ?? f.reason ?? ''}`;
-    const e = bySource.get(k) ?? { minutes: 0, reason: f.reason, label: f.label };
+    const e = bySource.get(k) ?? { minutes: 0, reason: f.reason, label: f.label, code: f.code };
     e.minutes += f.minutes;
     bySource.set(k, e);
   }
-  let top: { minutes: number; reason: ReasonCode | null } | null = null;
+  let top: { minutes: number; reason: ReasonCode | null; code: FactorCode } | null = null;
   for (const e of bySource.values()) if (!top || e.minutes > top.minutes) top = e;
   const winMinutes = factors.filter((f) => f.code === 'WIN').reduce((a, f) => a + f.minutes, 0);
   const summary =
@@ -297,6 +299,7 @@ export function explainEta(input: EtaInput): EtaResult {
     confidenceReason: confidenceReason(age, input.pendingReports),
     summary,
     plainReason,
+    topFactor: top && top.minutes > 0 ? { code: top.code, reason: top.reason } : winMinutes > 0 ? { code: 'WIN', reason: 'RECEIVING_WINDOW' } : null,
     factors,
     totals: { incurredMinutes: incurred, planChangeMinutes: planChange, expectedMinutes: expected },
     identityHolds,

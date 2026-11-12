@@ -1,0 +1,3952 @@
+{
+ "generatedAt": "Real API responses (fictional data). Scenario: reset → 10:30 rain on the ghat → 11:10 breakdown report → 11:20",
+ "sync": {
+  "simTime": "2026-11-19T05:50:00.000Z",
+  "running": false,
+  "speed": 1,
+  "stepMinutes": 5,
+  "worldVersion": 26160,
+  "simError": null,
+  "demoMode": true,
+  "unreadNotifications": 5
+ },
+ "shipments": {
+  "items": [
+   {
+    "view": "coordinator",
+    "id": "shp_1042",
+    "code": "SHP-1042",
+    "orderId": "ord_7781",
+    "orderCode": "ORD-7781",
+    "customer": {
+     "id": "cus_kestrel",
+     "name": "Kestrel Moulders",
+     "city": "Pune"
+    },
+    "lane": {
+     "id": "lane_pune",
+     "name": "Plant X → Pune"
+    },
+    "transporter": {
+     "id": "trn_ghatline",
+     "name": "Ghatline Carriers",
+     "isSmall": true
+    },
+    "truckCode": "TRK-07",
+    "currentMilestone": "IN_TRANSIT",
+    "etaAt": "2026-11-20T02:30:00.000Z",
+    "etaLowAt": "2026-11-20T01:10:00.000Z",
+    "etaHighAt": "2026-11-20T03:50:00.000Z",
+    "promisedBy": "2026-11-19T12:30:00.000Z",
+    "slackMinutes": -840,
+    "riskLevel": "AT_RISK",
+    "riskScore": 100,
+    "confidence": "MEDIUM",
+    "hasOpenAlert": true,
+    "pendingReportCount": 1,
+    "parentShipmentId": null,
+    "arrivedAt": null,
+    "deliveredAt": null,
+    "onTime": null,
+    "delayMinutes": null
+   },
+   {
+    "view": "coordinator",
+    "id": "shp_1039",
+    "code": "SHP-1039",
+    "orderId": "ord_7778",
+    "orderCode": "ORD-7778",
+    "customer": {
+     "id": "cus_kestrel",
+     "name": "Kestrel Moulders",
+     "city": "Pune"
+    },
+    "lane": {
+     "id": "lane_pune",
+     "name": "Plant X → Pune"
+    },
+    "transporter": {
+     "id": "trn_bluehill",
+     "name": "Bluehill Transport",
+     "isSmall": false
+    },
+    "truckCode": "TRK-31",
+    "currentMilestone": "IN_TRANSIT",
+    "etaAt": "2026-11-19T09:51:00.000Z",
+    "etaLowAt": "2026-11-19T09:41:00.000Z",
+    "etaHighAt": "2026-11-19T10:01:00.000Z",
+    "promisedBy": "2026-11-19T09:30:00.000Z",
+    "slackMinutes": -21,
+    "riskLevel": "AT_RISK",
+    "riskScore": 54,
+    "confidence": "HIGH",
+    "hasOpenAlert": true,
+    "pendingReportCount": 0,
+    "parentShipmentId": null,
+    "arrivedAt": null,
+    "deliveredAt": null,
+    "onTime": null,
+    "delayMinutes": null
+   },
+   {
+    "view": "coordinator",
+    "id": "shp_1041",
+    "code": "SHP-1041",
+    "orderId": "ord_7780",
+    "orderCode": "ORD-7780",
+    "customer": {
+     "id": "cus_kestrel",
+     "name": "Kestrel Moulders",
+     "city": "Pune"
+    },
+    "lane": {
+     "id": "lane_pune",
+     "name": "Plant X → Pune"
+    },
+    "transporter": {
+     "id": "trn_northstar",
+     "name": "Northstar Haulage",
+     "isSmall": false
+    },
+    "truckCode": "TRK-52",
+    "currentMilestone": "IN_TRANSIT",
+    "etaAt": "2026-11-19T10:13:00.000Z",
+    "etaLowAt": "2026-11-19T09:58:00.000Z",
+    "etaHighAt": "2026-11-19T10:28:00.000Z",
+    "promisedBy": "2026-11-19T10:00:00.000Z",
+    "slackMinutes": -13,
+    "riskLevel": "AT_RISK",
+    "riskScore": 52,
+    "confidence": "HIGH",
+    "hasOpenAlert": true,
+    "pendingReportCount": 0,
+    "parentShipmentId": null,
+    "arrivedAt": null,
+    "deliveredAt": null,
+    "onTime": null,
+    "delayMinutes": null
+   },
+   {
+    "view": "coordinator",
+    "id": "shp_1046",
+    "code": "SHP-1046",
+    "orderId": "ord_7785",
+    "orderCode": "ORD-7785",
+    "customer": {
+     "id": "cus_kestrel",
+     "name": "Kestrel Moulders",
+     "city": "Pune"
+    },
+    "lane": {
+     "id": "lane_pune",
+     "name": "Plant X → Pune"
+    },
+    "transporter": {
+     "id": "trn_bluehill",
+     "name": "Bluehill Transport",
+     "isSmall": false
+    },
+    "truckCode": "TRK-33",
+    "currentMilestone": "IN_TRANSIT",
+    "etaAt": "2026-11-19T11:31:00.000Z",
+    "etaLowAt": "2026-11-19T11:16:00.000Z",
+    "etaHighAt": "2026-11-19T11:46:00.000Z",
+    "promisedBy": "2026-11-19T11:30:00.000Z",
+    "slackMinutes": -1,
+    "riskLevel": "AT_RISK",
+    "riskScore": 50,
+    "confidence": "HIGH",
+    "hasOpenAlert": true,
+    "pendingReportCount": 0,
+    "parentShipmentId": null,
+    "arrivedAt": null,
+    "deliveredAt": null,
+    "onTime": null,
+    "delayMinutes": null
+   },
+   {
+    "view": "coordinator",
+    "id": "shp_1044",
+    "code": "SHP-1044",
+    "orderId": "ord_7783",
+    "orderCode": "ORD-7783",
+    "customer": {
+     "id": "cus_plover",
+     "name": "Plover Packaging",
+     "city": "Surat"
+    },
+    "lane": {
+     "id": "lane_surat",
+     "name": "Plant X → Surat"
+    },
+    "transporter": {
+     "id": "trn_coastway",
+     "name": "Coastway Movers",
+     "isSmall": true
+    },
+    "truckCode": "TRK-22",
+    "currentMilestone": "IN_TRANSIT",
+    "etaAt": "2026-11-19T12:15:00.000Z",
+    "etaLowAt": "2026-11-19T11:55:00.000Z",
+    "etaHighAt": "2026-11-19T12:35:00.000Z",
+    "promisedBy": "2026-11-19T12:30:00.000Z",
+    "slackMinutes": 15,
+    "riskLevel": "WATCH",
+    "riskScore": 48,
+    "confidence": "HIGH",
+    "hasOpenAlert": false,
+    "pendingReportCount": 0,
+    "parentShipmentId": null,
+    "arrivedAt": null,
+    "deliveredAt": null,
+    "onTime": null,
+    "delayMinutes": null
+   },
+   {
+    "view": "coordinator",
+    "id": "shp_1036",
+    "code": "SHP-1036",
+    "orderId": "ord_7775",
+    "orderCode": "ORD-7775",
+    "customer": {
+     "id": "cus_plover",
+     "name": "Plover Packaging",
+     "city": "Surat"
+    },
+    "lane": {
+     "id": "lane_surat",
+     "name": "Plant X → Surat"
+    },
+    "transporter": {
+     "id": "trn_coastway",
+     "name": "Coastway Movers",
+     "isSmall": true
+    },
+    "truckCode": "TRK-21",
+    "currentMilestone": "IN_TRANSIT",
+    "etaAt": "2026-11-19T10:35:00.000Z",
+    "etaLowAt": "2026-11-19T10:20:00.000Z",
+    "etaHighAt": "2026-11-19T10:50:00.000Z",
+    "promisedBy": "2026-11-19T11:00:00.000Z",
+    "slackMinutes": 25,
+    "riskLevel": "WATCH",
+    "riskScore": 46,
+    "confidence": "HIGH",
+    "hasOpenAlert": false,
+    "pendingReportCount": 0,
+    "parentShipmentId": null,
+    "arrivedAt": null,
+    "deliveredAt": null,
+    "onTime": null,
+    "delayMinutes": null
+   },
+   {
+    "view": "coordinator",
+    "id": "shp_1037",
+    "code": "SHP-1037",
+    "orderId": "ord_7776",
+    "orderCode": "ORD-7776",
+    "customer": {
+     "id": "cus_avocet",
+     "name": "Avocet Polymers",
+     "city": "Ahmedabad"
+    },
+    "lane": {
+     "id": "lane_ahmedabad",
+     "name": "Plant X → Ahmedabad"
+    },
+    "transporter": {
+     "id": "trn_ironroad",
+     "name": "Ironroad Freight",
+     "isSmall": false
+    },
+    "truckCode": "TRK-41",
+    "currentMilestone": "IN_TRANSIT",
+    "etaAt": "2026-11-20T02:30:00.000Z",
+    "etaLowAt": "2026-11-20T01:30:00.000Z",
+    "etaHighAt": "2026-11-20T03:30:00.000Z",
+    "promisedBy": "2026-11-20T03:30:00.000Z",
+    "slackMinutes": 60,
+    "riskLevel": "WATCH",
+    "riskScore": 40,
+    "confidence": "HIGH",
+    "hasOpenAlert": false,
+    "pendingReportCount": 0,
+    "parentShipmentId": null,
+    "arrivedAt": null,
+    "deliveredAt": null,
+    "onTime": null,
+    "delayMinutes": null
+   },
+   {
+    "view": "coordinator",
+    "id": "shp_1038",
+    "code": "SHP-1038",
+    "orderId": "ord_7777",
+    "orderCode": "ORD-7777",
+    "customer": {
+     "id": "cus_shrike",
+     "name": "Shrike Pipes",
+     "city": "Nagpur"
+    },
+    "lane": {
+     "id": "lane_nagpur",
+     "name": "Plant X → Nagpur"
+    },
+    "transporter": {
+     "id": "trn_northstar",
+     "name": "Northstar Haulage",
+     "isSmall": false
+    },
+    "truckCode": "TRK-51",
+    "currentMilestone": "IN_TRANSIT",
+    "etaAt": "2026-11-20T02:30:00.000Z",
+    "etaLowAt": "2026-11-20T01:30:00.000Z",
+    "etaHighAt": "2026-11-20T03:30:00.000Z",
+    "promisedBy": "2026-11-20T03:30:00.000Z",
+    "slackMinutes": 60,
+    "riskLevel": "WATCH",
+    "riskScore": 40,
+    "confidence": "HIGH",
+    "hasOpenAlert": false,
+    "pendingReportCount": 0,
+    "parentShipmentId": null,
+    "arrivedAt": null,
+    "deliveredAt": null,
+    "onTime": null,
+    "delayMinutes": null
+   },
+   {
+    "view": "coordinator",
+    "id": "shp_1040",
+    "code": "SHP-1040",
+    "orderId": "ord_7779",
+    "orderCode": "ORD-7779",
+    "customer": {
+     "id": "cus_merlin",
+     "name": "Merlin Extrusions",
+     "city": "Indore"
+    },
+    "lane": {
+     "id": "lane_indore",
+     "name": "Plant X → Indore"
+    },
+    "transporter": {
+     "id": "trn_ironroad",
+     "name": "Ironroad Freight",
+     "isSmall": false
+    },
+    "truckCode": "TRK-42",
+    "currentMilestone": "IN_TRANSIT",
+    "etaAt": "2026-11-20T02:30:00.000Z",
+    "etaLowAt": "2026-11-20T01:30:00.000Z",
+    "etaHighAt": "2026-11-20T03:30:00.000Z",
+    "promisedBy": "2026-11-20T03:30:00.000Z",
+    "slackMinutes": 60,
+    "riskLevel": "WATCH",
+    "riskScore": 40,
+    "confidence": "HIGH",
+    "hasOpenAlert": false,
+    "pendingReportCount": 0,
+    "parentShipmentId": null,
+    "arrivedAt": null,
+    "deliveredAt": null,
+    "onTime": null,
+    "delayMinutes": null
+   },
+   {
+    "view": "coordinator",
+    "id": "shp_1045",
+    "code": "SHP-1045",
+    "orderId": "ord_7784",
+    "orderCode": "ORD-7784",
+    "customer": {
+     "id": "cus_shrike",
+     "name": "Shrike Pipes",
+     "city": "Nagpur"
+    },
+    "lane": {
+     "id": "lane_nagpur",
+     "name": "Plant X → Nagpur"
+    },
+    "transporter": {
+     "id": "trn_northstar",
+     "name": "Northstar Haulage",
+     "isSmall": false
+    },
+    "truckCode": "TRK-53",
+    "currentMilestone": "IN_TRANSIT",
+    "etaAt": "2026-11-20T02:30:00.000Z",
+    "etaLowAt": "2026-11-20T01:30:00.000Z",
+    "etaHighAt": "2026-11-20T03:30:00.000Z",
+    "promisedBy": "2026-11-20T03:30:00.000Z",
+    "slackMinutes": 60,
+    "riskLevel": "WATCH",
+    "riskScore": 40,
+    "confidence": "HIGH",
+    "hasOpenAlert": false,
+    "pendingReportCount": 0,
+    "parentShipmentId": null,
+    "arrivedAt": null,
+    "deliveredAt": null,
+    "onTime": null,
+    "delayMinutes": null
+   },
+   {
+    "view": "coordinator",
+    "id": "shp_1047",
+    "code": "SHP-1047",
+    "orderId": "ord_7786",
+    "orderCode": "ORD-7786",
+    "customer": {
+     "id": "cus_merlin",
+     "name": "Merlin Extrusions",
+     "city": "Indore"
+    },
+    "lane": {
+     "id": "lane_indore",
+     "name": "Plant X → Indore"
+    },
+    "transporter": {
+     "id": "trn_northstar",
+     "name": "Northstar Haulage",
+     "isSmall": false
+    },
+    "truckCode": "TRK-54",
+    "currentMilestone": "IN_TRANSIT",
+    "etaAt": "2026-11-20T02:30:00.000Z",
+    "etaLowAt": "2026-11-20T01:30:00.000Z",
+    "etaHighAt": "2026-11-20T03:30:00.000Z",
+    "promisedBy": "2026-11-20T03:30:00.000Z",
+    "slackMinutes": 60,
+    "riskLevel": "WATCH",
+    "riskScore": 40,
+    "confidence": "HIGH",
+    "hasOpenAlert": false,
+    "pendingReportCount": 0,
+    "parentShipmentId": null,
+    "arrivedAt": null,
+    "deliveredAt": null,
+    "onTime": null,
+    "delayMinutes": null
+   },
+   {
+    "view": "coordinator",
+    "id": "shp_1043",
+    "code": "SHP-1043",
+    "orderId": "ord_7782",
+    "orderCode": "ORD-7782",
+    "customer": {
+     "id": "cus_osprey",
+     "name": "Osprey Containers",
+     "city": "Nashik"
+    },
+    "lane": {
+     "id": "lane_nashik",
+     "name": "Plant X → Nashik"
+    },
+    "transporter": {
+     "id": "trn_bluehill",
+     "name": "Bluehill Transport",
+     "isSmall": false
+    },
+    "truckCode": "TRK-32",
+    "currentMilestone": "IN_TRANSIT",
+    "etaAt": "2026-11-19T07:51:00.000Z",
+    "etaLowAt": "2026-11-19T07:46:00.000Z",
+    "etaHighAt": "2026-11-19T07:56:00.000Z",
+    "promisedBy": "2026-11-19T09:30:00.000Z",
+    "slackMinutes": 99,
+    "riskLevel": "WATCH",
+    "riskScore": 34,
+    "confidence": "HIGH",
+    "hasOpenAlert": false,
+    "pendingReportCount": 0,
+    "parentShipmentId": null,
+    "arrivedAt": null,
+    "deliveredAt": null,
+    "onTime": null,
+    "delayMinutes": null
+   }
+  ]
+ },
+ "heroDetail": {
+  "shipment": {
+   "view": "coordinator",
+   "id": "shp_1042",
+   "code": "SHP-1042",
+   "orderId": "ord_7781",
+   "orderCode": "ORD-7781",
+   "customer": {
+    "id": "cus_kestrel",
+    "name": "Kestrel Moulders",
+    "city": "Pune"
+   },
+   "lane": {
+    "id": "lane_pune",
+    "name": "Plant X → Pune"
+   },
+   "transporter": {
+    "id": "trn_ghatline",
+    "name": "Ghatline Carriers",
+    "isSmall": true
+   },
+   "truckCode": "TRK-07",
+   "currentMilestone": "IN_TRANSIT",
+   "etaAt": "2026-11-20T02:30:00.000Z",
+   "etaLowAt": "2026-11-20T01:10:00.000Z",
+   "etaHighAt": "2026-11-20T03:50:00.000Z",
+   "promisedBy": "2026-11-19T12:30:00.000Z",
+   "slackMinutes": -840,
+   "riskLevel": "AT_RISK",
+   "riskScore": 100,
+   "confidence": "MEDIUM",
+   "hasOpenAlert": true,
+   "pendingReportCount": 1,
+   "parentShipmentId": null,
+   "arrivedAt": null,
+   "deliveredAt": null,
+   "onTime": null,
+   "delayMinutes": null,
+   "route": {
+    "id": "rt_pune_a",
+    "code": "RT-PUNE-A",
+    "name": "Expressway via Khopoli–Lonavala ghat",
+    "isPrimary": true,
+    "lengthKm": 130
+   },
+   "driver": {
+    "id": "usr_drv_ramesh",
+    "name": "Ramesh",
+    "phone": "+91-00000-00001"
+   },
+   "items": [
+    {
+     "orderLineId": "oln_7781_pxhd520",
+     "gradeCode": "PX-HD 520",
+     "quantityT": 8,
+     "isUrgent": true
+    },
+    {
+     "orderLineId": "oln_7781_pxpp110",
+     "gradeCode": "PX-PP 110",
+     "quantityT": 14,
+     "isUrgent": false
+    }
+   ],
+   "milestones": [
+    {
+     "milestone": "ORDER_CONFIRMED",
+     "state": "DONE",
+     "at": "2026-11-17T04:30:00.000Z",
+     "source": "SEED",
+     "actorName": null
+    },
+    {
+     "milestone": "TRUCK_ASSIGNED",
+     "state": "DONE",
+     "at": "2026-11-18T10:30:00.000Z",
+     "source": "SEED",
+     "actorName": null
+    },
+    {
+     "milestone": "AT_GATE",
+     "state": "DONE",
+     "at": "2026-11-19T02:40:00.000Z",
+     "source": "DRIVER",
+     "actorName": "Ramesh"
+    },
+    {
+     "milestone": "LOADING",
+     "state": "DONE",
+     "at": "2026-11-19T03:20:00.000Z",
+     "source": "SIMULATION",
+     "actorName": null
+    },
+    {
+     "milestone": "GATE_OUT",
+     "state": "DONE",
+     "at": "2026-11-19T04:00:00.000Z",
+     "source": "DRIVER",
+     "actorName": "Ramesh"
+    },
+    {
+     "milestone": "IN_TRANSIT",
+     "state": "CURRENT",
+     "at": "2026-11-19T04:00:00.000Z",
+     "source": "SYSTEM",
+     "actorName": null
+    },
+    {
+     "milestone": "ARRIVED",
+     "state": "PENDING",
+     "at": null,
+     "source": null,
+     "actorName": null
+    },
+    {
+     "milestone": "DELIVERED",
+     "state": "PENDING",
+     "at": null,
+     "source": null,
+     "actorName": null
+    }
+   ],
+   "plannedArrivalAt": "2026-11-19T07:50:00.000Z",
+   "originalPromisedBy": "2026-11-19T12:30:00.000Z",
+   "renegotiated": false,
+   "receivingWindowOverrideEndAt": null,
+   "progressKm": 45.36,
+   "stopped": true,
+   "stoppedUntil": "2026-11-19T08:40:00.000Z",
+   "lastUpdateAt": "2026-11-19T05:40:00.000Z",
+   "firstAtRiskAt": "2026-11-19T05:40:00.000Z",
+   "customerNotifiedAt": "2026-11-19T05:40:00.000Z",
+   "physicalArrivalAt": null,
+   "childShipmentIds": [],
+   "openAlert": {
+    "id": "alr_shp_1042_1795066800",
+    "status": "OPEN",
+    "openedAt": "2026-11-19T05:40:00.000Z",
+    "topFactor": "RPT",
+    "topReason": "BREAKDOWN"
+   },
+   "latestCustomerResponse": null
+  }
+ },
+ "heroEta": {
+  "eta": {
+   "view": "coordinator",
+   "shipmentId": "shp_1042",
+   "simTime": "2026-11-19T05:50:00.000Z",
+   "ruleVersion": "eta-rules-v1",
+   "plannedArrivalAt": "2026-11-19T07:50:00.000Z",
+   "projectedRoadArrivalAt": "2026-11-19T13:50:00.000Z",
+   "predictedArrivalAt": "2026-11-20T02:30:00.000Z",
+   "etaLowAt": "2026-11-20T01:10:00.000Z",
+   "etaHighAt": "2026-11-20T03:50:00.000Z",
+   "receivingWindow": {
+    "opensAt": "2026-11-20T02:30:00.000Z",
+    "closesAt": "2026-11-20T12:30:00.000Z",
+    "overrideEndAt": null
+   },
+   "promisedBy": "2026-11-19T12:30:00.000Z",
+   "slackMinutes": -840,
+   "level": "AT_RISK",
+   "score": 100,
+   "confidence": "MEDIUM",
+   "confidenceReason": "Medium — driver report pending review",
+   "summary": "At risk: +180 min breakdown is the largest factor",
+   "factors": [
+    {
+     "code": "GATE",
+     "phase": "INCURRED",
+     "minutes": 40,
+     "split": null,
+     "sourceRef": null,
+     "reviewStatus": null,
+     "party": "PLANT",
+     "reason": "PLANT_GATE_WAIT",
+     "label": "Plant gate wait and loading",
+     "detail": "Gate queue and loading after the planned departure · +40 min"
+    },
+    {
+     "code": "HIST",
+     "phase": "INCURRED",
+     "minutes": 7,
+     "split": null,
+     "sourceRef": null,
+     "reviewStatus": null,
+     "party": "TRANSPORTER",
+     "reason": "TRANSPORTER_PACE",
+     "label": "Transporter pace (from delivered history)",
+     "detail": "So far at 93.1% of baseline speed · +7 min"
+    },
+    {
+     "code": "DISR",
+     "phase": "INCURRED",
+     "minutes": 2,
+     "split": null,
+     "sourceRef": {
+      "type": "DISRUPTION",
+      "id": "dis_1795064400_1"
+     },
+     "reviewStatus": null,
+     "party": "EXTERNAL",
+     "reason": "HEAVY_RAIN",
+     "label": "Heavy rain on ghat section",
+     "detail": "KHP-LNV-GHAT 65% slower until 18:30 · +2 min"
+    },
+    {
+     "code": "RPT",
+     "phase": "INCURRED",
+     "minutes": 10,
+     "split": null,
+     "sourceRef": {
+      "type": "DRIVER_REPORT",
+      "id": "rpt_shp_1042_1795066800"
+     },
+     "reviewStatus": "PENDING_REVIEW",
+     "party": "TRANSPORTER",
+     "reason": "BREAKDOWN",
+     "label": "Driver report: breakdown",
+     "detail": "Stopped so far · +10 min"
+    },
+    {
+     "code": "HIST",
+     "phase": "EXPECTED",
+     "minutes": 13,
+     "split": null,
+     "sourceRef": null,
+     "reviewStatus": null,
+     "party": "TRANSPORTER",
+     "reason": "TRANSPORTER_PACE",
+     "label": "Transporter pace (from delivered history)",
+     "detail": "Remaining baseline at 93.1% of baseline speed · +13 min"
+    },
+    {
+     "code": "DISR",
+     "phase": "EXPECTED",
+     "minutes": 118,
+     "split": null,
+     "sourceRef": {
+      "type": "DISRUPTION",
+      "id": "dis_1795064400_1"
+     },
+     "reviewStatus": null,
+     "party": "EXTERNAL",
+     "reason": "HEAVY_RAIN",
+     "label": "Heavy rain on ghat section",
+     "detail": "KHP-LNV-GHAT 65% slower until 18:30 · +118 min"
+    },
+    {
+     "code": "RPT",
+     "phase": "EXPECTED",
+     "minutes": 170,
+     "split": null,
+     "sourceRef": {
+      "type": "DRIVER_REPORT",
+      "id": "rpt_shp_1042_1795066800"
+     },
+     "reviewStatus": "PENDING_REVIEW",
+     "party": "TRANSPORTER",
+     "reason": "BREAKDOWN",
+     "label": "Driver report: breakdown",
+     "detail": "Stopped until 14:10 · +170 min"
+    },
+    {
+     "code": "WIN",
+     "phase": "EXPECTED",
+     "minutes": 760,
+     "split": [
+      {
+       "party": "PLANT",
+       "minutes": 84
+      },
+      {
+       "party": "TRANSPORTER",
+       "minutes": 423
+      },
+      {
+       "party": "EXTERNAL",
+       "minutes": 253
+      }
+     ],
+     "sourceRef": null,
+     "reviewStatus": null,
+     "party": null,
+     "reason": "RECEIVING_WINDOW",
+     "label": "Waiting for the receiving window",
+     "detail": "Road arrival 19:19 is outside receiving hours; check-in at 08:00 · +760 min"
+    }
+   ],
+   "totals": {
+    "incurredMinutes": 59,
+    "planChangeMinutes": 0,
+    "expectedMinutes": 1061
+   },
+   "identityHolds": true,
+   "isRuleBased": true
+  }
+ },
+ "heroAttribution": {
+  "shipmentId": "shp_1042",
+  "status": "LIVE",
+  "delayMinutes": null,
+  "totalsByParty": {
+   "PLANT": 40,
+   "TRANSPORTER": 17,
+   "CUSTOMER": 0,
+   "EXTERNAL": 2,
+   "UNATTRIBUTED": 0
+  },
+  "rows": [
+   {
+    "id": "da_shp_1042_GATE_PLANT",
+    "sourceKey": "GATE",
+    "factor": "GATE",
+    "reason": "PLANT_GATE_WAIT",
+    "kind": "TIME_LOST",
+    "label": "Plant gate wait and loading",
+    "party": "PLANT",
+    "minutes": 40,
+    "status": "LIVE",
+    "originalParty": null,
+    "overrideNote": null,
+    "overriddenBy": null,
+    "overriddenAt": null
+   },
+   {
+    "id": "da_shp_1042_HIST_TRANSPORTER",
+    "sourceKey": "HIST",
+    "factor": "HIST",
+    "reason": "TRANSPORTER_PACE",
+    "kind": "TIME_LOST",
+    "label": "Transporter pace (from delivered history)",
+    "party": "TRANSPORTER",
+    "minutes": 7,
+    "status": "LIVE",
+    "originalParty": null,
+    "overrideNote": null,
+    "overriddenBy": null,
+    "overriddenAt": null
+   },
+   {
+    "id": "da_shp_1042_DISR:dis_1795064400_1_EXTERNAL",
+    "sourceKey": "DISR:dis_1795064400_1",
+    "factor": "DISR",
+    "reason": "HEAVY_RAIN",
+    "kind": "TIME_LOST",
+    "label": "Heavy rain on ghat section",
+    "party": "EXTERNAL",
+    "minutes": 2,
+    "status": "LIVE",
+    "originalParty": null,
+    "overrideNote": null,
+    "overriddenBy": null,
+    "overriddenAt": null
+   },
+   {
+    "id": "da_shp_1042_RPT:rpt_shp_1042_1795066800_TRANSPORTER",
+    "sourceKey": "RPT:rpt_shp_1042_1795066800",
+    "factor": "RPT",
+    "reason": "BREAKDOWN",
+    "kind": "TIME_LOST",
+    "label": "Driver report: breakdown",
+    "party": "TRANSPORTER",
+    "minutes": 10,
+    "status": "LIVE",
+    "originalParty": null,
+    "overrideNote": null,
+    "overriddenBy": null,
+    "overriddenAt": null
+   }
+  ],
+  "countsAgainstTransporter": null,
+  "ruleText": "Counts against the transporter only if the shipment would have been on time without the transporter's minutes."
+ },
+ "heroTimeline": {
+  "items": [
+   {
+    "id": "evt_1042_01",
+    "type": "MILESTONE",
+    "milestone": "ORDER_CONFIRMED",
+    "simTime": "2026-11-17T04:30:00.000Z",
+    "source": "SEED",
+    "actorName": null,
+    "summary": "Order confirmed"
+   },
+   {
+    "id": "evt_1042_02",
+    "type": "MILESTONE",
+    "milestone": "TRUCK_ASSIGNED",
+    "simTime": "2026-11-18T10:30:00.000Z",
+    "source": "SEED",
+    "actorName": null,
+    "summary": "Truck assigned"
+   },
+   {
+    "id": "sev_shp_1042_AT_GATE",
+    "type": "MILESTONE",
+    "milestone": "AT_GATE",
+    "simTime": "2026-11-19T02:40:00.000Z",
+    "source": "DRIVER",
+    "actorName": "Ramesh",
+    "summary": "At plant gate"
+   },
+   {
+    "id": "sev_shp_1042_LOADING",
+    "type": "MILESTONE",
+    "milestone": "LOADING",
+    "simTime": "2026-11-19T03:20:00.000Z",
+    "source": "SIMULATION",
+    "actorName": null,
+    "summary": "Loading"
+   },
+   {
+    "id": "sev_shp_1042_GATE_OUT",
+    "type": "MILESTONE",
+    "milestone": "GATE_OUT",
+    "simTime": "2026-11-19T04:00:00.000Z",
+    "source": "DRIVER",
+    "actorName": "Ramesh",
+    "summary": "Gate out"
+   },
+   {
+    "id": "sev_shp_1042_IN_TRANSIT",
+    "type": "MILESTONE",
+    "milestone": "IN_TRANSIT",
+    "simTime": "2026-11-19T04:00:00.000Z",
+    "source": "SYSTEM",
+    "actorName": null,
+    "summary": "In transit"
+   },
+   {
+    "id": "sev_dis_1795064400_1_shp_1042_STARTED",
+    "type": "DISRUPTION_STARTED",
+    "milestone": null,
+    "simTime": "2026-11-19T05:00:00.000Z",
+    "source": "COORDINATOR",
+    "actorName": "Meera",
+    "summary": "Disruption started"
+   },
+   {
+    "id": "sev_alr_shp_1042_1795066800_CUSTOMER_NOTIFIED",
+    "type": "CUSTOMER_NOTIFIED",
+    "milestone": null,
+    "simTime": "2026-11-19T05:40:00.000Z",
+    "source": "SYSTEM",
+    "actorName": null,
+    "summary": "Customer notified"
+   },
+   {
+    "id": "sev_alr_shp_1042_1795066800_OPENED",
+    "type": "ALERT_OPENED",
+    "milestone": null,
+    "simTime": "2026-11-19T05:40:00.000Z",
+    "source": "SYSTEM",
+    "actorName": null,
+    "summary": "At-risk alert opened"
+   },
+   {
+    "id": "sev_rpt_shp_1042_1795066800_DRIVER_REPORT",
+    "type": "DRIVER_REPORT",
+    "milestone": null,
+    "simTime": "2026-11-19T05:40:00.000Z",
+    "source": "DRIVER",
+    "actorName": "Ramesh",
+    "summary": "Driver reported: breakdown"
+   }
+  ]
+ },
+ "alerts": {
+  "items": [
+   {
+    "id": "alr_shp_1042_1795066800",
+    "status": "OPEN",
+    "openedAt": "2026-11-19T05:40:00.000Z",
+    "topFactor": "RPT",
+    "topReason": "BREAKDOWN",
+    "view": "coordinator",
+    "shipment": {
+     "id": "shp_1042",
+     "code": "SHP-1042",
+     "customerName": "Kestrel Moulders",
+     "laneName": "Plant X → Pune"
+    },
+    "resolvedAt": null,
+    "summary": "At risk · top factor at opening: breakdown",
+    "proposedOption": null,
+    "chosenOption": null,
+    "chosenBy": null,
+    "chosenAt": null,
+    "customerResponse": null,
+    "customerRespondedAt": null
+   },
+   {
+    "id": "alr_shp_1046_1795064400",
+    "status": "OPEN",
+    "openedAt": "2026-11-19T05:00:00.000Z",
+    "topFactor": "DISR",
+    "topReason": "HEAVY_RAIN",
+    "view": "coordinator",
+    "shipment": {
+     "id": "shp_1046",
+     "code": "SHP-1046",
+     "customerName": "Kestrel Moulders",
+     "laneName": "Plant X → Pune"
+    },
+    "resolvedAt": null,
+    "summary": "At risk · top factor at opening: heavy rain",
+    "proposedOption": null,
+    "chosenOption": null,
+    "chosenBy": null,
+    "chosenAt": null,
+    "customerResponse": null,
+    "customerRespondedAt": null
+   },
+   {
+    "id": "alr_shp_1041_1795064400",
+    "status": "OPEN",
+    "openedAt": "2026-11-19T05:00:00.000Z",
+    "topFactor": "DISR",
+    "topReason": "HEAVY_RAIN",
+    "view": "coordinator",
+    "shipment": {
+     "id": "shp_1041",
+     "code": "SHP-1041",
+     "customerName": "Kestrel Moulders",
+     "laneName": "Plant X → Pune"
+    },
+    "resolvedAt": null,
+    "summary": "At risk · top factor at opening: heavy rain",
+    "proposedOption": null,
+    "chosenOption": null,
+    "chosenBy": null,
+    "chosenAt": null,
+    "customerResponse": null,
+    "customerRespondedAt": null
+   },
+   {
+    "id": "alr_shp_1039_1795064400",
+    "status": "OPEN",
+    "openedAt": "2026-11-19T05:00:00.000Z",
+    "topFactor": "DISR",
+    "topReason": "HEAVY_RAIN",
+    "view": "coordinator",
+    "shipment": {
+     "id": "shp_1039",
+     "code": "SHP-1039",
+     "customerName": "Kestrel Moulders",
+     "laneName": "Plant X → Pune"
+    },
+    "resolvedAt": null,
+    "summary": "At risk · top factor at opening: heavy rain",
+    "proposedOption": null,
+    "chosenOption": null,
+    "chosenBy": null,
+    "chosenAt": null,
+    "customerResponse": null,
+    "customerRespondedAt": null
+   }
+  ]
+ },
+ "notifications": {
+  "items": [
+   {
+    "id": "ntf_rpt_shp_1042_1795066800_REVIEW",
+    "kind": "REPORT_NEEDS_REVIEW",
+    "templateKey": "notif.REPORT_NEEDS_REVIEW",
+    "params": {
+     "reason": "BREAKDOWN",
+     "reportId": "rpt_shp_1042_1795066800",
+     "shipmentCode": "SHP-1042"
+    },
+    "text": "SHP-1042: driver report \"Breakdown\" needs review",
+    "simTime": "2026-11-19T05:40:00.000Z",
+    "readAt": null,
+    "shipmentId": "shp_1042",
+    "shipmentCode": "SHP-1042",
+    "alertId": null
+   },
+   {
+    "id": "ntf_alr_shp_1042_1795066800_AT_RISK",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "topReason": "BREAKDOWN",
+     "promisedBy": "2026-11-19T12:30:00.000Z",
+     "shipmentCode": "SHP-1042",
+     "predictedArrivalAt": "2026-11-20T02:30:00.000Z"
+    },
+    "text": "SHP-1042 is at risk of missing 18:00: predicted Fri 08:00, largest factor breakdown.",
+    "simTime": "2026-11-19T05:40:00.000Z",
+    "readAt": null,
+    "shipmentId": "shp_1042",
+    "shipmentCode": "SHP-1042",
+    "alertId": "alr_shp_1042_1795066800"
+   },
+   {
+    "id": "ntf_alr_shp_1046_1795064400_AT_RISK",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "topReason": "HEAVY_RAIN",
+     "promisedBy": "2026-11-19T11:30:00.000Z",
+     "shipmentCode": "SHP-1046",
+     "predictedArrivalAt": "2026-11-19T11:31:00.000Z"
+    },
+    "text": "SHP-1046 is at risk of missing 17:00: predicted 17:01, largest factor heavy rain.",
+    "simTime": "2026-11-19T05:00:00.000Z",
+    "readAt": null,
+    "shipmentId": "shp_1046",
+    "shipmentCode": "SHP-1046",
+    "alertId": "alr_shp_1046_1795064400"
+   },
+   {
+    "id": "ntf_alr_shp_1041_1795064400_AT_RISK",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "topReason": "HEAVY_RAIN",
+     "promisedBy": "2026-11-19T10:00:00.000Z",
+     "shipmentCode": "SHP-1041",
+     "predictedArrivalAt": "2026-11-19T10:13:00.000Z"
+    },
+    "text": "SHP-1041 is at risk of missing 15:30: predicted 15:43, largest factor heavy rain.",
+    "simTime": "2026-11-19T05:00:00.000Z",
+    "readAt": null,
+    "shipmentId": "shp_1041",
+    "shipmentCode": "SHP-1041",
+    "alertId": "alr_shp_1041_1795064400"
+   },
+   {
+    "id": "ntf_alr_shp_1039_1795064400_AT_RISK",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "topReason": "HEAVY_RAIN",
+     "promisedBy": "2026-11-19T09:30:00.000Z",
+     "shipmentCode": "SHP-1039",
+     "predictedArrivalAt": "2026-11-19T09:51:00.000Z"
+    },
+    "text": "SHP-1039 is at risk of missing 15:00: predicted 15:21, largest factor heavy rain.",
+    "simTime": "2026-11-19T05:00:00.000Z",
+    "readAt": null,
+    "shipmentId": "shp_1039",
+    "shipmentCode": "SHP-1039",
+    "alertId": "alr_shp_1039_1795064400"
+   },
+   {
+    "id": "hntf_0172_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 49,
+     "shipmentCode": "SHP-H0172"
+    },
+    "text": "SHP-H0172 arrived 49 min after the promised time.",
+    "simTime": "2026-11-16T11:49:00.000Z",
+    "readAt": "2026-11-16T12:19:00.000Z",
+    "shipmentId": "hshp_0172",
+    "shipmentCode": "SHP-H0172",
+    "alertId": "halt_0172"
+   },
+   {
+    "id": "hntf_0172_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0172"
+    },
+    "text": "SHP-H0172 is at risk of missing the promised time.",
+    "simTime": "2026-11-16T06:00:00.000Z",
+    "readAt": "2026-11-16T06:30:00.000Z",
+    "shipmentId": "hshp_0172",
+    "shipmentCode": "SHP-H0172",
+    "alertId": "halt_0172"
+   },
+   {
+    "id": "hntf_0163_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 840,
+     "shipmentCode": "SHP-H0163"
+    },
+    "text": "SHP-H0163 arrived 840 min after the promised time.",
+    "simTime": "2026-11-14T02:30:00.000Z",
+    "readAt": "2026-11-14T03:00:00.000Z",
+    "shipmentId": "hshp_0163",
+    "shipmentCode": "SHP-H0163",
+    "alertId": "halt_0163"
+   },
+   {
+    "id": "hntf_0163_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0163"
+    },
+    "text": "SHP-H0163 is at risk of missing the promised time.",
+    "simTime": "2026-11-13T08:40:00.000Z",
+    "readAt": "2026-11-13T09:10:00.000Z",
+    "shipmentId": "hshp_0163",
+    "shipmentCode": "SHP-H0163",
+    "alertId": "halt_0163"
+   },
+   {
+    "id": "hntf_0160_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 80,
+     "shipmentCode": "SHP-H0160"
+    },
+    "text": "SHP-H0160 arrived 80 min after the promised time.",
+    "simTime": "2026-11-12T10:20:00.000Z",
+    "readAt": "2026-11-12T10:50:00.000Z",
+    "shipmentId": "hshp_0160",
+    "shipmentCode": "SHP-H0160",
+    "alertId": "halt_0160"
+   },
+   {
+    "id": "hntf_0160_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0160"
+    },
+    "text": "SHP-H0160 is at risk of missing the promised time.",
+    "simTime": "2026-11-12T04:10:00.000Z",
+    "readAt": "2026-11-12T04:40:00.000Z",
+    "shipmentId": "hshp_0160",
+    "shipmentCode": "SHP-H0160",
+    "alertId": "halt_0160"
+   },
+   {
+    "id": "hntf_0128_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 25,
+     "shipmentCode": "SHP-H0128"
+    },
+    "text": "SHP-H0128 arrived 25 min after the promised time.",
+    "simTime": "2026-11-01T10:55:00.000Z",
+    "readAt": "2026-11-01T11:25:00.000Z",
+    "shipmentId": "hshp_0128",
+    "shipmentCode": "SHP-H0128",
+    "alertId": "halt_0128"
+   },
+   {
+    "id": "hntf_0128_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0128"
+    },
+    "text": "SHP-H0128 is at risk of missing the promised time.",
+    "simTime": "2026-11-01T06:25:00.000Z",
+    "readAt": "2026-11-01T06:55:00.000Z",
+    "shipmentId": "hshp_0128",
+    "shipmentCode": "SHP-H0128",
+    "alertId": "halt_0128"
+   },
+   {
+    "id": "hntf_0126_r1",
+    "kind": "RECOVERY_CONFIRMED",
+    "templateKey": "notif.RECOVERY_CONFIRMED",
+    "params": {
+     "shipmentCode": "SHP-H0126"
+    },
+    "text": "Recovery confirmed for SHP-H0126: replacement truck.",
+    "simTime": "2026-10-31T04:25:00.000Z",
+    "readAt": "2026-10-31T04:55:00.000Z",
+    "shipmentId": "hshp_0126",
+    "shipmentCode": "SHP-H0126",
+    "alertId": "halt_0126"
+   },
+   {
+    "id": "hntf_0126_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0126"
+    },
+    "text": "SHP-H0126 is at risk of missing the promised time.",
+    "simTime": "2026-10-31T04:10:00.000Z",
+    "readAt": "2026-10-31T04:40:00.000Z",
+    "shipmentId": "hshp_0126",
+    "shipmentCode": "SHP-H0126",
+    "alertId": "halt_0126"
+   },
+   {
+    "id": "hntf_0119_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 4,
+     "shipmentCode": "SHP-H0119"
+    },
+    "text": "SHP-H0119 arrived 4 min after the promised time.",
+    "simTime": "2026-10-28T08:34:00.000Z",
+    "readAt": "2026-10-28T09:04:00.000Z",
+    "shipmentId": "hshp_0119",
+    "shipmentCode": "SHP-H0119",
+    "alertId": "halt_0119"
+   },
+   {
+    "id": "hntf_0118_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 1,
+     "shipmentCode": "SHP-H0118"
+    },
+    "text": "SHP-H0118 arrived 1 min after the promised time.",
+    "simTime": "2026-10-28T08:31:00.000Z",
+    "readAt": "2026-10-28T09:01:00.000Z",
+    "shipmentId": "hshp_0118",
+    "shipmentCode": "SHP-H0118",
+    "alertId": "halt_0118"
+   },
+   {
+    "id": "hntf_0118_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0118"
+    },
+    "text": "SHP-H0118 is at risk of missing the promised time.",
+    "simTime": "2026-10-28T04:00:00.000Z",
+    "readAt": "2026-10-28T04:30:00.000Z",
+    "shipmentId": "hshp_0118",
+    "shipmentCode": "SHP-H0118",
+    "alertId": "halt_0118"
+   },
+   {
+    "id": "hntf_0119_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0119"
+    },
+    "text": "SHP-H0119 is at risk of missing the promised time.",
+    "simTime": "2026-10-28T01:00:00.000Z",
+    "readAt": "2026-10-28T01:30:00.000Z",
+    "shipmentId": "hshp_0119",
+    "shipmentCode": "SHP-H0119",
+    "alertId": "halt_0119"
+   },
+   {
+    "id": "hntf_0113_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 135,
+     "shipmentCode": "SHP-H0113"
+    },
+    "text": "SHP-H0113 arrived 135 min after the promised time.",
+    "simTime": "2026-10-27T11:45:00.000Z",
+    "readAt": "2026-10-27T12:15:00.000Z",
+    "shipmentId": "hshp_0113",
+    "shipmentCode": "SHP-H0113",
+    "alertId": "halt_0113"
+   },
+   {
+    "id": "hntf_0113_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0113"
+    },
+    "text": "SHP-H0113 is at risk of missing the promised time.",
+    "simTime": "2026-10-27T05:15:00.000Z",
+    "readAt": "2026-10-27T05:45:00.000Z",
+    "shipmentId": "hshp_0113",
+    "shipmentCode": "SHP-H0113",
+    "alertId": "halt_0113"
+   },
+   {
+    "id": "hntf_0109_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 840,
+     "shipmentCode": "SHP-H0109"
+    },
+    "text": "SHP-H0109 arrived 840 min after the promised time.",
+    "simTime": "2026-10-27T02:30:00.000Z",
+    "readAt": "2026-10-27T03:00:00.000Z",
+    "shipmentId": "hshp_0109",
+    "shipmentCode": "SHP-H0109",
+    "alertId": "halt_0109"
+   },
+   {
+    "id": "hntf_0109_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0109"
+    },
+    "text": "SHP-H0109 is at risk of missing the promised time.",
+    "simTime": "2026-10-26T08:30:00.000Z",
+    "readAt": "2026-10-26T09:00:00.000Z",
+    "shipmentId": "hshp_0109",
+    "shipmentCode": "SHP-H0109",
+    "alertId": "halt_0109"
+   },
+   {
+    "id": "hntf_0103_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 109,
+     "shipmentCode": "SHP-H0103"
+    },
+    "text": "SHP-H0103 arrived 109 min after the promised time.",
+    "simTime": "2026-10-24T09:19:00.000Z",
+    "readAt": "2026-10-24T09:49:00.000Z",
+    "shipmentId": "hshp_0103",
+    "shipmentCode": "SHP-H0103",
+    "alertId": "halt_0103"
+   },
+   {
+    "id": "hntf_0103_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0103"
+    },
+    "text": "SHP-H0103 is at risk of missing the promised time.",
+    "simTime": "2026-10-24T04:30:00.000Z",
+    "readAt": "2026-10-24T05:00:00.000Z",
+    "shipmentId": "hshp_0103",
+    "shipmentCode": "SHP-H0103",
+    "alertId": "halt_0103"
+   },
+   {
+    "id": "hntf_0096_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 29,
+     "shipmentCode": "SHP-H0096"
+    },
+    "text": "SHP-H0096 arrived 29 min after the promised time.",
+    "simTime": "2026-10-22T10:59:00.000Z",
+    "readAt": "2026-10-22T11:29:00.000Z",
+    "shipmentId": "hshp_0096",
+    "shipmentCode": "SHP-H0096",
+    "alertId": "halt_0096"
+   },
+   {
+    "id": "hntf_0096_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0096"
+    },
+    "text": "SHP-H0096 is at risk of missing the promised time.",
+    "simTime": "2026-10-22T06:15:00.000Z",
+    "readAt": "2026-10-22T06:45:00.000Z",
+    "shipmentId": "hshp_0096",
+    "shipmentCode": "SHP-H0096",
+    "alertId": "halt_0096"
+   },
+   {
+    "id": "hntf_0090_r1",
+    "kind": "RECOVERY_CONFIRMED",
+    "templateKey": "notif.RECOVERY_CONFIRMED",
+    "params": {
+     "shipmentCode": "SHP-H0090"
+    },
+    "text": "Recovery confirmed for SHP-H0090: replacement truck.",
+    "simTime": "2026-10-19T03:10:00.000Z",
+    "readAt": "2026-10-19T03:40:00.000Z",
+    "shipmentId": "hshp_0090",
+    "shipmentCode": "SHP-H0090",
+    "alertId": "halt_0090"
+   },
+   {
+    "id": "hntf_0090_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0090"
+    },
+    "text": "SHP-H0090 is at risk of missing the promised time.",
+    "simTime": "2026-10-19T02:55:00.000Z",
+    "readAt": "2026-10-19T03:25:00.000Z",
+    "shipmentId": "hshp_0090",
+    "shipmentCode": "SHP-H0090",
+    "alertId": "halt_0090"
+   },
+   {
+    "id": "hntf_0081_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 10,
+     "shipmentCode": "SHP-H0081"
+    },
+    "text": "SHP-H0081 arrived 10 min after the promised time.",
+    "simTime": "2026-10-15T10:40:00.000Z",
+    "readAt": "2026-10-15T11:10:00.000Z",
+    "shipmentId": "hshp_0081",
+    "shipmentCode": "SHP-H0081",
+    "alertId": "halt_0081"
+   },
+   {
+    "id": "hntf_0081_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0081"
+    },
+    "text": "SHP-H0081 is at risk of missing the promised time.",
+    "simTime": "2026-10-15T05:35:00.000Z",
+    "readAt": "2026-10-15T06:05:00.000Z",
+    "shipmentId": "hshp_0081",
+    "shipmentCode": "SHP-H0081",
+    "alertId": "halt_0081"
+   },
+   {
+    "id": "hntf_0079_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 870,
+     "shipmentCode": "SHP-H0079"
+    },
+    "text": "SHP-H0079 arrived 870 min after the promised time.",
+    "simTime": "2026-10-15T02:30:00.000Z",
+    "readAt": "2026-10-15T03:00:00.000Z",
+    "shipmentId": "hshp_0079",
+    "shipmentCode": "SHP-H0079",
+    "alertId": "halt_0079"
+   },
+   {
+    "id": "hntf_0079_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0079"
+    },
+    "text": "SHP-H0079 is at risk of missing the promised time.",
+    "simTime": "2026-10-14T07:25:00.000Z",
+    "readAt": "2026-10-14T07:55:00.000Z",
+    "shipmentId": "hshp_0079",
+    "shipmentCode": "SHP-H0079",
+    "alertId": "halt_0079"
+   },
+   {
+    "id": "hntf_0073_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 2,
+     "shipmentCode": "SHP-H0073"
+    },
+    "text": "SHP-H0073 arrived 2 min after the promised time.",
+    "simTime": "2026-10-13T03:32:00.000Z",
+    "readAt": "2026-10-13T04:02:00.000Z",
+    "shipmentId": "hshp_0073",
+    "shipmentCode": "SHP-H0073",
+    "alertId": "halt_0073"
+   },
+   {
+    "id": "hntf_0073_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0073"
+    },
+    "text": "SHP-H0073 is at risk of missing the promised time.",
+    "simTime": "2026-10-12T14:15:00.000Z",
+    "readAt": "2026-10-12T14:45:00.000Z",
+    "shipmentId": "hshp_0073",
+    "shipmentCode": "SHP-H0073",
+    "alertId": "halt_0073"
+   },
+   {
+    "id": "hntf_0068_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 1,
+     "shipmentCode": "SHP-H0068"
+    },
+    "text": "SHP-H0068 arrived 1 min after the promised time.",
+    "simTime": "2026-10-11T09:31:00.000Z",
+    "readAt": "2026-10-11T10:01:00.000Z",
+    "shipmentId": "hshp_0068",
+    "shipmentCode": "SHP-H0068",
+    "alertId": "halt_0068"
+   },
+   {
+    "id": "hntf_0068_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0068"
+    },
+    "text": "SHP-H0068 is at risk of missing the promised time.",
+    "simTime": "2026-10-11T06:00:00.000Z",
+    "readAt": "2026-10-11T06:30:00.000Z",
+    "shipmentId": "hshp_0068",
+    "shipmentCode": "SHP-H0068",
+    "alertId": "halt_0068"
+   },
+   {
+    "id": "hntf_0063_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 20,
+     "shipmentCode": "SHP-H0063"
+    },
+    "text": "SHP-H0063 arrived 20 min after the promised time.",
+    "simTime": "2026-10-10T07:50:00.000Z",
+    "readAt": "2026-10-10T08:20:00.000Z",
+    "shipmentId": "hshp_0063",
+    "shipmentCode": "SHP-H0063",
+    "alertId": "halt_0063"
+   },
+   {
+    "id": "hntf_0063_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0063"
+    },
+    "text": "SHP-H0063 is at risk of missing the promised time.",
+    "simTime": "2026-10-10T03:15:00.000Z",
+    "readAt": "2026-10-10T03:45:00.000Z",
+    "shipmentId": "hshp_0063",
+    "shipmentCode": "SHP-H0063",
+    "alertId": "halt_0063"
+   },
+   {
+    "id": "hntf_0052_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 66,
+     "shipmentCode": "SHP-H0052"
+    },
+    "text": "SHP-H0052 arrived 66 min after the promised time.",
+    "simTime": "2026-10-06T09:36:00.000Z",
+    "readAt": "2026-10-06T10:06:00.000Z",
+    "shipmentId": "hshp_0052",
+    "shipmentCode": "SHP-H0052",
+    "alertId": "halt_0052"
+   },
+   {
+    "id": "hntf_0052_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0052"
+    },
+    "text": "SHP-H0052 is at risk of missing the promised time.",
+    "simTime": "2026-10-06T05:00:00.000Z",
+    "readAt": "2026-10-06T05:30:00.000Z",
+    "shipmentId": "hshp_0052",
+    "shipmentCode": "SHP-H0052",
+    "alertId": "halt_0052"
+   },
+   {
+    "id": "hntf_0047_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 188,
+     "shipmentCode": "SHP-H0047"
+    },
+    "text": "SHP-H0047 arrived 188 min after the promised time.",
+    "simTime": "2026-10-05T10:08:00.000Z",
+    "readAt": "2026-10-05T10:38:00.000Z",
+    "shipmentId": "hshp_0047",
+    "shipmentCode": "SHP-H0047",
+    "alertId": "halt_0047"
+   },
+   {
+    "id": "hntf_0048_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 36,
+     "shipmentCode": "SHP-H0048"
+    },
+    "text": "SHP-H0048 arrived 36 min after the promised time.",
+    "simTime": "2026-10-05T09:06:00.000Z",
+    "readAt": "2026-10-05T09:36:00.000Z",
+    "shipmentId": "hshp_0048",
+    "shipmentCode": "SHP-H0048",
+    "alertId": "halt_0048"
+   },
+   {
+    "id": "hntf_0048_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0048"
+    },
+    "text": "SHP-H0048 is at risk of missing the promised time.",
+    "simTime": "2026-10-05T05:45:00.000Z",
+    "readAt": "2026-10-05T06:15:00.000Z",
+    "shipmentId": "hshp_0048",
+    "shipmentCode": "SHP-H0048",
+    "alertId": "halt_0048"
+   },
+   {
+    "id": "hntf_0047_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0047"
+    },
+    "text": "SHP-H0047 is at risk of missing the promised time.",
+    "simTime": "2026-10-05T02:40:00.000Z",
+    "readAt": "2026-10-05T03:10:00.000Z",
+    "shipmentId": "hshp_0047",
+    "shipmentCode": "SHP-H0047",
+    "alertId": "halt_0047"
+   },
+   {
+    "id": "hntf_0043_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 38,
+     "shipmentCode": "SHP-H0043"
+    },
+    "text": "SHP-H0043 arrived 38 min after the promised time.",
+    "simTime": "2026-10-04T09:38:00.000Z",
+    "readAt": "2026-10-04T10:08:00.000Z",
+    "shipmentId": "hshp_0043",
+    "shipmentCode": "SHP-H0043",
+    "alertId": "halt_0043"
+   },
+   {
+    "id": "hntf_0043_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0043"
+    },
+    "text": "SHP-H0043 is at risk of missing the promised time.",
+    "simTime": "2026-10-04T05:05:00.000Z",
+    "readAt": "2026-10-04T05:35:00.000Z",
+    "shipmentId": "hshp_0043",
+    "shipmentCode": "SHP-H0043",
+    "alertId": "halt_0043"
+   },
+   {
+    "id": "hntf_0040_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 104,
+     "shipmentCode": "SHP-H0040"
+    },
+    "text": "SHP-H0040 arrived 104 min after the promised time.",
+    "simTime": "2026-10-02T11:44:00.000Z",
+    "readAt": "2026-10-02T12:14:00.000Z",
+    "shipmentId": "hshp_0040",
+    "shipmentCode": "SHP-H0040",
+    "alertId": "halt_0040"
+   },
+   {
+    "id": "hntf_0039_l1",
+    "kind": "ARRIVED_LATE",
+    "templateKey": "notif.ARRIVED_LATE",
+    "params": {
+     "delayMinutes": 21,
+     "shipmentCode": "SHP-H0039"
+    },
+    "text": "SHP-H0039 arrived 21 min after the promised time.",
+    "simTime": "2026-10-02T07:21:00.000Z",
+    "readAt": "2026-10-02T07:51:00.000Z",
+    "shipmentId": "hshp_0039",
+    "shipmentCode": "SHP-H0039",
+    "alertId": "halt_0039"
+   },
+   {
+    "id": "hntf_0040_a1",
+    "kind": "AT_RISK",
+    "templateKey": "notif.AT_RISK",
+    "params": {
+     "shipmentCode": "SHP-H0040"
+    },
+    "text": "SHP-H0040 is at risk of missing the promised time.",
+    "simTime": "2026-10-02T06:00:00.000Z",
+    "readAt": "2026-10-02T06:30:00.000Z",
+    "shipmentId": "hshp_0040",
+    "shipmentCode": "SHP-H0040",
+    "alertId": "halt_0040"
+   }
+  ],
+  "unreadCount": 5
+ },
+ "audit": {
+  "items": [
+   {
+    "id": "cmwdfgc1v000et306fgdf5xf6",
+    "actor": {
+     "id": "usr_coord_meera",
+     "name": "Meera",
+     "role": "COORDINATOR"
+    },
+    "action": "sim.clock",
+    "entityType": "SimState",
+    "entityId": "1",
+    "simTime": "2026-11-19T05:50:00.000Z",
+    "createdAt": "2026-11-12T10:51:01.507Z",
+    "data": {
+     "to": "2026-11-19T05:50:00.000Z",
+     "action": "ADVANCE_TO"
+    }
+   },
+   {
+    "id": "cmwdfgc0h000dt306v0xsja8e",
+    "actor": null,
+    "action": "alert.open",
+    "entityType": "Alert",
+    "entityId": "alr_shp_1042_1795066800",
+    "simTime": "2026-11-19T05:40:00.000Z",
+    "createdAt": "2026-11-12T10:51:01.457Z",
+    "data": {
+     "level": "AT_RISK",
+     "reason": "BREAKDOWN",
+     "shipmentId": "shp_1042",
+     "shipmentCode": "SHP-1042"
+    }
+   },
+   {
+    "id": "cmwdfgc01000ct306dlcyx05o",
+    "actor": {
+     "id": "usr_drv_ramesh",
+     "name": "Ramesh",
+     "role": "DRIVER"
+    },
+    "action": "report.create",
+    "entityType": "DriverReport",
+    "entityId": "rpt_shp_1042_1795066800",
+    "simTime": "2026-11-19T05:40:00.000Z",
+    "createdAt": "2026-11-12T10:51:01.441Z",
+    "data": {
+     "party": "TRANSPORTER",
+     "reason": "BREAKDOWN",
+     "onBehalf": false,
+     "shipmentId": "shp_1042",
+     "shipmentCode": "SHP-1042",
+     "appliedMinutes": 180
+    }
+   },
+   {
+    "id": "cmwdfgbzx000bt306sr619nwz",
+    "actor": {
+     "id": "usr_coord_meera",
+     "name": "Meera",
+     "role": "COORDINATOR"
+    },
+    "action": "sim.clock",
+    "entityType": "SimState",
+    "entityId": "1",
+    "simTime": "2026-11-19T05:40:00.000Z",
+    "createdAt": "2026-11-12T10:51:01.437Z",
+    "data": {
+     "to": "2026-11-19T05:40:00.000Z",
+     "action": "ADVANCE_TO"
+    }
+   },
+   {
+    "id": "cmwdfgbw5000at3067878w4ps",
+    "actor": null,
+    "action": "alert.open",
+    "entityType": "Alert",
+    "entityId": "alr_shp_1046_1795064400",
+    "simTime": "2026-11-19T05:00:00.000Z",
+    "createdAt": "2026-11-12T10:51:01.301Z",
+    "data": {
+     "level": "AT_RISK",
+     "reason": "HEAVY_RAIN",
+     "shipmentId": "shp_1046",
+     "shipmentCode": "SHP-1046"
+    }
+   },
+   {
+    "id": "cmwdfgbw40009t306jig6ckfr",
+    "actor": null,
+    "action": "alert.open",
+    "entityType": "Alert",
+    "entityId": "alr_shp_1041_1795064400",
+    "simTime": "2026-11-19T05:00:00.000Z",
+    "createdAt": "2026-11-12T10:51:01.300Z",
+    "data": {
+     "level": "AT_RISK",
+     "reason": "HEAVY_RAIN",
+     "shipmentId": "shp_1041",
+     "shipmentCode": "SHP-1041"
+    }
+   },
+   {
+    "id": "cmwdfgbw10008t306dc05cz1i",
+    "actor": null,
+    "action": "alert.open",
+    "entityType": "Alert",
+    "entityId": "alr_shp_1039_1795064400",
+    "simTime": "2026-11-19T05:00:00.000Z",
+    "createdAt": "2026-11-12T10:51:01.297Z",
+    "data": {
+     "level": "AT_RISK",
+     "reason": "HEAVY_RAIN",
+     "shipmentId": "shp_1039",
+     "shipmentCode": "SHP-1039"
+    }
+   },
+   {
+    "id": "cmwdfgbvm0007t306x0ccf5bj",
+    "actor": {
+     "id": "usr_coord_meera",
+     "name": "Meera",
+     "role": "COORDINATOR"
+    },
+    "action": "disruption.create",
+    "entityType": "Disruption",
+    "entityId": "dis_1795064400_1",
+    "simTime": "2026-11-19T05:00:00.000Z",
+    "createdAt": "2026-11-12T10:51:01.282Z",
+    "data": {
+     "kind": "WEATHER_SLOWDOWN",
+     "label": "Heavy rain on ghat section",
+     "minutes": 480,
+     "affected": 4,
+     "segmentCodes": [
+      "KHP-LNV-GHAT"
+     ]
+    }
+   },
+   {
+    "id": "cmwdfgbvg0006t306bt28pdbh",
+    "actor": {
+     "id": "usr_coord_meera",
+     "name": "Meera",
+     "role": "COORDINATOR"
+    },
+    "action": "sim.clock",
+    "entityType": "SimState",
+    "entityId": "1",
+    "simTime": "2026-11-19T05:00:00.000Z",
+    "createdAt": "2026-11-12T10:51:01.276Z",
+    "data": {
+     "to": "2026-11-19T05:00:00.000Z",
+     "action": "ADVANCE_TO"
+    }
+   },
+   {
+    "id": "cmwdfgbur0005t30680kq88ec",
+    "actor": {
+     "id": "usr_drv_ramesh",
+     "name": "Ramesh",
+     "role": "DRIVER"
+    },
+    "action": "auth.login",
+    "entityType": "User",
+    "entityId": "usr_drv_ramesh",
+    "simTime": "2026-11-19T04:55:00.000Z",
+    "createdAt": "2026-11-12T10:51:01.251Z",
+    "data": {}
+   },
+   {
+    "id": "cmwdfgbta0004t306gfhfpi2o",
+    "actor": {
+     "id": "usr_cust_arjun",
+     "name": "Arjun",
+     "role": "CUSTOMER"
+    },
+    "action": "auth.login",
+    "entityType": "User",
+    "entityId": "usr_cust_arjun",
+    "simTime": "2026-11-19T04:55:00.000Z",
+    "createdAt": "2026-11-12T10:51:01.198Z",
+    "data": {}
+   },
+   {
+    "id": "cmwdfgbrn0003t306uy31v3lp",
+    "actor": {
+     "id": "usr_coord_meera",
+     "name": "Meera",
+     "role": "COORDINATOR"
+    },
+    "action": "auth.login",
+    "entityType": "User",
+    "entityId": "usr_coord_meera",
+    "simTime": "2026-11-19T04:55:00.000Z",
+    "createdAt": "2026-11-12T10:51:01.139Z",
+    "data": {}
+   },
+   {
+    "id": "cmwdfgbpd0002t306tguwcxr9",
+    "actor": {
+     "id": "usr_coord_meera",
+     "name": "Meera",
+     "role": "COORDINATOR"
+    },
+    "action": "sim.reset",
+    "entityType": "SimState",
+    "entityId": "1",
+    "simTime": "2026-11-19T04:55:00.000Z",
+    "createdAt": "2026-11-12T10:51:01.057Z",
+    "data": {}
+   },
+   {
+    "id": "cmwdfgbl30001t3068g8xtif0",
+    "actor": {
+     "id": "usr_drv_ramesh",
+     "name": "Ramesh",
+     "role": "DRIVER"
+    },
+    "action": "milestone.record",
+    "entityType": "Shipment",
+    "entityId": "shp_1042",
+    "simTime": "2026-11-19T04:00:00.000Z",
+    "createdAt": "2026-11-12T10:51:00.903Z",
+    "data": {
+     "milestone": "GATE_OUT",
+     "shipmentId": "shp_1042",
+     "shipmentCode": "SHP-1042"
+    }
+   },
+   {
+    "id": "cmwdfgbex0000t3069rdxifml",
+    "actor": {
+     "id": "usr_drv_ramesh",
+     "name": "Ramesh",
+     "role": "DRIVER"
+    },
+    "action": "milestone.record",
+    "entityType": "Shipment",
+    "entityId": "shp_1042",
+    "simTime": "2026-11-19T02:40:00.000Z",
+    "createdAt": "2026-11-12T10:51:00.681Z",
+    "data": {
+     "milestone": "AT_GATE",
+     "shipmentId": "shp_1042",
+     "shipmentCode": "SHP-1042"
+    }
+   }
+  ]
+ },
+ "reference": {
+  "lanes": [
+   {
+    "id": "lane_ahmedabad",
+    "code": "LN-AHMD",
+    "name": "Plant X → Ahmedabad",
+    "customerId": "cus_avocet"
+   },
+   {
+    "id": "lane_indore",
+    "code": "LN-INDR",
+    "name": "Plant X → Indore",
+    "customerId": "cus_merlin"
+   },
+   {
+    "id": "lane_nagpur",
+    "code": "LN-NAGP",
+    "name": "Plant X → Nagpur",
+    "customerId": "cus_shrike"
+   },
+   {
+    "id": "lane_nashik",
+    "code": "LN-NASH",
+    "name": "Plant X → Nashik",
+    "customerId": "cus_osprey"
+   },
+   {
+    "id": "lane_pune",
+    "code": "LN-PUNE",
+    "name": "Plant X → Pune",
+    "customerId": "cus_kestrel"
+   },
+   {
+    "id": "lane_surat",
+    "code": "LN-SURT",
+    "name": "Plant X → Surat",
+    "customerId": "cus_plover"
+   }
+  ],
+  "routes": [
+   {
+    "id": "rt_ahmedabad_a",
+    "code": "RT-AHMD-A",
+    "laneId": "lane_ahmedabad",
+    "name": "Via Surat and Vadodara",
+    "isPrimary": true,
+    "segments": [
+     {
+      "name": "Plant X → Bhiwandi",
+      "endKm": 40,
+      "startKm": 0,
+      "speedKmh": 34.285714285714285,
+      "segmentCode": "PLT-BWD"
+     },
+     {
+      "name": "Bhiwandi → Vapi",
+      "endKm": 180,
+      "startKm": 40,
+      "speedKmh": 46.666666666666664,
+      "segmentCode": "BWD-VPI"
+     },
+     {
+      "name": "Vapi → Surat",
+      "endKm": 280,
+      "startKm": 180,
+      "speedKmh": 46.15384615384615,
+      "segmentCode": "VPI-SRT"
+     },
+     {
+      "name": "Surat → Vadodara",
+      "endKm": 430,
+      "startKm": 280,
+      "speedKmh": 50,
+      "segmentCode": "SRT-VDR"
+     },
+     {
+      "name": "Vadodara → Ahmedabad",
+      "endKm": 540,
+      "startKm": 430,
+      "speedKmh": 55,
+      "segmentCode": "VDR-AMD"
+     }
+    ]
+   },
+   {
+    "id": "rt_indore_a",
+    "code": "RT-INDR-A",
+    "laneId": "lane_indore",
+    "name": "Via Nashik and Dhule",
+    "isPrimary": true,
+    "segments": [
+     {
+      "name": "Plant X → Thane",
+      "endKm": 35,
+      "startKm": 0,
+      "speedKmh": 35,
+      "segmentCode": "PLT-THN"
+     },
+     {
+      "name": "Thane → Kasara",
+      "endKm": 105,
+      "startKm": 35,
+      "speedKmh": 52.5,
+      "segmentCode": "THN-KSR"
+     },
+     {
+      "name": "Kasara → Nashik",
+      "endKm": 165,
+      "startKm": 105,
+      "speedKmh": 51.42857142857143,
+      "segmentCode": "KSR-NSK"
+     },
+     {
+      "name": "Nashik → Dhule",
+      "endKm": 325,
+      "startKm": 165,
+      "speedKmh": 48,
+      "segmentCode": "NSK-DHL"
+     },
+     {
+      "name": "Dhule → Indore",
+      "endKm": 585,
+      "startKm": 325,
+      "speedKmh": 47.27272727272727,
+      "segmentCode": "DHL-IDR"
+     }
+    ]
+   },
+   {
+    "id": "rt_nagpur_a",
+    "code": "RT-NAGP-A",
+    "laneId": "lane_nagpur",
+    "name": "Via Nashik, Aurangabad and Amravati",
+    "isPrimary": true,
+    "segments": [
+     {
+      "name": "Plant X → Thane",
+      "endKm": 35,
+      "startKm": 0,
+      "speedKmh": 35,
+      "segmentCode": "PLT-THN"
+     },
+     {
+      "name": "Thane → Kasara",
+      "endKm": 105,
+      "startKm": 35,
+      "speedKmh": 52.5,
+      "segmentCode": "THN-KSR"
+     },
+     {
+      "name": "Kasara → Nashik",
+      "endKm": 165,
+      "startKm": 105,
+      "speedKmh": 51.42857142857143,
+      "segmentCode": "KSR-NSK"
+     },
+     {
+      "name": "Nashik → Aurangabad",
+      "endKm": 345,
+      "startKm": 165,
+      "speedKmh": 45,
+      "segmentCode": "NSK-AUR"
+     },
+     {
+      "name": "Aurangabad → Amravati",
+      "endKm": 675,
+      "startKm": 345,
+      "speedKmh": 47.142857142857146,
+      "segmentCode": "AUR-AMR"
+     },
+     {
+      "name": "Amravati → Nagpur",
+      "endKm": 830,
+      "startKm": 675,
+      "speedKmh": 46.5,
+      "segmentCode": "AMR-NGP"
+     }
+    ]
+   },
+   {
+    "id": "rt_nashik_a",
+    "code": "RT-NASH-A",
+    "laneId": "lane_nashik",
+    "name": "Via Thane and Kasara",
+    "isPrimary": true,
+    "segments": [
+     {
+      "name": "Plant X → Thane",
+      "endKm": 35,
+      "startKm": 0,
+      "speedKmh": 35,
+      "segmentCode": "PLT-THN"
+     },
+     {
+      "name": "Thane → Kasara",
+      "endKm": 105,
+      "startKm": 35,
+      "speedKmh": 52.5,
+      "segmentCode": "THN-KSR"
+     },
+     {
+      "name": "Kasara → Nashik",
+      "endKm": 165,
+      "startKm": 105,
+      "speedKmh": 51.42857142857143,
+      "segmentCode": "KSR-NSK"
+     }
+    ]
+   },
+   {
+    "id": "rt_nashik_b",
+    "code": "RT-NASH-B",
+    "laneId": "lane_nashik",
+    "name": "Alternate inland road",
+    "isPrimary": false,
+    "segments": [
+     {
+      "name": "Plant X → Thane",
+      "endKm": 35,
+      "startKm": 0,
+      "speedKmh": 35,
+      "segmentCode": "PLT-THN"
+     },
+     {
+      "name": "Thane → Nashik (alternate inland road)",
+      "endKm": 185,
+      "startKm": 35,
+      "speedKmh": 45,
+      "segmentCode": "THN-NSK-ALT"
+     }
+    ]
+   },
+   {
+    "id": "rt_pune_a",
+    "code": "RT-PUNE-A",
+    "laneId": "lane_pune",
+    "name": "Expressway via Khopoli–Lonavala ghat",
+    "isPrimary": true,
+    "segments": [
+     {
+      "name": "Plant X → Khopoli",
+      "endKm": 45,
+      "startKm": 0,
+      "speedKmh": 30,
+      "segmentCode": "PLT-KHP"
+     },
+     {
+      "name": "Khopoli–Lonavala ghat",
+      "endKm": 65,
+      "startKm": 45,
+      "speedKmh": 20,
+      "segmentCode": "KHP-LNV-GHAT"
+     },
+     {
+      "name": "Lonavala → Pune",
+      "endKm": 130,
+      "startKm": 65,
+      "speedKmh": 32.5,
+      "segmentCode": "LNV-PUN"
+     }
+    ]
+   },
+   {
+    "id": "rt_pune_b",
+    "code": "RT-PUNE-B",
+    "laneId": "lane_pune",
+    "name": "Southern road (avoids the ghat)",
+    "isPrimary": false,
+    "segments": [
+     {
+      "name": "Plant X → Khopoli",
+      "endKm": 45,
+      "startKm": 0,
+      "speedKmh": 30,
+      "segmentCode": "PLT-KHP"
+     },
+     {
+      "name": "Khopoli → Pune (southern road, avoids ghat)",
+      "endKm": 153,
+      "startKm": 45,
+      "speedKmh": 24,
+      "segmentCode": "KHP-PUN-S"
+     }
+    ]
+   },
+   {
+    "id": "rt_surat_a",
+    "code": "RT-SURT-A",
+    "laneId": "lane_surat",
+    "name": "Via Bhiwandi and Vapi",
+    "isPrimary": true,
+    "segments": [
+     {
+      "name": "Plant X → Bhiwandi",
+      "endKm": 40,
+      "startKm": 0,
+      "speedKmh": 34.285714285714285,
+      "segmentCode": "PLT-BWD"
+     },
+     {
+      "name": "Bhiwandi → Vapi",
+      "endKm": 180,
+      "startKm": 40,
+      "speedKmh": 46.666666666666664,
+      "segmentCode": "BWD-VPI"
+     },
+     {
+      "name": "Vapi → Surat",
+      "endKm": 280,
+      "startKm": 180,
+      "speedKmh": 46.15384615384615,
+      "segmentCode": "VPI-SRT"
+     }
+    ]
+   },
+   {
+    "id": "rt_surat_b",
+    "code": "RT-SURT-B",
+    "laneId": "lane_surat",
+    "name": "Coastal road",
+    "isPrimary": false,
+    "segments": [
+     {
+      "name": "Plant X → Bhiwandi",
+      "endKm": 40,
+      "startKm": 0,
+      "speedKmh": 34.285714285714285,
+      "segmentCode": "PLT-BWD"
+     },
+     {
+      "name": "Bhiwandi → Surat (coastal road)",
+      "endKm": 290,
+      "startKm": 40,
+      "speedKmh": 41.666666666666664,
+      "segmentCode": "BWD-SRT-COAST"
+     }
+    ]
+   }
+  ],
+  "segments": [
+   {
+    "segmentCode": "AMR-NGP",
+    "name": "Amravati → Nagpur",
+    "routeCodes": [
+     "RT-NAGP-A"
+    ]
+   },
+   {
+    "segmentCode": "AUR-AMR",
+    "name": "Aurangabad → Amravati",
+    "routeCodes": [
+     "RT-NAGP-A"
+    ]
+   },
+   {
+    "segmentCode": "BWD-SRT-COAST",
+    "name": "Bhiwandi → Surat (coastal road)",
+    "routeCodes": [
+     "RT-SURT-B"
+    ]
+   },
+   {
+    "segmentCode": "BWD-VPI",
+    "name": "Bhiwandi → Vapi",
+    "routeCodes": [
+     "RT-AHMD-A",
+     "RT-SURT-A"
+    ]
+   },
+   {
+    "segmentCode": "DHL-IDR",
+    "name": "Dhule → Indore",
+    "routeCodes": [
+     "RT-INDR-A"
+    ]
+   },
+   {
+    "segmentCode": "KHP-LNV-GHAT",
+    "name": "Khopoli–Lonavala ghat",
+    "routeCodes": [
+     "RT-PUNE-A"
+    ]
+   },
+   {
+    "segmentCode": "KHP-PUN-S",
+    "name": "Khopoli → Pune (southern road, avoids ghat)",
+    "routeCodes": [
+     "RT-PUNE-B"
+    ]
+   },
+   {
+    "segmentCode": "KSR-NSK",
+    "name": "Kasara → Nashik",
+    "routeCodes": [
+     "RT-INDR-A",
+     "RT-NAGP-A",
+     "RT-NASH-A"
+    ]
+   },
+   {
+    "segmentCode": "LNV-PUN",
+    "name": "Lonavala → Pune",
+    "routeCodes": [
+     "RT-PUNE-A"
+    ]
+   },
+   {
+    "segmentCode": "NSK-AUR",
+    "name": "Nashik → Aurangabad",
+    "routeCodes": [
+     "RT-NAGP-A"
+    ]
+   },
+   {
+    "segmentCode": "NSK-DHL",
+    "name": "Nashik → Dhule",
+    "routeCodes": [
+     "RT-INDR-A"
+    ]
+   },
+   {
+    "segmentCode": "PLT-BWD",
+    "name": "Plant X → Bhiwandi",
+    "routeCodes": [
+     "RT-AHMD-A",
+     "RT-SURT-A",
+     "RT-SURT-B"
+    ]
+   },
+   {
+    "segmentCode": "PLT-KHP",
+    "name": "Plant X → Khopoli",
+    "routeCodes": [
+     "RT-PUNE-A",
+     "RT-PUNE-B"
+    ]
+   },
+   {
+    "segmentCode": "PLT-THN",
+    "name": "Plant X → Thane",
+    "routeCodes": [
+     "RT-INDR-A",
+     "RT-NAGP-A",
+     "RT-NASH-A",
+     "RT-NASH-B"
+    ]
+   },
+   {
+    "segmentCode": "SRT-VDR",
+    "name": "Surat → Vadodara",
+    "routeCodes": [
+     "RT-AHMD-A"
+    ]
+   },
+   {
+    "segmentCode": "THN-KSR",
+    "name": "Thane → Kasara",
+    "routeCodes": [
+     "RT-INDR-A",
+     "RT-NAGP-A",
+     "RT-NASH-A"
+    ]
+   },
+   {
+    "segmentCode": "THN-NSK-ALT",
+    "name": "Thane → Nashik (alternate inland road)",
+    "routeCodes": [
+     "RT-NASH-B"
+    ]
+   },
+   {
+    "segmentCode": "VDR-AMD",
+    "name": "Vadodara → Ahmedabad",
+    "routeCodes": [
+     "RT-AHMD-A"
+    ]
+   },
+   {
+    "segmentCode": "VPI-SRT",
+    "name": "Vapi → Surat",
+    "routeCodes": [
+     "RT-AHMD-A",
+     "RT-SURT-A"
+    ]
+   }
+  ],
+  "transporters": [
+   {
+    "id": "trn_bluehill",
+    "code": "TR-BLUE",
+    "name": "Bluehill Transport",
+    "fleetSize": 25,
+    "isSmall": false
+   },
+   {
+    "id": "trn_coastway",
+    "code": "TR-COAS",
+    "name": "Coastway Movers",
+    "fleetSize": 8,
+    "isSmall": true
+   },
+   {
+    "id": "trn_ghatline",
+    "code": "TR-GHAT",
+    "name": "Ghatline Carriers",
+    "fleetSize": 4,
+    "isSmall": true
+   },
+   {
+    "id": "trn_ironroad",
+    "code": "TR-IRON",
+    "name": "Ironroad Freight",
+    "fleetSize": 40,
+    "isSmall": false
+   },
+   {
+    "id": "trn_northstar",
+    "code": "TR-NRTH",
+    "name": "Northstar Haulage",
+    "fleetSize": 60,
+    "isSmall": false
+   }
+  ],
+  "customers": [
+   {
+    "id": "cus_avocet",
+    "code": "CUST-AVO",
+    "name": "Avocet Polymers",
+    "city": "Ahmedabad"
+   },
+   {
+    "id": "cus_kestrel",
+    "code": "CUST-KES",
+    "name": "Kestrel Moulders",
+    "city": "Pune"
+   },
+   {
+    "id": "cus_merlin",
+    "code": "CUST-MER",
+    "name": "Merlin Extrusions",
+    "city": "Indore"
+   },
+   {
+    "id": "cus_osprey",
+    "code": "CUST-OSP",
+    "name": "Osprey Containers",
+    "city": "Nashik"
+   },
+   {
+    "id": "cus_plover",
+    "code": "CUST-PLO",
+    "name": "Plover Packaging",
+    "city": "Surat"
+   },
+   {
+    "id": "cus_shrike",
+    "code": "CUST-SHR",
+    "name": "Shrike Pipes",
+    "city": "Nagpur"
+   }
+  ],
+  "trucks": [
+   {
+    "id": "trk_07",
+    "code": "TRK-07",
+    "transporterId": "trn_ghatline",
+    "status": "ASSIGNED",
+    "locationLabel": "Plant X yard",
+    "hasDefaultDriver": true
+   },
+   {
+    "id": "trk_08",
+    "code": "TRK-08",
+    "transporterId": "trn_ghatline",
+    "status": "AVAILABLE",
+    "locationLabel": "Plant X yard",
+    "hasDefaultDriver": false
+   },
+   {
+    "id": "trk_11",
+    "code": "TRK-11",
+    "transporterId": "trn_ghatline",
+    "status": "AVAILABLE",
+    "locationLabel": "Khopoli yard",
+    "hasDefaultDriver": true
+   },
+   {
+    "id": "trk_12",
+    "code": "TRK-12",
+    "transporterId": "trn_ghatline",
+    "status": "MAINTENANCE",
+    "locationLabel": "Plant X yard",
+    "hasDefaultDriver": false
+   },
+   {
+    "id": "trk_21",
+    "code": "TRK-21",
+    "transporterId": "trn_coastway",
+    "status": "ASSIGNED",
+    "locationLabel": "Plant X yard",
+    "hasDefaultDriver": true
+   },
+   {
+    "id": "trk_22",
+    "code": "TRK-22",
+    "transporterId": "trn_coastway",
+    "status": "ASSIGNED",
+    "locationLabel": "Plant X yard",
+    "hasDefaultDriver": false
+   },
+   {
+    "id": "trk_31",
+    "code": "TRK-31",
+    "transporterId": "trn_bluehill",
+    "status": "ASSIGNED",
+    "locationLabel": "Plant X yard",
+    "hasDefaultDriver": true
+   },
+   {
+    "id": "trk_32",
+    "code": "TRK-32",
+    "transporterId": "trn_bluehill",
+    "status": "ASSIGNED",
+    "locationLabel": "Plant X yard",
+    "hasDefaultDriver": true
+   },
+   {
+    "id": "trk_33",
+    "code": "TRK-33",
+    "transporterId": "trn_bluehill",
+    "status": "ASSIGNED",
+    "locationLabel": "Plant X yard",
+    "hasDefaultDriver": false
+   },
+   {
+    "id": "trk_34",
+    "code": "TRK-34",
+    "transporterId": "trn_bluehill",
+    "status": "AVAILABLE",
+    "locationLabel": "Plant X yard",
+    "hasDefaultDriver": false
+   },
+   {
+    "id": "trk_41",
+    "code": "TRK-41",
+    "transporterId": "trn_ironroad",
+    "status": "ASSIGNED",
+    "locationLabel": "Plant X yard",
+    "hasDefaultDriver": true
+   },
+   {
+    "id": "trk_42",
+    "code": "TRK-42",
+    "transporterId": "trn_ironroad",
+    "status": "ASSIGNED",
+    "locationLabel": "Plant X yard",
+    "hasDefaultDriver": false
+   },
+   {
+    "id": "trk_43",
+    "code": "TRK-43",
+    "transporterId": "trn_ironroad",
+    "status": "AVAILABLE",
+    "locationLabel": "Plant X yard",
+    "hasDefaultDriver": false
+   },
+   {
+    "id": "trk_51",
+    "code": "TRK-51",
+    "transporterId": "trn_northstar",
+    "status": "ASSIGNED",
+    "locationLabel": "Plant X yard",
+    "hasDefaultDriver": true
+   },
+   {
+    "id": "trk_52",
+    "code": "TRK-52",
+    "transporterId": "trn_northstar",
+    "status": "ASSIGNED",
+    "locationLabel": "Plant X yard",
+    "hasDefaultDriver": true
+   },
+   {
+    "id": "trk_53",
+    "code": "TRK-53",
+    "transporterId": "trn_northstar",
+    "status": "ASSIGNED",
+    "locationLabel": "Plant X yard",
+    "hasDefaultDriver": false
+   },
+   {
+    "id": "trk_54",
+    "code": "TRK-54",
+    "transporterId": "trn_northstar",
+    "status": "ASSIGNED",
+    "locationLabel": "Plant X yard",
+    "hasDefaultDriver": false
+   },
+   {
+    "id": "trk_55",
+    "code": "TRK-55",
+    "transporterId": "trn_northstar",
+    "status": "AVAILABLE",
+    "locationLabel": "Plant X yard",
+    "hasDefaultDriver": false
+   },
+   {
+    "id": "trk_56",
+    "code": "TRK-56",
+    "transporterId": "trn_northstar",
+    "status": "AVAILABLE",
+    "locationLabel": "Plant X yard",
+    "hasDefaultDriver": false
+   },
+   {
+    "id": "trk_57",
+    "code": "TRK-57",
+    "transporterId": "trn_northstar",
+    "status": "AVAILABLE",
+    "locationLabel": "Plant X yard",
+    "hasDefaultDriver": false
+   }
+  ]
+ },
+ "disruptionsActive": {
+  "items": [
+   {
+    "id": "dis_1795064400_1",
+    "kind": "WEATHER_SLOWDOWN",
+    "origin": "SIMULATOR",
+    "label": "Heavy rain on ghat section",
+    "segmentCodes": [
+     "KHP-LNV-GHAT"
+    ],
+    "shipmentId": null,
+    "slowdownPct": 65,
+    "extraMinutesPerTruck": null,
+    "stopMinutes": null,
+    "party": "EXTERNAL",
+    "reason": "HEAVY_RAIN",
+    "startsAt": "2026-11-19T05:00:00.000Z",
+    "endsAt": "2026-11-19T13:00:00.000Z",
+    "endedEarlyAt": null,
+    "active": true
+   }
+  ]
+ },
+ "layers": {
+  "plant": {
+   "name": "Plant X",
+   "lat": 19.0326,
+   "lng": 73.1175
+  },
+  "sites": [
+   {
+    "customerId": "cus_avocet",
+    "name": "Avocet Polymers",
+    "city": "Ahmedabad",
+    "lat": 23.0225,
+    "lng": 72.5714,
+    "receivingHours": "08:00–18:00"
+   },
+   {
+    "customerId": "cus_kestrel",
+    "name": "Kestrel Moulders",
+    "city": "Pune",
+    "lat": 18.5204,
+    "lng": 73.8567,
+    "receivingHours": "08:00–18:00"
+   },
+   {
+    "customerId": "cus_merlin",
+    "name": "Merlin Extrusions",
+    "city": "Indore",
+    "lat": 22.7196,
+    "lng": 75.8577,
+    "receivingHours": "08:00–18:00"
+   },
+   {
+    "customerId": "cus_osprey",
+    "name": "Osprey Containers",
+    "city": "Nashik",
+    "lat": 19.9975,
+    "lng": 73.7898,
+    "receivingHours": "08:00–18:00"
+   },
+   {
+    "customerId": "cus_plover",
+    "name": "Plover Packaging",
+    "city": "Surat",
+    "lat": 21.1702,
+    "lng": 72.8311,
+    "receivingHours": "08:00–18:00"
+   },
+   {
+    "customerId": "cus_shrike",
+    "name": "Shrike Pipes",
+    "city": "Nagpur",
+    "lat": 21.1458,
+    "lng": 79.0882,
+    "receivingHours": "08:00–18:00"
+   }
+  ],
+  "routes": [
+   {
+    "id": "rt_ahmedabad_a",
+    "code": "RT-AHMD-A",
+    "laneId": "lane_ahmedabad",
+    "name": "Via Surat and Vadodara",
+    "isPrimary": true,
+    "lengthKm": 540,
+    "geometry": {
+     "type": "LineString",
+     "coordinates": [
+      [
+       73.1175,
+       19.0326
+      ],
+      [
+       73.06,
+       19.3
+      ],
+      [
+       72.95,
+       19.8
+      ],
+      [
+       72.9,
+       20.37
+      ],
+      [
+       72.9,
+       20.8
+      ],
+      [
+       72.83,
+       21.17
+      ],
+      [
+       73,
+       21.7
+      ],
+      [
+       73.18,
+       22.31
+      ],
+      [
+       72.85,
+       22.7
+      ],
+      [
+       72.57,
+       23.02
+      ]
+     ],
+     "x_source": "HAND_TRACED_DEMO"
+    },
+    "segments": [
+     {
+      "name": "Plant X → Bhiwandi",
+      "endKm": 40,
+      "startKm": 0,
+      "speedKmh": 34.285714285714285,
+      "segmentCode": "PLT-BWD"
+     },
+     {
+      "name": "Bhiwandi → Vapi",
+      "endKm": 180,
+      "startKm": 40,
+      "speedKmh": 46.666666666666664,
+      "segmentCode": "BWD-VPI"
+     },
+     {
+      "name": "Vapi → Surat",
+      "endKm": 280,
+      "startKm": 180,
+      "speedKmh": 46.15384615384615,
+      "segmentCode": "VPI-SRT"
+     },
+     {
+      "name": "Surat → Vadodara",
+      "endKm": 430,
+      "startKm": 280,
+      "speedKmh": 50,
+      "segmentCode": "SRT-VDR"
+     },
+     {
+      "name": "Vadodara → Ahmedabad",
+      "endKm": 540,
+      "startKm": 430,
+      "speedKmh": 55,
+      "segmentCode": "VDR-AMD"
+     }
+    ]
+   },
+   {
+    "id": "rt_indore_a",
+    "code": "RT-INDR-A",
+    "laneId": "lane_indore",
+    "name": "Via Nashik and Dhule",
+    "isPrimary": true,
+    "lengthKm": 585,
+    "geometry": {
+     "type": "LineString",
+     "coordinates": [
+      [
+       73.1175,
+       19.0326
+      ],
+      [
+       73,
+       19.2
+      ],
+      [
+       73.2,
+       19.42
+      ],
+      [
+       73.47,
+       19.65
+      ],
+      [
+       73.6,
+       19.85
+      ],
+      [
+       73.79,
+       20
+      ],
+      [
+       74.3,
+       20.5
+      ],
+      [
+       74.77,
+       20.9
+      ],
+      [
+       75.3,
+       21.6
+      ],
+      [
+       75.86,
+       22.72
+      ]
+     ],
+     "x_source": "HAND_TRACED_DEMO"
+    },
+    "segments": [
+     {
+      "name": "Plant X → Thane",
+      "endKm": 35,
+      "startKm": 0,
+      "speedKmh": 35,
+      "segmentCode": "PLT-THN"
+     },
+     {
+      "name": "Thane → Kasara",
+      "endKm": 105,
+      "startKm": 35,
+      "speedKmh": 52.5,
+      "segmentCode": "THN-KSR"
+     },
+     {
+      "name": "Kasara → Nashik",
+      "endKm": 165,
+      "startKm": 105,
+      "speedKmh": 51.42857142857143,
+      "segmentCode": "KSR-NSK"
+     },
+     {
+      "name": "Nashik → Dhule",
+      "endKm": 325,
+      "startKm": 165,
+      "speedKmh": 48,
+      "segmentCode": "NSK-DHL"
+     },
+     {
+      "name": "Dhule → Indore",
+      "endKm": 585,
+      "startKm": 325,
+      "speedKmh": 47.27272727272727,
+      "segmentCode": "DHL-IDR"
+     }
+    ]
+   },
+   {
+    "id": "rt_nagpur_a",
+    "code": "RT-NAGP-A",
+    "laneId": "lane_nagpur",
+    "name": "Via Nashik, Aurangabad and Amravati",
+    "isPrimary": true,
+    "lengthKm": 830,
+    "geometry": {
+     "type": "LineString",
+     "coordinates": [
+      [
+       73.1175,
+       19.0326
+      ],
+      [
+       73,
+       19.2
+      ],
+      [
+       73.2,
+       19.42
+      ],
+      [
+       73.47,
+       19.65
+      ],
+      [
+       73.6,
+       19.85
+      ],
+      [
+       73.79,
+       20
+      ],
+      [
+       74.6,
+       19.95
+      ],
+      [
+       75.34,
+       19.88
+      ],
+      [
+       76.4,
+       20.4
+      ],
+      [
+       77.75,
+       20.93
+      ],
+      [
+       78.4,
+       21
+      ],
+      [
+       79.09,
+       21.15
+      ]
+     ],
+     "x_source": "HAND_TRACED_DEMO"
+    },
+    "segments": [
+     {
+      "name": "Plant X → Thane",
+      "endKm": 35,
+      "startKm": 0,
+      "speedKmh": 35,
+      "segmentCode": "PLT-THN"
+     },
+     {
+      "name": "Thane → Kasara",
+      "endKm": 105,
+      "startKm": 35,
+      "speedKmh": 52.5,
+      "segmentCode": "THN-KSR"
+     },
+     {
+      "name": "Kasara → Nashik",
+      "endKm": 165,
+      "startKm": 105,
+      "speedKmh": 51.42857142857143,
+      "segmentCode": "KSR-NSK"
+     },
+     {
+      "name": "Nashik → Aurangabad",
+      "endKm": 345,
+      "startKm": 165,
+      "speedKmh": 45,
+      "segmentCode": "NSK-AUR"
+     },
+     {
+      "name": "Aurangabad → Amravati",
+      "endKm": 675,
+      "startKm": 345,
+      "speedKmh": 47.142857142857146,
+      "segmentCode": "AUR-AMR"
+     },
+     {
+      "name": "Amravati → Nagpur",
+      "endKm": 830,
+      "startKm": 675,
+      "speedKmh": 46.5,
+      "segmentCode": "AMR-NGP"
+     }
+    ]
+   },
+   {
+    "id": "rt_nashik_a",
+    "code": "RT-NASH-A",
+    "laneId": "lane_nashik",
+    "name": "Via Thane and Kasara",
+    "isPrimary": true,
+    "lengthKm": 165,
+    "geometry": {
+     "type": "LineString",
+     "coordinates": [
+      [
+       73.1175,
+       19.0326
+      ],
+      [
+       73,
+       19.2
+      ],
+      [
+       73.2,
+       19.42
+      ],
+      [
+       73.47,
+       19.65
+      ],
+      [
+       73.6,
+       19.85
+      ],
+      [
+       73.79,
+       20
+      ]
+     ],
+     "x_source": "HAND_TRACED_DEMO"
+    },
+    "segments": [
+     {
+      "name": "Plant X → Thane",
+      "endKm": 35,
+      "startKm": 0,
+      "speedKmh": 35,
+      "segmentCode": "PLT-THN"
+     },
+     {
+      "name": "Thane → Kasara",
+      "endKm": 105,
+      "startKm": 35,
+      "speedKmh": 52.5,
+      "segmentCode": "THN-KSR"
+     },
+     {
+      "name": "Kasara → Nashik",
+      "endKm": 165,
+      "startKm": 105,
+      "speedKmh": 51.42857142857143,
+      "segmentCode": "KSR-NSK"
+     }
+    ]
+   },
+   {
+    "id": "rt_nashik_b",
+    "code": "RT-NASH-B",
+    "laneId": "lane_nashik",
+    "name": "Alternate inland road",
+    "isPrimary": false,
+    "lengthKm": 185,
+    "geometry": {
+     "type": "LineString",
+     "coordinates": [
+      [
+       73.1175,
+       19.0326
+      ],
+      [
+       73,
+       19.2
+      ],
+      [
+       73.4,
+       19.4
+      ],
+      [
+       73.75,
+       19.6
+      ],
+      [
+       73.79,
+       20
+      ]
+     ],
+     "x_source": "HAND_TRACED_DEMO"
+    },
+    "segments": [
+     {
+      "name": "Plant X → Thane",
+      "endKm": 35,
+      "startKm": 0,
+      "speedKmh": 35,
+      "segmentCode": "PLT-THN"
+     },
+     {
+      "name": "Thane → Nashik (alternate inland road)",
+      "endKm": 185,
+      "startKm": 35,
+      "speedKmh": 45,
+      "segmentCode": "THN-NSK-ALT"
+     }
+    ]
+   },
+   {
+    "id": "rt_pune_a",
+    "code": "RT-PUNE-A",
+    "laneId": "lane_pune",
+    "name": "Expressway via Khopoli–Lonavala ghat",
+    "isPrimary": true,
+    "lengthKm": 130,
+    "geometry": {
+     "type": "LineString",
+     "coordinates": [
+      [
+       73.1175,
+       19.0326
+      ],
+      [
+       73.2,
+       18.93
+      ],
+      [
+       73.34,
+       18.79
+      ],
+      [
+       73.37,
+       18.77
+      ],
+      [
+       73.405,
+       18.75
+      ],
+      [
+       73.6,
+       18.66
+      ],
+      [
+       73.86,
+       18.52
+      ]
+     ],
+     "x_source": "HAND_TRACED_DEMO"
+    },
+    "segments": [
+     {
+      "name": "Plant X → Khopoli",
+      "endKm": 45,
+      "startKm": 0,
+      "speedKmh": 30,
+      "segmentCode": "PLT-KHP"
+     },
+     {
+      "name": "Khopoli–Lonavala ghat",
+      "endKm": 65,
+      "startKm": 45,
+      "speedKmh": 20,
+      "segmentCode": "KHP-LNV-GHAT"
+     },
+     {
+      "name": "Lonavala → Pune",
+      "endKm": 130,
+      "startKm": 65,
+      "speedKmh": 32.5,
+      "segmentCode": "LNV-PUN"
+     }
+    ]
+   },
+   {
+    "id": "rt_pune_b",
+    "code": "RT-PUNE-B",
+    "laneId": "lane_pune",
+    "name": "Southern road (avoids the ghat)",
+    "isPrimary": false,
+    "lengthKm": 153,
+    "geometry": {
+     "type": "LineString",
+     "coordinates": [
+      [
+       73.1175,
+       19.0326
+      ],
+      [
+       73.2,
+       18.93
+      ],
+      [
+       73.34,
+       18.79
+      ],
+      [
+       73.25,
+       18.6
+      ],
+      [
+       73.45,
+       18.44
+      ],
+      [
+       73.86,
+       18.52
+      ]
+     ],
+     "x_source": "HAND_TRACED_DEMO"
+    },
+    "segments": [
+     {
+      "name": "Plant X → Khopoli",
+      "endKm": 45,
+      "startKm": 0,
+      "speedKmh": 30,
+      "segmentCode": "PLT-KHP"
+     },
+     {
+      "name": "Khopoli → Pune (southern road, avoids ghat)",
+      "endKm": 153,
+      "startKm": 45,
+      "speedKmh": 24,
+      "segmentCode": "KHP-PUN-S"
+     }
+    ]
+   },
+   {
+    "id": "rt_surat_a",
+    "code": "RT-SURT-A",
+    "laneId": "lane_surat",
+    "name": "Via Bhiwandi and Vapi",
+    "isPrimary": true,
+    "lengthKm": 280,
+    "geometry": {
+     "type": "LineString",
+     "coordinates": [
+      [
+       73.1175,
+       19.0326
+      ],
+      [
+       73.06,
+       19.3
+      ],
+      [
+       72.95,
+       19.8
+      ],
+      [
+       72.9,
+       20.37
+      ],
+      [
+       72.9,
+       20.8
+      ],
+      [
+       72.83,
+       21.17
+      ]
+     ],
+     "x_source": "HAND_TRACED_DEMO"
+    },
+    "segments": [
+     {
+      "name": "Plant X → Bhiwandi",
+      "endKm": 40,
+      "startKm": 0,
+      "speedKmh": 34.285714285714285,
+      "segmentCode": "PLT-BWD"
+     },
+     {
+      "name": "Bhiwandi → Vapi",
+      "endKm": 180,
+      "startKm": 40,
+      "speedKmh": 46.666666666666664,
+      "segmentCode": "BWD-VPI"
+     },
+     {
+      "name": "Vapi → Surat",
+      "endKm": 280,
+      "startKm": 180,
+      "speedKmh": 46.15384615384615,
+      "segmentCode": "VPI-SRT"
+     }
+    ]
+   },
+   {
+    "id": "rt_surat_b",
+    "code": "RT-SURT-B",
+    "laneId": "lane_surat",
+    "name": "Coastal road",
+    "isPrimary": false,
+    "lengthKm": 290,
+    "geometry": {
+     "type": "LineString",
+     "coordinates": [
+      [
+       73.1175,
+       19.0326
+      ],
+      [
+       73.06,
+       19.3
+      ],
+      [
+       72.8,
+       19.7
+      ],
+      [
+       72.72,
+       20.4
+      ],
+      [
+       72.83,
+       21.17
+      ]
+     ],
+     "x_source": "HAND_TRACED_DEMO"
+    },
+    "segments": [
+     {
+      "name": "Plant X → Bhiwandi",
+      "endKm": 40,
+      "startKm": 0,
+      "speedKmh": 34.285714285714285,
+      "segmentCode": "PLT-BWD"
+     },
+     {
+      "name": "Bhiwandi → Surat (coastal road)",
+      "endKm": 290,
+      "startKm": 40,
+      "speedKmh": 41.666666666666664,
+      "segmentCode": "BWD-SRT-COAST"
+     }
+    ]
+   }
+  ],
+  "activeDisruptions": [
+   {
+    "id": "dis_1795064400_1",
+    "kind": "WEATHER_SLOWDOWN",
+    "label": "Heavy rain on ghat section",
+    "segmentCodes": [
+     "KHP-LNV-GHAT"
+    ]
+   }
+  ]
+ },
+ "positions": {
+  "simTime": "2026-11-19T05:50:00.000Z",
+  "items": [
+   {
+    "shipmentId": "shp_1036",
+    "code": "SHP-1036",
+    "routeId": "rt_surat_a",
+    "lat": 19.817367083638942,
+    "lng": 72.94847657161063,
+    "bearing": 355,
+    "progressPct": 37.1,
+    "currentMilestone": "IN_TRANSIT",
+    "riskLevel": "WATCH",
+    "stopped": false
+   },
+   {
+    "shipmentId": "shp_1037",
+    "code": "SHP-1037",
+    "routeId": "rt_ahmedabad_a",
+    "lat": 19.785041853760866,
+    "lng": 72.95329079217261,
+    "bearing": 348,
+    "progressPct": 18.1,
+    "currentMilestone": "IN_TRANSIT",
+    "riskLevel": "WATCH",
+    "stopped": false
+   },
+   {
+    "shipmentId": "shp_1038",
+    "code": "SHP-1038",
+    "routeId": "rt_nagpur_a",
+    "lat": 19.694152547538234,
+    "lng": 73.49869915589986,
+    "bearing": 33,
+    "progressPct": 13.6,
+    "currentMilestone": "IN_TRANSIT",
+    "riskLevel": "WATCH",
+    "stopped": false
+   },
+   {
+    "shipmentId": "shp_1039",
+    "code": "SHP-1039",
+    "routeId": "rt_pune_a",
+    "lat": 18.770702729998725,
+    "lng": 73.36894590500192,
+    "bearing": 124,
+    "progressPct": 40.2,
+    "currentMilestone": "IN_TRANSIT",
+    "riskLevel": "AT_RISK",
+    "stopped": false
+   },
+   {
+    "shipmentId": "shp_1040",
+    "code": "SHP-1040",
+    "routeId": "rt_indore_a",
+    "lat": 19.522602337194645,
+    "lng": 73.32044622192414,
+    "bearing": 50,
+    "progressPct": 13.8,
+    "currentMilestone": "IN_TRANSIT",
+    "riskLevel": "WATCH",
+    "stopped": false
+   },
+   {
+    "shipmentId": "shp_1041",
+    "code": "SHP-1041",
+    "routeId": "rt_pune_a",
+    "lat": 18.782456482511613,
+    "lng": 73.35131527623258,
+    "bearing": 124,
+    "progressPct": 37.9,
+    "currentMilestone": "IN_TRANSIT",
+    "riskLevel": "AT_RISK",
+    "stopped": false
+   },
+   {
+    "shipmentId": "shp_1042",
+    "code": "SHP-1042",
+    "routeId": "rt_pune_a",
+    "lat": 18.79958739437978,
+    "lng": 73.33041260562023,
+    "bearing": 135,
+    "progressPct": 34.9,
+    "currentMilestone": "IN_TRANSIT",
+    "riskLevel": "AT_RISK",
+    "stopped": true
+   },
+   {
+    "shipmentId": "shp_1043",
+    "code": "SHP-1043",
+    "routeId": "rt_nashik_a",
+    "lat": 19.43809893766629,
+    "lng": 73.22124657899955,
+    "bearing": 50,
+    "progressPct": 39.8,
+    "currentMilestone": "IN_TRANSIT",
+    "riskLevel": "WATCH",
+    "stopped": false
+   },
+   {
+    "shipmentId": "shp_1044",
+    "code": "SHP-1044",
+    "routeId": "rt_surat_a",
+    "lat": 19.346806832777464,
+    "lng": 73.04970249678897,
+    "bearing": 348,
+    "progressPct": 14.8,
+    "currentMilestone": "IN_TRANSIT",
+    "riskLevel": "WATCH",
+    "stopped": false
+   },
+   {
+    "shipmentId": "shp_1045",
+    "code": "SHP-1045",
+    "routeId": "rt_nagpur_a",
+    "lat": 19.263192154004436,
+    "lng": 73.0574474127313,
+    "bearing": 42,
+    "progressPct": 4.4,
+    "currentMilestone": "IN_TRANSIT",
+    "riskLevel": "WATCH",
+    "stopped": false
+   },
+   {
+    "shipmentId": "shp_1046",
+    "code": "SHP-1046",
+    "routeId": "rt_pune_a",
+    "lat": 18.882754658977813,
+    "lng": 73.2472453410222,
+    "bearing": 135,
+    "progressPct": 21.9,
+    "currentMilestone": "IN_TRANSIT",
+    "riskLevel": "AT_RISK",
+    "stopped": false
+   },
+   {
+    "shipmentId": "shp_1047",
+    "code": "SHP-1047",
+    "routeId": "rt_indore_a",
+    "lat": 19.157021488060554,
+    "lng": 73.03016711560863,
+    "bearing": 325,
+    "progressPct": 3.2,
+    "currentMilestone": "IN_TRANSIT",
+    "riskLevel": "WATCH",
+    "stopped": false
+   }
+  ]
+ },
+ "customerShipments": {
+  "items": [
+   {
+    "view": "customer",
+    "id": "shp_1042",
+    "code": "SHP-1042",
+    "orderId": "ord_7781",
+    "orderCode": "ORD-7781",
+    "laneName": "Plant X → Pune",
+    "transporterName": "Ghatline Carriers",
+    "currentMilestone": "IN_TRANSIT",
+    "etaAt": "2026-11-20T02:30:00.000Z",
+    "etaLowAt": "2026-11-20T01:10:00.000Z",
+    "etaHighAt": "2026-11-20T03:50:00.000Z",
+    "promisedBy": "2026-11-19T12:30:00.000Z",
+    "riskLevel": "AT_RISK",
+    "plainStatus": "On the way · expected Fri 08:00",
+    "arrivedAt": null,
+    "deliveredAt": null,
+    "onTime": null
+   },
+   {
+    "view": "customer",
+    "id": "shp_1039",
+    "code": "SHP-1039",
+    "orderId": "ord_7778",
+    "orderCode": "ORD-7778",
+    "laneName": "Plant X → Pune",
+    "transporterName": "Bluehill Transport",
+    "currentMilestone": "IN_TRANSIT",
+    "etaAt": "2026-11-19T09:51:00.000Z",
+    "etaLowAt": "2026-11-19T09:41:00.000Z",
+    "etaHighAt": "2026-11-19T10:01:00.000Z",
+    "promisedBy": "2026-11-19T09:30:00.000Z",
+    "riskLevel": "AT_RISK",
+    "plainStatus": "On the way · expected 15:21",
+    "arrivedAt": null,
+    "deliveredAt": null,
+    "onTime": null
+   },
+   {
+    "view": "customer",
+    "id": "shp_1041",
+    "code": "SHP-1041",
+    "orderId": "ord_7780",
+    "orderCode": "ORD-7780",
+    "laneName": "Plant X → Pune",
+    "transporterName": "Northstar Haulage",
+    "currentMilestone": "IN_TRANSIT",
+    "etaAt": "2026-11-19T10:13:00.000Z",
+    "etaLowAt": "2026-11-19T09:58:00.000Z",
+    "etaHighAt": "2026-11-19T10:28:00.000Z",
+    "promisedBy": "2026-11-19T10:00:00.000Z",
+    "riskLevel": "AT_RISK",
+    "plainStatus": "On the way · expected 15:43",
+    "arrivedAt": null,
+    "deliveredAt": null,
+    "onTime": null
+   },
+   {
+    "view": "customer",
+    "id": "shp_1046",
+    "code": "SHP-1046",
+    "orderId": "ord_7785",
+    "orderCode": "ORD-7785",
+    "laneName": "Plant X → Pune",
+    "transporterName": "Bluehill Transport",
+    "currentMilestone": "IN_TRANSIT",
+    "etaAt": "2026-11-19T11:31:00.000Z",
+    "etaLowAt": "2026-11-19T11:16:00.000Z",
+    "etaHighAt": "2026-11-19T11:46:00.000Z",
+    "promisedBy": "2026-11-19T11:30:00.000Z",
+    "riskLevel": "AT_RISK",
+    "plainStatus": "On the way · expected 17:01",
+    "arrivedAt": null,
+    "deliveredAt": null,
+    "onTime": null
+   }
+  ]
+ },
+ "customerAlerts": {
+  "items": [
+   {
+    "view": "customer",
+    "id": "alr_shp_1042_1795066800",
+    "status": "OPEN",
+    "openedAt": "2026-11-19T05:40:00.000Z",
+    "shipmentId": "shp_1042",
+    "shipmentCode": "SHP-1042",
+    "orderCode": "ORD-7781",
+    "predictedArrivalAt": "2026-11-20T02:30:00.000Z",
+    "etaLowAt": "2026-11-20T01:10:00.000Z",
+    "etaHighAt": "2026-11-20T03:50:00.000Z",
+    "promisedBy": "2026-11-19T12:30:00.000Z",
+    "plainReason": "Vehicle breakdown on the route",
+    "action": null,
+    "customerResponse": null,
+    "customerRespondedAt": null,
+    "canRespond": true
+   },
+   {
+    "view": "customer",
+    "id": "alr_shp_1046_1795064400",
+    "status": "OPEN",
+    "openedAt": "2026-11-19T05:00:00.000Z",
+    "shipmentId": "shp_1046",
+    "shipmentCode": "SHP-1046",
+    "orderCode": "ORD-7785",
+    "predictedArrivalAt": "2026-11-19T11:31:00.000Z",
+    "etaLowAt": "2026-11-19T11:16:00.000Z",
+    "etaHighAt": "2026-11-19T11:46:00.000Z",
+    "promisedBy": "2026-11-19T11:30:00.000Z",
+    "plainReason": "Heavy rain on the route",
+    "action": null,
+    "customerResponse": null,
+    "customerRespondedAt": null,
+    "canRespond": true
+   },
+   {
+    "view": "customer",
+    "id": "alr_shp_1041_1795064400",
+    "status": "OPEN",
+    "openedAt": "2026-11-19T05:00:00.000Z",
+    "shipmentId": "shp_1041",
+    "shipmentCode": "SHP-1041",
+    "orderCode": "ORD-7780",
+    "predictedArrivalAt": "2026-11-19T10:13:00.000Z",
+    "etaLowAt": "2026-11-19T09:58:00.000Z",
+    "etaHighAt": "2026-11-19T10:28:00.000Z",
+    "promisedBy": "2026-11-19T10:00:00.000Z",
+    "plainReason": "Heavy rain on the route",
+    "action": null,
+    "customerResponse": null,
+    "customerRespondedAt": null,
+    "canRespond": true
+   },
+   {
+    "view": "customer",
+    "id": "alr_shp_1039_1795064400",
+    "status": "OPEN",
+    "openedAt": "2026-11-19T05:00:00.000Z",
+    "shipmentId": "shp_1039",
+    "shipmentCode": "SHP-1039",
+    "orderCode": "ORD-7778",
+    "predictedArrivalAt": "2026-11-19T09:51:00.000Z",
+    "etaLowAt": "2026-11-19T09:41:00.000Z",
+    "etaHighAt": "2026-11-19T10:01:00.000Z",
+    "promisedBy": "2026-11-19T09:30:00.000Z",
+    "plainReason": "Heavy rain on the route",
+    "action": null,
+    "customerResponse": null,
+    "customerRespondedAt": null,
+    "canRespond": true
+   }
+  ]
+ },
+ "arrivedDetail": {
+  "shipment": {
+   "view": "coordinator",
+   "id": "shp_1043",
+   "code": "SHP-1043",
+   "orderId": "ord_7782",
+   "orderCode": "ORD-7782",
+   "customer": {
+    "id": "cus_osprey",
+    "name": "Osprey Containers",
+    "city": "Nashik"
+   },
+   "lane": {
+    "id": "lane_nashik",
+    "name": "Plant X → Nashik"
+   },
+   "transporter": {
+    "id": "trn_bluehill",
+    "name": "Bluehill Transport",
+    "isSmall": false
+   },
+   "truckCode": "TRK-32",
+   "currentMilestone": "ARRIVED",
+   "etaAt": "2026-11-19T07:51:00.000Z",
+   "etaLowAt": "2026-11-19T07:51:00.000Z",
+   "etaHighAt": "2026-11-19T07:51:00.000Z",
+   "promisedBy": "2026-11-19T09:30:00.000Z",
+   "slackMinutes": 99,
+   "riskLevel": "WATCH",
+   "riskScore": 34,
+   "confidence": "HIGH",
+   "hasOpenAlert": false,
+   "pendingReportCount": 0,
+   "parentShipmentId": null,
+   "arrivedAt": "2026-11-19T07:51:02.000Z",
+   "deliveredAt": null,
+   "onTime": true,
+   "delayMinutes": 0,
+   "route": {
+    "id": "rt_nashik_a",
+    "code": "RT-NASH-A",
+    "name": "Via Thane and Kasara",
+    "isPrimary": true,
+    "lengthKm": 165
+   },
+   "driver": {
+    "id": "usr_drv_gopal",
+    "name": "Gopal",
+    "phone": "+91-00000-00008"
+   },
+   "items": [
+    {
+     "orderLineId": "oln_7782_pxpp110",
+     "gradeCode": "PX-PP 110",
+     "quantityT": 20,
+     "isUrgent": false
+    }
+   ],
+   "milestones": [
+    {
+     "milestone": "ORDER_CONFIRMED",
+     "state": "DONE",
+     "at": "2026-11-17T04:30:00.000Z",
+     "source": "SEED",
+     "actorName": null
+    },
+    {
+     "milestone": "TRUCK_ASSIGNED",
+     "state": "DONE",
+     "at": "2026-11-18T10:30:00.000Z",
+     "source": "SEED",
+     "actorName": null
+    },
+    {
+     "milestone": "AT_GATE",
+     "state": "DONE",
+     "at": "2026-11-19T03:10:00.000Z",
+     "source": "SIMULATION",
+     "actorName": null
+    },
+    {
+     "milestone": "LOADING",
+     "state": "DONE",
+     "at": "2026-11-19T03:30:00.000Z",
+     "source": "SIMULATION",
+     "actorName": null
+    },
+    {
+     "milestone": "GATE_OUT",
+     "state": "DONE",
+     "at": "2026-11-19T04:10:00.000Z",
+     "source": "SIMULATION",
+     "actorName": null
+    },
+    {
+     "milestone": "IN_TRANSIT",
+     "state": "DONE",
+     "at": "2026-11-19T04:10:00.000Z",
+     "source": "SIMULATION",
+     "actorName": null
+    },
+    {
+     "milestone": "ARRIVED",
+     "state": "CURRENT",
+     "at": "2026-11-19T07:51:02.000Z",
+     "source": "SIMULATION",
+     "actorName": null
+    },
+    {
+     "milestone": "DELIVERED",
+     "state": "PENDING",
+     "at": null,
+     "source": null,
+     "actorName": null
+    }
+   ],
+   "plannedArrivalAt": "2026-11-19T07:20:00.000Z",
+   "originalPromisedBy": "2026-11-19T09:30:00.000Z",
+   "renegotiated": false,
+   "receivingWindowOverrideEndAt": null,
+   "progressKm": 165,
+   "stopped": false,
+   "stoppedUntil": null,
+   "lastUpdateAt": "2026-11-19T07:40:00.000Z",
+   "firstAtRiskAt": null,
+   "customerNotifiedAt": null,
+   "physicalArrivalAt": "2026-11-19T07:51:02.000Z",
+   "childShipmentIds": [],
+   "openAlert": null,
+   "latestCustomerResponse": null
+  }
+ },
+ "arrivedAttribution": {
+  "shipmentId": "shp_1043",
+  "status": "FINAL",
+  "delayMinutes": 0,
+  "totalsByParty": {
+   "PLANT": 20,
+   "TRANSPORTER": 11,
+   "CUSTOMER": 0,
+   "EXTERNAL": 0,
+   "UNATTRIBUTED": 0
+  },
+  "rows": [
+   {
+    "id": "da_shp_1043_GATE_PLANT",
+    "sourceKey": "GATE",
+    "factor": "GATE",
+    "reason": "PLANT_GATE_WAIT",
+    "kind": "TIME_LOST",
+    "label": "Plant gate wait and loading",
+    "party": "PLANT",
+    "minutes": 20,
+    "status": "FINAL",
+    "originalParty": null,
+    "overrideNote": null,
+    "overriddenBy": null,
+    "overriddenAt": null
+   },
+   {
+    "id": "da_shp_1043_HIST_TRANSPORTER",
+    "sourceKey": "HIST",
+    "factor": "HIST",
+    "reason": "TRANSPORTER_PACE",
+    "kind": "TIME_LOST",
+    "label": "Transporter pace (from delivered history)",
+    "party": "TRANSPORTER",
+    "minutes": 11,
+    "status": "FINAL",
+    "originalParty": null,
+    "overrideNote": null,
+    "overriddenBy": null,
+    "overriddenAt": null
+   }
+  ],
+  "countsAgainstTransporter": false,
+  "ruleText": "Counts against the transporter only if the shipment would have been on time without the transporter's minutes."
+ }
+}

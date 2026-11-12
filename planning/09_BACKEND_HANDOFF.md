@@ -2,7 +2,7 @@
 
 Living document maintained by the backend (branch `backend`). It lists **only what is implemented and tested**. The full target contract is `06_API_SPEC.md`; types live in `packages/shared`.
 
-Last updated: 2026-11-12 — **Milestone 6 (delay attribution, driver reports)**.
+Last updated: 2026-11-12 — **Combined Milestone 1 (M7: disruptions, alerts, notifications; control tower on real APIs)**.
 
 ---
 
@@ -62,12 +62,34 @@ Status per code: `VALIDATION_ERROR` 400 · `UNAUTHENTICATED` 401 · `FORBIDDEN`/
 | POST | `/api/sim/reset` (#6) | Coordinator + `DEMO_MODE` | Implemented + tested |
 | GET | `/api/shipments/:shipmentId/eta` (#18) | Coordinator, Customer (own) | Implemented + tested |
 | GET | `/api/engine/rules` (#20) | Session (any role) | Implemented + tested |
+| GET | `/api/disruptions` (#7) | Coordinator | Implemented + tested |
+| POST | `/api/disruptions` (#8) | Coordinator + `DEMO_MODE` | Implemented + tested |
+| POST | `/api/disruptions/:disruptionId/end` (#9) | Coordinator + `DEMO_MODE` | Implemented + tested |
+| GET | `/api/map/layers` (#10) | Any (scoped) | Implemented + tested |
+| GET | `/api/tracking/positions` (#11) | Any (scoped) | Implemented + tested |
+| GET | `/api/shipments` (#14) | Coordinator, Customer (own) | Implemented + tested |
+| GET | `/api/shipments/:shipmentId` (#15) | Coordinator, Customer (own) | Implemented + tested |
+| GET | `/api/shipments/:shipmentId/timeline` (#16) | Coordinator, Customer (own, filtered) | Implemented + tested |
+| GET | `/api/alerts` (#26), `/api/alerts/:alertId` (#27) | Coordinator, Customer (own) | Implemented + tested |
+| POST | `/api/alerts/:alertId/customer-response` (#28) | Customer (own) | Implemented + tested (NEW_WINDOW branch in M8) |
+| GET | `/api/notifications` (#31) · POST `/:id/read` (#32) · POST `/read-all` (#33) | Coordinator, Customer | Implemented + tested |
+| GET | `/api/audit` (#37) | Coordinator | Implemented + tested |
+| GET | `/api/reference` (#38) | Coordinator | Implemented + tested |
 | POST | `/api/driver-reports/classify` (#22) | Driver, Coordinator | Implemented + tested |
 | POST | `/api/shipments/:shipmentId/driver-reports` (#23) | Driver (own shipment), Coordinator | Implemented + tested |
 | GET | `/api/driver-reports` (#24) | Coordinator | Implemented + tested |
 | POST | `/api/driver-reports/:reportId/review` (#25) | Coordinator | Implemented + tested |
 | GET | `/api/shipments/:shipmentId/attribution` (#34) | Coordinator | Implemented + tested |
 | POST | `/api/shipments/:shipmentId/attribution/overrides` (#35) | Coordinator | Implemented + tested |
+
+### Control tower, disruptions and alerts (Combined Milestone 1) — what the SPA does
+- **Lists and detail:** #14 (`status=live&sort=risk` for the tower; filters `riskLevel` repeated, `laneId`, `transporterId`, `customerId` coordinator only, `arrivedFrom/To`, `onTime`, `q` ≤ 32, `sort`, `limit` ≤ 200, unknown params → 400), #15 detail, #16 timeline. Customer views never contain driver identity, parties, factor codes or scores.
+- **Map:** #10 (coordinator: all sites, routes, active disruptions; customer: own site and lane routes, no disruptions; driver: own route and destination; every route has `geometry.x_source = "HAND_TRACED_DEMO"` → show "illustrative routes"), #11 positions at the current simulation time (extrapolated between steps, poll every 1 s while running).
+- **Disruptions (#7–#9):** create returns `{ disruption, impact }` with `impact.summary` ("4 shipments affected · 3 at risk · 3 now At risk · 1 now Watch") and `levelChanges`; end early with an empty body; 409 `ALREADY_DONE` when already ended.
+- **Alerts (#26–#28):** open automatically when a shipment becomes At risk or Late (one per episode, no duplicates); resolve when it drops below At risk (BACK_ON_TRACK) or arrives (ARRIVED_LATE if late). Coordinator alert `summary` = level + top factor at opening; `proposedOption` is null until M8 — show "View shipment", not "View options". Customer alert: plain reason, `action: null` → "Plant X team is reviewing options", `canRespond`.
+- **Notifications (#31–#33):** `{ items, unreadCount }` newest first; read one is idempotent; read-all returns `{ updated, unreadCount: 0 }`; `/api/sync.unreadNotifications` follows.
+- **Audit (#37):** activity feed; `data.shipmentCode` is present on milestone, report, review, alert, override and response entries.
+- **Recovery:** #29/#30 do not exist yet; the UI shows the not-available notice (`RECOVERY_AVAILABLE` flag).
 
 ### Driver reports and attribution (Milestone 6) — what the SPA must do
 - **Classify while typing (#22):** `POST /api/driver-reports/classify` `{ "text": "tyre puncture near Lonavala" }` → `ClassifyResponse` `{ suggestedReason: "BREAKDOWN", matchedKeywords: ["tyre","puncture"], strength: "STRONG", defaultMinutes: 180, defaultParty: "TRANSPORTER", method: "KEYWORD_LIST_V1" }`. Writes nothing. Show "Suggested: Breakdown — matched: tyre, puncture. Is this right?"; with `suggestedReason: null` show "No suggestion — please pick a reason". `defaultParty` is null for Documents (depends on gate-out). Text 1–280 chars after trim. Customers → 403.
@@ -132,9 +154,10 @@ Type: `HealthResponse`. `serverTime` is wall-clock time, not simulation time.
 | `ApiError`, `ErrorCode`, `ValidationIssue`, `ListResponse<T>`, `Id`, `ISODateTime`, `Minutes`, `Pct` | All | |
 | `SimStateDto`, `SyncResponse`, `SimClockRequest`, `SimClockResponse`, `SimResetRequest`, `SimResetResponse` | #4, #5, #6 | **Implemented** (Milestone 4) |
 | `Factor`, `FactorPhase` (`FACTOR_PHASES`), `PartyMinutes`, `EtaExplanationCoordinator`, `EtaSummaryCustomer`, `EtaResponse`, `EngineRulesResponse`, `RULE_VERSION` | #18, #20 (and later #19 replay, #23, #30) | **Implemented** (Milestone 5) |
+| Shipments (`ShipmentListItem*`, `ShipmentDetail*`, `MilestoneEntry`, `AlertSummary`, `TimelineEvent`, `ShipmentListQuery`), alerts/notifications (`AlertDto*`, `CustomerAlertDto`, `RecoveryOptionDto`, `NotificationDto`, `NotificationsResponse`, `CustomerResponseRequest`), disruptions (`DisruptionDto`, `CreateDisruptionRequest/Response`), map (`MapLayersResponse`, `PositionItem`, `PositionsResponse`), `AuditItem/Response/Query`, `ReferenceResponse`; `GeoJSONLineString.x_source?` | #7–#11, #14–#16, #26–#28, #31–#33, #37, #38 | **Implemented** (Combined M1) — moved verbatim from the web's `pending.ts` |
 | `DriverReportDto`, `DriverTripShipment`, `DriverHandover`, `ClassifyRequest`, `ClassifyResponse`, `CreateDriverReportRequest`, `CreateDriverReportResponse`, `DriverReportListResponse`, `ReviewDriverReportRequest`, `ReviewDriverReportResponse`, `REPORT_ESTIMATE_MINUTES`, `AttributionRowDto`, `AttributionResponse`, `AttributionOverrideRequest` | #21 (DTO only), #22–#25, #34, #35 | **Implemented** (Milestone 6). `CreateDriverReportRequest` narrows `chipReason`/`reason` to `DriverReasonCode` (the documented validation). `DriverTripShipment.instruction` is always null until recovery (Milestone 7) |
 
-**Action for the web app (type collisions):** `apps/web/src/api/contract/pending.ts` still declares 20 types that are now published here, so `npm run typecheck -w @routepulse/web` fails with "already exported" errors: `AttributionOverrideRequest`, `AttributionResponse`, `AttributionRowDto`, `ClassifyRequest`, `ClassifyResponse`, `CreateDriverReportRequest`, `CreateDriverReportResponse`, `DriverHandover`, `DriverReportDto`, `DriverTripShipment`, `EngineRulesResponse`, `EtaExplanationCoordinator`, `EtaSummaryCustomer`, `Factor`, `PartyMinutes`, `ReviewDriverReportRequest`, `ReviewDriverReportResponse`, `SimClockRequest`, `SimClockResponse`, `SimResetResponse`. Delete them from `pending.ts` and import them from `@routepulse/shared` where the remaining pending types use them. (The backend does not edit `apps/web`.)
+**Resolved 2026-11-12 (Phase Zero):** the 20 duplicates below were removed from `pending.ts`; the web app imports them from `@routepulse/shared` and `npm run typecheck` (all packages) is clean. Previously: **Action for the web app (type collisions):** `apps/web/src/api/contract/pending.ts` still declares 20 types that are now published here, so `npm run typecheck -w @routepulse/web` fails with "already exported" errors: `AttributionOverrideRequest`, `AttributionResponse`, `AttributionRowDto`, `ClassifyRequest`, `ClassifyResponse`, `CreateDriverReportRequest`, `CreateDriverReportResponse`, `DriverHandover`, `DriverReportDto`, `DriverTripShipment`, `EngineRulesResponse`, `EtaExplanationCoordinator`, `EtaSummaryCustomer`, `Factor`, `PartyMinutes`, `ReviewDriverReportRequest`, `ReviewDriverReportResponse`, `SimClockRequest`, `SimClockResponse`, `SimResetResponse`. Delete them from `pending.ts` and import them from `@routepulse/shared` where the remaining pending types use them. (The backend does not edit `apps/web`.)
 | `UserDto`, `LoginRequest`, `LoginResponse`, `MeResponse`, `HomePath`, `SESSION_COOKIE_NAME` | #1–#3 | **Implemented** (Milestone 3) |
 
 You may build against these with fixtures; field names will not change without a note here.
@@ -165,7 +188,7 @@ Log in with these accounts through `/api/auth/login` (Milestone 3). Right after 
 
 ## 7. Known incomplete functionality
 
-Implemented: `/api/health`, authentication (#1–#3), the simulation clock (#4–#6), ETA explanation (#18), engine rules (#20), driver reports (#22–#25) and attribution (#34, #35). Not yet implemented: shipments/orders lists and detail, timeline, replay (#19), driver trip (#21), map layers and positions, disruption endpoints (#7–#9), alerts, recovery, notifications endpoints (the `REPORT_NEEDS_REVIEW` row is already written), analytics (raw/fair on-time is computed in the service, not yet exposed). Next: Milestone 7, after approval.
+Implemented: #1–#11, #14–#16, #18, #20, #22–#28, #31–#35, #37, #38 and `/api/health`. Not yet implemented: orders (#12, #13), milestone taps over HTTP (#17), replay (#19), driver trip (#21), recovery options and choose (#29, #30), the NEW_WINDOW branch of #28, analytics dashboard (#36). Next: Combined Milestone 2 (recovery), after approval.
 
 ## 8. Contract change log
 
@@ -174,6 +197,7 @@ Implemented: `/api/health`, authentication (#1–#3), the simulation clock (#4�
 | 2026-11-12 | Initial publish: enums, base types, `HealthResponse`, `SimStateDto`, `SyncResponse` | — |
 | 2026-11-12 | Added `Segment`, `GeoJSONLineString`, `GeometrySource`, `PLANT`, `DISPLAY_TIME_ZONE`, `RISK_THRESHOLDS`, `SMALL_FLEET_MAX` | No |
 | 2026-11-12 | Added `SimClockRequest`, `SimClockResponse`, `SimResetRequest`, `SimResetResponse` (as specified in API §5); #4–#6 implemented | No |
+| 2026-11-12 | Combined M1: published shipments, alerts, notifications, disruptions, map, audit, reference DTOs (moved from the web's `pending.ts`, identical); `GeoJSONLineString.x_source?` added (optional) | No |
 | 2026-11-12 | Added driver-report, driver-trip and attribution types (API §2.2, §9, §12); #22–#25, #34, #35 implemented; attribution final at arrival (L1); ETA bars follow the ledger party | No |
 | 2026-11-12 | Added `Factor`, `FactorPhase`, `FACTOR_PHASES`, `PartyMinutes`, `EtaExplanationCoordinator`, `EtaSummaryCustomer`, `EtaResponse`, `EngineRulesResponse`, `RULE_VERSION` (as specified in API §2 and §8); #18 and #20 implemented; manual hero truck now refreshes `lastUpdateAt` via simulated GPS (O-14) | No |
 | 2026-11-12 | Added `UserDto`, `HomePath`, `LoginRequest`, `LoginResponse`, `MeResponse`, `SESSION_COOKIE_NAME` (already specified in API §2.2/§4; now published). Unauthenticated calls to unknown `/api` paths now return 401 instead of 404 | No (new types); behaviour change for unknown paths only |

@@ -7,6 +7,8 @@ import { PlannedScreen } from './PlannedScreen';
 
 const LoginPage = lazy(() => import('../features/auth/LoginPage'));
 const ControlTowerPage = lazy(() => import('../features/control-tower/ControlTowerPage'));
+const ShipmentDetailPage = lazy(() => import('../features/shipment/ShipmentDetailPage'));
+const SimulationPage = lazy(() => import('../features/simulation/SimulationPage'));
 
 /** Three route trees + login (UI plan §3, architecture §5.1). Each tree has its own error boundary. */
 export const routes: RouteObject[] = [
@@ -26,11 +28,11 @@ export const routes: RouteObject[] = [
     errorElement: <RouteErrorBoundary />,
     children: [
       { path: 'control-tower', element: <ControlTowerPage /> },
-      { path: 'shipments/:id', element: <PlannedScreen title="Shipment detail" task="11.3" /> },
+      { path: 'shipments/:id', element: <ShipmentDetailPage /> },
       { path: 'shipments/:id/replay', element: <PlannedScreen title="Replay" task="11.6" /> },
       { path: 'dashboard', element: <PlannedScreen title="Dashboard" task="14.2" /> },
       { path: 'reports', element: <PlannedScreen title="Driver reports" task="11.8" /> },
-      { path: 'simulation', element: <PlannedScreen title="Simulation" task="11.7" /> },
+      { path: 'simulation', element: <SimulationPage /> },
     ],
   },
   {

@@ -181,10 +181,11 @@ export async function overrideAttribution(
   }
   const n = await tx.shipmentEvent.count({ where: { shipmentId: row.shipmentId, type: 'ATTRIBUTION_OVERRIDDEN' } });
   const data = { attributionId: resultId, sourceKey: row.sourceKey, fromParty: row.party, toParty: input.newParty, seconds: row.delaySeconds, note: input.note };
+  const code = (await tx.shipment.findUniqueOrThrow({ where: { id: row.shipmentId }, select: { code: true } })).code;
   await tx.shipmentEvent.create({
     data: { id: `sev_${row.shipmentId}_OVERRIDE_${n + 1}`, shipmentId: row.shipmentId, type: 'ATTRIBUTION_OVERRIDDEN', simTime: fromS(actionS), source: 'COORDINATOR', actorUserId: input.actor.userId, data },
   });
-  await writeAudit(tx, { actorUserId: input.actor.userId, actorRole: input.actor.role, action: 'attribution.override', entityType: 'DelayAttribution', entityId: resultId, data });
+  await writeAudit(tx, { actorUserId: input.actor.userId, actorRole: input.actor.role, action: 'attribution.override', entityType: 'DelayAttribution', entityId: resultId, data: { ...data, shipmentId: row.shipmentId, shipmentCode: code } });
 }
 
 /**

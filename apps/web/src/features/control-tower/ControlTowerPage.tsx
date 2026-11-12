@@ -158,6 +158,13 @@ export default function ControlTowerPage() {
               {user.role === 'COORDINATOR' ? <SimulationDock /> : null}
             </MapView>
           )}
+          {positions.isError && !layers.isError ? (
+            <div className="absolute top-3 right-3 z-10 max-w-[280px]">
+              <Banner tone="warning" live>
+                Live truck positions are unavailable right now; the shipment list is current.
+              </Banner>
+            </div>
+          ) : null}
           {!isXl ? (
             <Button size="sm" icon={PanelRightIcon} className="absolute top-3 left-3 z-10 shadow-sm" onClick={() => setDrawerOpen(true)}>
               {selectedId ? 'Shipment panel' : 'Alerts & activity'}

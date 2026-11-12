@@ -17,6 +17,7 @@ import { createSimulationService, type RecalcHook, type SimulationService } from
 import { simRouter } from './routes/sim.js';
 import { etaRouter } from './routes/eta.js';
 import { reportsRouter } from './routes/reports.js';
+import { worldRouter } from './routes/world.js';
 
 export interface AppDeps {
   config: AppConfig;
@@ -81,6 +82,7 @@ export function createApp({ config, prisma, logger, now = Date.now, loginRateLim
   app.use('/api', simRouter(sim, prisma, config));
   app.use('/api', etaRouter(sim));
   app.use('/api', reportsRouter(sim, prisma));
+  app.use('/api', worldRouter(sim, prisma, config));
   // (Further protected routers are mounted here in later milestones, each with requireRole + scope policies.)
   app.use('/api', apiNotFound);
 

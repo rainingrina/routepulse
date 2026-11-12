@@ -15,6 +15,8 @@ export interface Segment {
 export interface GeoJSONLineString {
   type: 'LineString';
   coordinates: [number, number][];
+  /** GeoJSON foreign member naming the geometry's origin; every seed route is 'HAND_TRACED_DEMO'. */
+  x_source?: GeometrySource;
 }
 
 /**

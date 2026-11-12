@@ -5,7 +5,8 @@ import { cn } from '../components/cn';
 import { ChevronDown, Layers, ICON_STROKE } from '../components/icons';
 
 /** Collapsible legend, bottom-left (UI plan §6.4). Basemap note is explicit: offline land only for now. */
-export function MapLegend({ showDisruptions }: { showDisruptions: boolean }) {
+/** `illustrativeRoutes`: at least one route line is hand-traced demo geometry (`x_source: HAND_TRACED_DEMO`). */
+export function MapLegend({ showDisruptions, illustrativeRoutes = false }: { showDisruptions: boolean; illustrativeRoutes?: boolean }) {
   const [open, setOpen] = useState(true);
   return (
     <div className="absolute bottom-3 left-3 z-10 max-w-[240px] rounded-lg border border-border bg-surface/95 text-small shadow-sm">
@@ -47,6 +48,7 @@ export function MapLegend({ showDisruptions }: { showDisruptions: boolean }) {
               Active disruption
             </li>
           ) : null}
+          {illustrativeRoutes ? <li className="pt-1 text-[11px] leading-4 text-text-muted">Route lines are hand-traced illustrations, not routing output</li> : null}
           <li className="pt-1 text-[11px] leading-4 text-text-muted">Offline map · basemap detail pending</li>
         </ul>
       ) : null}

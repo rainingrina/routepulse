@@ -19,6 +19,25 @@ Entries below describe the backend (branch `backend`) and frontend (branch `fron
   - 72 unit tests (API client, retry/session rules, role guard, formatting, login validation, status badges, list filters, activity summaries, recovery ordering, map geometry, mock fixture identity checks).
   - `docs/FRONTEND_BACKEND_HANDOFF.md`.
 
+### Added (Combined Milestone 1 — M7 + real control tower)
+- **Backend:** shipments list/detail (#14, #15), timeline (#16), map layers (#10, `x_source` kept) and positions (#11, extrapolated read-only with the same engine), audit (#37), reference (#38), disruptions list/create/end (#7–#9, through `applyChange` and the pipeline, with impact summary), alert engine inside the pipeline (open on AT_RISK/LATE, one active per shipment, firstAtRiskAt/customerNotifiedAt, resolve on level drop or arrival, ARRIVED_LATE at finalisation), notifications (#31–#33, scoped, shared coordinator read state), alerts (#26, #27) and customer response (#28 without the NEW_WINDOW branch). Deterministic ids for alerts, notifications and events.
+- **Shared contracts:** moved from the web's `pending.ts` to `@routepulse/shared` (verbatim from API §2.2/§5–§7/§10–§11/§14): shipments, timeline, alerts, notifications, disruptions, map, audit, reference DTOs; `GeoJSONLineString.x_source?` (optional, non-breaking).
+- **Frontend:** control tower on real APIs; shipment detail page (four ETA terms, factors, attribution, activity); Simulation page (inject/end disruptions with impact); hooks for timeline, attribution, reference, disruptions; recovery shows an explicit "not available yet" notice outside mock mode; alert cards show shipment, status, first-at-risk time and reason; map legend labels hand-traced routes; positions-unavailable notice.
+- **Tests:** API 299 (new: 26 integration tests in `world.test.ts`), web 88 (new: 16 component tests rendering captured real API responses); duplicate-alert, WATCH-alert and recovery-flag mutations caught.
+
+### Fixed (Combined Milestone 1)
+- Map rendered blank: its region collapsed to 0 px height (conflicting `relative`/`absolute` classes; MapLibre forces `position: relative`). Fixed in `apps/web/src/map/MapView.tsx`.
+- Activity feed lacked shipment codes for milestones, reports and overrides: `shipmentCode` added to those audit entries.
+
+### Changed (Combined Milestone 1)
+- `apps/web/vite.config.ts`: proxy target overridable with `ROUTEPULSE_API_ORIGIN` (default unchanged).
+- `apps/api/.env.example`: Homebrew URL must include the OS username (Prisma P1010 otherwise).
+
+### Changed (integration, Phase Zero)
+- Web contract: the 20 DTOs duplicated in `apps/web/src/api/contract/pending.ts` were removed; the web app now imports them from `@routepulse/shared` (shapes were identical; `CreateDriverReportRequest` in shared narrows reasons to the driver chips). Web typecheck clean again.
+- Root scripts: `typecheck` and `test` now include `@routepulse/web`; new `dev:web`, `dev:web:mock`, `build:web`.
+- New `docs/DEVELOPMENT_AND_TESTING.md` (verified install, run, test and troubleshooting instructions).
+
 ### Added (Milestone 6)
 - **Backend Milestone 6 (delay attribution), branch `backend`:**
   - Ledger lifecycle completed on the one existing ledger (`DelayAttribution`): rows become FINAL at ARRIVED (autopilot in the settle step, manual on the tap) stamped with `arrivedAt` = eligible check-in of the physical arrival, never the tap time; an UNATTRIBUTED **GAP** row records any remainder of `arrivedAt − plannedArrivalAt` (spec §5.9); idempotent finalisation; a negative remainder is treated as an invariant violation, never hidden.

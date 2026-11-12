@@ -12,10 +12,13 @@
   },
   "scripts": {
     "dev:api": "npm run dev -w @routepulse/api",
-    "typecheck": "npm run typecheck -w @routepulse/shared && npm run typecheck -w @routepulse/api",
-    "test": "npm run typecheck && npm run test -w @routepulse/api",
+    "dev:web": "npm run dev -w @routepulse/web",
+    "dev:web:mock": "npm run dev:mock -w @routepulse/web",
+    "typecheck": "npm run typecheck -w @routepulse/shared && npm run typecheck -w @routepulse/api && npm run typecheck -w @routepulse/web",
+    "test": "npm run typecheck && npm run test -w @routepulse/api && npm run test -w @routepulse/web",
     "db:migrate": "npm run db:migrate -w @routepulse/api",
     "db:generate": "npm run db:generate -w @routepulse/api",
-    "seed": "npm run seed -w @routepulse/api"
+    "seed": "npm run seed -w @routepulse/api",
+    "build:web": "npm run build -w @routepulse/web"
   }
 }

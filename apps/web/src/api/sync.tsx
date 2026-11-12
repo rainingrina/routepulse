@@ -16,7 +16,7 @@ export interface SyncState {
   lastSuccessAt: number | null;
 }
 
-const SyncContext = createContext<SyncState>({ sync: undefined, reconnecting: false, lastSuccessAt: null });
+export const SyncContext = createContext<SyncState>({ sync: undefined, reconnecting: false, lastSuccessAt: null });
 
 /** Polls GET /api/sync every second and invalidates world-state queries when `worldVersion` changes. */
 export function SyncProvider({ children }: { children: ReactNode }) {

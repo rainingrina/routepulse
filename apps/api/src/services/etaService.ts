@@ -2,6 +2,7 @@ import type { SnapshotTrigger } from '@routepulse/shared';
 import { explainEta, projectWorld, type DisruptionInfo, type EtaResult, type ReportInfo } from '../engines/eta.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import { isFactorArray } from '../guards/factors.js';
+import { evaluateAlerts } from './alertService.js';
 import { SIM_CONFIG, fromS, loadDisruptions, loadLiveShipments, toS, type Db, type StaticWorld } from '../sim/world.js';
 
 /**
@@ -175,5 +176,7 @@ export async function recalculate(tx: Prisma.TransactionClient, ctx: RecalcConte
     });
     material = true;
   }
+  // Alerts and notifications from the same authoritative results (architecture §6.3: ES → AS).
+  if (await evaluateAlerts(tx, ctx.simTimeS, results)) material = true;
   return material;
 }

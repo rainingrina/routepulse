@@ -39,7 +39,7 @@ export function NotificationBell() {
   );
 }
 
-function NotificationList({ onNavigate }: { onNavigate: () => void }) {
+export function NotificationList({ onNavigate }: { onNavigate: () => void }) {
   const list = useNotifications();
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();

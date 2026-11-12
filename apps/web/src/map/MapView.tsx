@@ -310,8 +310,11 @@ export function MapView({
   }
 
   return (
-    <div role="region" aria-label={ariaLabel} className={`relative overflow-hidden ${className ?? ''}`}>
-      <div ref={containerRef} className="absolute inset-0" />
+    // The caller's className sets the position (e.g. "absolute inset-0"); without one the region is
+    // relative. Mixing "relative" with "absolute" collapsed the region to 0 px height. MapLibre's CSS
+    // makes its container position:relative, so it fills the region with h-full/w-full instead of inset.
+    <div role="region" aria-label={ariaLabel} className={`overflow-hidden ${className ?? 'relative'}`}>
+      <div ref={containerRef} className="h-full w-full" />
       {staticEls.plant ? createPortal(<PlantMarker name={layers.plant.name} />, staticEls.plant) : null}
       {layers.sites.map((s) => {
         const el = staticEls[`site:${s.customerId}`];
@@ -343,7 +346,7 @@ export function MapView({
       <div className="pointer-events-none absolute top-[88px] right-[10px] z-10">
         <IconButton icon={Maximize2} label="Fit all shipments" size="sm" onClick={fitAll} className="pointer-events-auto border border-border bg-surface shadow-xs" />
       </div>
-      <MapLegend showDisruptions={showDisruptions} />
+      <MapLegend showDisruptions={showDisruptions} illustrativeRoutes={layers.routes.some((r) => r.geometry.x_source === 'HAND_TRACED_DEMO')} />
       {children}
     </div>
   );

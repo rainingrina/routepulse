@@ -4,8 +4,9 @@ import { useAlerts } from '../../api/hooks/world';
 import { Badge, EmptyState, Skeleton } from '../../components/display/basics';
 import { ErrorState } from '../../components/display/feedback';
 import { Button } from '../../components/primitives/Button';
+import { RECOVERY_AVAILABLE } from '../recovery/availability';
 import { CircleCheck, MessageSquare, TriangleAlert } from '../../components/icons';
-import { customerResponseLabel, recoveryKindLabel } from '../../i18n/en';
+import { customerResponseLabel, reasonLabel, recoveryKindLabel } from '../../i18n/en';
 import { formatDayTime, formatTime } from '../../i18n/format';
 
 /** UI plan §6.5 Alerts tab (#26, active = OPEN + ACTION_CHOSEN; newest first from the API). */
@@ -64,9 +65,13 @@ function AlertCard({ alert: a, onViewOptions }: { alert: AlertDtoCoordinator; on
       <div className="flex items-start gap-2">
         <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={2} />
         <div className="min-w-0 flex-1">
-          <p className="text-body font-semibold text-text">{a.summary}</p>
+          <p className="text-body font-semibold text-text">
+            <span className="code-label">{a.shipment.code}</span> · {a.status === 'OPEN' ? 'Open' : a.status === 'ACTION_CHOSEN' ? 'Action chosen' : 'Resolved'}
+          </p>
+          <p className="text-body text-text">{a.summary}</p>
           <p className="mt-0.5 text-small text-text-muted tabular">
-            {a.shipment.customerName} · {a.shipment.laneName} · raised {formatDayTime(a.openedAt)}
+            {a.shipment.customerName} · {a.shipment.laneName} · at risk since {formatDayTime(a.openedAt)}
+            {a.topReason ? ` · ${reasonLabel[a.topReason]}` : ''}
           </p>
         </div>
       </div>
@@ -87,7 +92,7 @@ function AlertCard({ alert: a, onViewOptions }: { alert: AlertDtoCoordinator; on
       </div>
       <div className="mt-3 flex gap-2">
         <Button size="sm" variant="primary" onClick={onViewOptions}>
-          View options
+          {RECOVERY_AVAILABLE ? 'View options' : 'View shipment'}
         </Button>
         <Link
           to={`/shipments/${encodeURIComponent(a.shipment.id)}`}
