@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { GeoJSONSource, LngLatBounds, Map as MlMap, Marker, NavigationControl, setWorkerUrl, type StyleSpecification } from 'maplibre-gl';
-import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import type { MapLayersResponse, PositionItem } from '../api/contract';
 import { IconButton } from '../components/primitives/Button';
 import { Maximize2 } from '../components/icons';
