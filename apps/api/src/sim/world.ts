@@ -1,9 +1,19 @@
-import type { EventSource, Milestone } from '@routepulse/shared';
+import type { EventSource, FactorCode, Milestone, Party, ReasonCode } from '@routepulse/shared';
 import { ENGINE_CONFIG } from '../config/engine.js';
 import type { PrismaClient } from '../db/prisma.js';
 import { derivePaces } from '../engines/pace.js';
 import { toSimRoute, type SimRoute } from '../engines/simRoute.js';
-import { DEFAULT_SIM_CONFIG, loadingEndFor, type SimConfig, type SimDisruption, type SimEvent, type SimShipment } from '../engines/simulate.js';
+import {
+  DEFAULT_SIM_CONFIG,
+  loadingEndFor,
+  parseLedgerKey,
+  type Ledger,
+  type SimConfig,
+  type SimDisruption,
+  type SimEvent,
+  type SimShipment,
+  type StopCause,
+} from '../engines/simulate.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import { isSegmentArray } from '../guards/geo.js';
 
@@ -78,8 +88,18 @@ const LIVE_SELECT = {
   pingIntervalMinutes: true,
   silentFrom: true,
   order: { select: { customer: { select: { receivingOpenMin: true, receivingCloseMin: true, unloadingMinutes: true } } } },
+  attributions: { where: { status: 'LIVE' }, select: { sourceKey: true, party: true, kind: true, delaySeconds: true } },
+  reports: {
+    orderBy: { simTime: 'desc' },
+    take: 1,
+    select: { id: true, party: true, simTime: true },
+  },
 } as const;
 
+/**
+ * Disruptions that can still matter after `afterS`. "Earliest created" for the L5 tie-break uses
+ * the simulation start time (then id), never the wall-clock createdAt, so results are reproducible.
+ */
 export async function loadDisruptions(db: Db, afterS: number): Promise<SimDisruption[]> {
   const rows = await db.disruption.findMany({ orderBy: { id: 'asc' } });
   return rows
@@ -92,6 +112,10 @@ export async function loadDisruptions(db: Db, afterS: number): Promise<SimDisrup
       extraMinutesPerTruck: d.extraMinutesPerTruck,
       startS: toS(d.startsAt),
       endS: toS(d.endedEarlyAt ?? d.endsAt),
+      party: d.party,
+      reason: d.reasonCode,
+      createdS: toS(d.startsAt),
+      label: d.label,
     }))
     .filter((d) => d.endS > afterS);
 }
@@ -105,6 +129,15 @@ export async function loadLiveShipments(db: Db, world: StaticWorld, disruptions:
   });
   return rows.map((r) => {
     const loadingStartedS = optS(r.loadingStartedAt);
+    const ledger: Ledger = {};
+    const planChangeByParty: Partial<Record<Party, number>> = {};
+    for (const a of r.attributions) {
+      if (a.kind === 'TIME_LOST') ledger[`${a.sourceKey}|${a.party}`] = a.delaySeconds;
+      else if (a.kind === 'PLAN_CHANGE') planChangeByParty[a.party] = (planChangeByParty[a.party] ?? 0) + a.delaySeconds;
+    }
+    const report = r.reports[0];
+    const stopCause: StopCause | null =
+      r.stoppedUntil && report ? { sourceKey: `RPT:${report.id}`, party: report.party, createdS: toS(report.simTime) } : null;
     return {
       id: r.id,
       code: r.code,
@@ -133,8 +166,71 @@ export async function loadLiveShipments(db: Db, world: StaticWorld, disruptions:
       lastUpdateS: optS(r.lastUpdateAt),
       pingIntervalMin: r.pingIntervalMinutes,
       silentFromS: optS(r.silentFrom),
+      stopCause,
+      ledger,
+      planChangeByParty,
     };
   });
+}
+
+const FACTOR_OF_KEY = (sourceKey: string): FactorCode =>
+  sourceKey.startsWith('DISR:') ? 'DISR' : sourceKey.startsWith('RPT:') ? 'RPT' : (sourceKey as FactorCode);
+
+/**
+ * Upserts the changed ledger rows (DelayAttribution, kind TIME_LOST, status LIVE). Row ids are
+ * deterministic so the database digest is identical across identical runs.
+ */
+export async function persistLedger(
+  db: Db,
+  before: readonly SimShipment[],
+  after: readonly SimShipment[],
+  disruptions: readonly SimDisruption[],
+  atS: number,
+): Promise<number> {
+  const prev = new Map(before.map((s) => [s.id, s.ledger]));
+  const disr = new Map(disruptions.map((d) => [d.id, d]));
+  let changed = 0;
+  for (const s of after) {
+    const old = prev.get(s.id) ?? {};
+    for (const key of Object.keys(s.ledger).sort()) {
+      const sec = s.ledger[key] ?? 0;
+      if (sec === (old[key] ?? 0)) continue;
+      const { sourceKey, party } = parseLedgerKey(key);
+      const factor = FACTOR_OF_KEY(sourceKey);
+      let reason: ReasonCode | null = null;
+      let disruptionId: string | null = null;
+      let driverReportId: string | null = null;
+      if (factor === 'GATE') reason = 'PLANT_GATE_WAIT';
+      else if (factor === 'HIST') reason = 'TRANSPORTER_PACE';
+      else if (factor === 'WIN') reason = 'RECEIVING_WINDOW';
+      else if (factor === 'DISR') {
+        disruptionId = sourceKey.slice(5);
+        reason = disr.get(disruptionId)?.reason ?? (await db.disruption.findUniqueOrThrow({ where: { id: disruptionId }, select: { reasonCode: true } })).reasonCode;
+      } else if (factor === 'RPT') {
+        driverReportId = sourceKey.slice(4);
+        reason = (await db.driverReport.findUniqueOrThrow({ where: { id: driverReportId }, select: { reason: true } })).reason;
+      }
+      await db.delayAttribution.upsert({
+        where: { shipmentId_sourceKey_party: { shipmentId: s.id, sourceKey, party } },
+        create: {
+          id: `da_${s.id}_${sourceKey}_${party}`,
+          shipmentId: s.id,
+          sourceKey,
+          kind: 'TIME_LOST',
+          factor,
+          reason,
+          party,
+          delaySeconds: sec,
+          disruptionId,
+          driverReportId,
+          updatedAtSim: fromS(atS),
+        },
+        update: { delaySeconds: sec, updatedAtSim: fromS(atS) },
+      });
+      changed += 1;
+    }
+  }
+  return changed;
 }
 
 /** Writes only the fields the engine changed. Returns the number of shipments updated. */

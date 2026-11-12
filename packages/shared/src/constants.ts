@@ -18,3 +18,6 @@ export const RISK_THRESHOLDS = {
 
 /** A transporter with at most this many trucks is shown as a small fleet [A]. */
 export const SMALL_FLEET_MAX = 10;
+
+/** Version of the hand-written ETA/risk rule set (engine doc; AC-M3.8). */
+export const RULE_VERSION = 'eta-rules-v1';

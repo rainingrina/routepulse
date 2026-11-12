@@ -26,6 +26,7 @@ function ship(over: Partial<SimShipment> = {}): SimShipment {
     hours: { openMin: 480, closeMin: 1080 }, unloadingMin: 60, pace: PACE, progressMm: 0, stoppedUntilS: null,
     gateQueuedS: null, loadingStartedS: null, loadingEndS: null, gateOutS: s(9 * 60 + 30), physicalArrivalS: null,
     arrivedS: null, deliveredS: null, delayMinutes: null, onTime: null, lastUpdateS: null, pingIntervalMin: 30, silentFromS: null,
+    stopCause: null, ledger: {}, planChangeByParty: {},
     ...over,
   };
 }
@@ -127,7 +128,7 @@ describe('movement', () => {
 });
 
 describe('disruptions (L5 precedence)', () => {
-  const rain = (pct: number, id = 'd1'): SimDisruption => ({ id, kind: 'WEATHER_SLOWDOWN', segmentCodes: ['PLT-KHP'], shipmentId: null, slowdownPct: pct, extraMinutesPerTruck: null, startS: s(9 * 60), endS: s(12 * 60) });
+  const rain = (pct: number, id = 'd1'): SimDisruption => ({ id, kind: 'WEATHER_SLOWDOWN', segmentCodes: ['PLT-KHP'], shipmentId: null, slowdownPct: pct, extraMinutesPerTruck: null, startS: s(9 * 60), endS: s(12 * 60), party: 'EXTERNAL', reason: 'HEAVY_RAIN', createdS: s(9 * 60), label: 'rain' });
 
   it('a slowdown reduces speed by its percentage; the largest overlapping slowdown wins', () => {
     const free = one(run([ship()], 9 * 60 + 30, 10 * 60));
@@ -138,7 +139,7 @@ describe('disruptions (L5 precedence)', () => {
   });
 
   it('a road closure holds the truck at the segment start until it ends; mid-segment trucks continue', () => {
-    const closure: SimDisruption = { id: 'c', kind: 'ROAD_CLOSURE', segmentCodes: ['KHP-LNV-GHAT'], shipmentId: null, slowdownPct: null, extraMinutesPerTruck: null, startS: s(10 * 60), endS: s(11 * 60) };
+    const closure: SimDisruption = { id: 'c', kind: 'ROAD_CLOSURE', segmentCodes: ['KHP-LNV-GHAT'], shipmentId: null, slowdownPct: null, extraMinutesPerTruck: null, startS: s(10 * 60), endS: s(11 * 60), party: 'EXTERNAL', reason: 'ROAD_CLOSED', createdS: s(10 * 60), label: 'closure' };
     const atEntry = one(run([ship({ progressMm: 45_000_000 })], 10 * 60, 10 * 60 + 55, [closure]));
     expect(atEntry.progressMm).toBe(45_000_000);
     const inside = one(run([ship({ progressMm: 50_000_000 })], 10 * 60, 10 * 60 + 5, [closure]));
@@ -148,11 +149,11 @@ describe('disruptions (L5 precedence)', () => {
   });
 
   it('a breakdown stops the truck; a stop beats a slowdown; the latest-ending stop wins', () => {
-    const bd: SimDisruption = { id: 'b', kind: 'TRUCK_BREAKDOWN', segmentCodes: [], shipmentId: 'shp_x', slowdownPct: null, extraMinutesPerTruck: null, startS: s(10 * 60), endS: s(11 * 60) };
+    const bd: SimDisruption = { id: 'b', kind: 'TRUCK_BREAKDOWN', segmentCodes: [], shipmentId: 'shp_x', slowdownPct: null, extraMinutesPerTruck: null, startS: s(10 * 60), endS: s(11 * 60), party: 'TRANSPORTER', reason: 'BREAKDOWN', createdS: s(10 * 60), label: 'breakdown' };
     const before = ship({ progressMm: 10_000_000 });
     const stopped = one(run([before], 10 * 60, 10 * 60 + 30, [bd, rain(50)]));
     expect(stopped.progressMm).toBe(10_000_000);
-    const both = ship({ progressMm: 10_000_000, stoppedUntilS: s(11 * 60 + 30) });
+    const both = ship({ progressMm: 10_000_000, stoppedUntilS: s(11 * 60 + 30), stopCause: { sourceKey: 'RPT:r1', party: 'TRANSPORTER', createdS: s(10 * 60 + 10) } });
     expect(holdEnd(both, ROUTE, [bd], s(10 * 60 + 15))).toBe(s(11 * 60 + 30));
   });
 });
@@ -184,7 +185,7 @@ describe('plant gate', () => {
   });
 
   it('gate congestion adds its minutes to trucks starting to load while it is active', () => {
-    const cong: SimDisruption = { id: 'g', kind: 'GATE_CONGESTION', segmentCodes: [], shipmentId: null, slowdownPct: null, extraMinutesPerTruck: 20, startS: s(8 * 60), endS: s(9 * 60) };
+    const cong: SimDisruption = { id: 'g', kind: 'GATE_CONGESTION', segmentCodes: [], shipmentId: null, slowdownPct: null, extraMinutesPerTruck: 20, startS: s(8 * 60), endS: s(9 * 60), party: 'PLANT', reason: 'PLANT_GATE_WAIT', createdS: s(8 * 60), label: 'congestion' };
     const r = run([atGate('F', 485)], 8 * 60 + 5, 8 * 60 + 5, [cong]);
     expect(one(r).loadingEndS).toBe(s(485 + 60));
   });

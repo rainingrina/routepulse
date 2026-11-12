@@ -1,6 +1,6 @@
 # PROGRESS — RoutePulse
 
-Last updated: 2026-11-12 — backend Milestones 1–4 (foundation, schema + seed, auth, deterministic simulation) on branch `backend`. Frontend tasks (Dev B) are untouched. Nothing is marked Verified.
+Last updated: 2026-11-12 — backend Milestones 1–5 (foundation, schema + seed, auth, deterministic simulation, ETA and risk engine) on branch `backend`. Frontend tasks (Dev B) are untouched. Nothing is marked Verified.
 
 **Status values:** Not Started · In Progress · Implemented · Tested · Verified
 - *Implemented* = code written. *Tested* = automated tests written and passing (ran by us). *Verified* = checked in the running app against the acceptance criteria.
@@ -40,7 +40,7 @@ Last updated: 2026-11-12 — backend Milestones 1–4 (foundation, schema + seed
 | O-11 | `pmtiles` browser library for the tiled basemap (not in the L9 list) | **Deferred** (2026-11-12) — frontend coordination; not a backend dependency. GeoJSON fallback basemap remains available (architecture §16.3) |
 | O-12 | Receiving override and arrivals before normal opening | **Decided (2026-11-12): literal rule** — an accepted override accepts any road arrival up to its end, including before opening. Implemented in `engines/receivingWindow.ts`, tested. Gate access, unloading availability and on-time eligibility are separate concepts |
 | O-13 | Historical pace for the engine | **Decided (2026-11-12):** derive from seeded history (Pune/Ghatline r = 0.0741); Milestone 5 golden tests use the derived pace |
-| O-14 | Manual hero truck sends no automatic tracking pings (architecture §9.3: pings are autopilot-only; driver taps count as updates). With the Milestone 5 confidence rule, the hero would drop to MEDIUM/LOW confidence on long quiet stretches (e.g. 12:40–17:50) and the ±range would widen beyond the journeys' ±20 | **Open — decide before Milestone 5:** (a) keep as documented, or (b) let manual shipments also ping (the driver's phone sends GPS even when milestones are manual) |
+| O-14 | Simulated GPS for the manual hero truck | **Decided (2026-11-12): (b)** — manual trucks ping every 30 min like autopilot trucks (also while stopped); pings only refresh `lastUpdateAt`, never create events or milestones; AT_GATE, GATE_OUT, ARRIVED, DELIVERED stay manual. Implemented in `engines/simulate.ts`, tested (afternoon confidence stays HIGH) |
 | O-15 | Logout revocation is in memory | **Accepted for the prototype (2026-11-12).** Production requirement: persistent revocation (e.g. a session table or a per-user session version) — not built without approval |
 
 ---
@@ -65,7 +65,7 @@ Last updated: 2026-11-12 — backend Milestones 1–4 (foundation, schema + seed
 |---|---|---|---|---|---|
 | 2.1 | `schema.prisma`: all 20 models and 22 enums per schema doc v0.3 (incl. `physicalArrivalAt`, `receivingWindowOverrideEndAt`); explicit `onDelete: Restrict` except the 5 documented Cascades | Dev A | 1.3 | Tested | `prisma validate` passes; migration applied to dev and test; integration tests query real tables |
 | 2.2 | Migrations `init_sim_state`, `sim_state_checks`, `full_schema`: 49 CHECK constraints + 5 partial unique indexes; `prisma migrate diff` against the schema is empty (Prisma will not drop them) | Dev A | 2.1 | Tested | Constraint and index lists asserted; 10 behavioural rejection tests pass |
-| 2.3 | Json guards: `isLineString`, `isSegmentArray`, `routeProblems` done (used by the seed); guards for factors, option params and notification params come with their milestones | Dev A | 2.1 | In Progress | Route guards tested |
+| 2.3 | Json guards: `isLineString`, `isSegmentArray`, `routeProblems` (seed), `isFactorArray` (RiskSnapshot.factors, Milestone 5, run on write); option params and notification params come with their milestones | Dev A | 2.1 | In Progress | Route and factor guards tested |
 | 2.4 | Enum drift check: compile-time equality of 22 shared unions vs Prisma enums (`contract-checks.ts`) + runtime order test (CT-1) | Dev A | 1.7, 2.1 | Tested | Passes; renaming one shared value failed both `tsc` (1 error) and the test |
 
 ## 3. Authentication and authorisation
@@ -107,27 +107,27 @@ Last updated: 2026-11-12 — backend Milestones 1–4 (foundation, schema + seed
 | 6.3 | Autopilot milestones (AT_GATE at planned gate, FCFS gate queue over 3 bays, LOADING, GATE_OUT not before planned departure, physical arrival, ARRIVED at eligible check-in, DELIVERED after unloading, truck release), pings + seeded silence; manual hero via `recordMilestone` (L6: `arrivedAt` = physical/eligible time, never the tap time) | Dev A | 6.2 | Tested | Gate order (arrival-vs-code mutation caught), L6 late-tap test, autopilot delivery test |
 | 6.4 | Clock controls (#5): PLAY, PAUSE, SET_SPEED 1×/10×/60×, ADVANCE, ADVANCE_TO; long-gap guard (12 steps, pause, `simError`) | Dev A | 6.2 | Tested | Speed tests per speed, pause/resume without jump, R8, validation and role tests |
 | 6.5 | Reset (#6): deterministic seed + hero pre-script → Thu 10:25 paused, ≈ 0.5–0.7 s; sessions survive (stable user ids); audit `sim.reset` | Dev A | 4.4, 6.1 | Tested | R7 two-reset digest identical; < 5 s asserted |
-| 6.6 | Disruptions: **effects in the engine done** (weather slowdown, road closure at segment entry, truck breakdown hold, gate congestion; L5 precedence). Endpoints #7–#9 with the impact summary need risk levels → after Milestone 5 | Dev A | 6.2, 7.x | In Progress | Effects tested (unit + one service-level ghat-rain test) |
-| 6.7 | Reproducibility tests: R1 (via R7 + pure-engine equality), R2 (mid-step split ≤ 1 mm, deterministic), R3/R4 (ADVANCE 60 = 12 × ADVANCE 5 = 60× ticker, bit-identical), R7 (two resets identical), R8 (long gap). **Partial:** R5 only via the speed change inside the R4 ticker path; R6 only as "a mid-step tap is stamped to the whole minute" (no running-vs-paused comparison yet) | Dev A | 6.2–6.5 | In Progress | R1–R4, R7, R8 pass against the real engine and test database |
+| 6.6 | Disruptions: **effects in the engine and their ledger/ETA booking done** (weather slowdown, road closure at segment entry, truck breakdown hold, gate congestion; L5 precedence; DISR factors). Creating disruptions goes through `simulationService.applyChange('DISRUPTION', …)` (used by tests). Endpoints #7–#9 with the impact summary: not started (next milestones) | Dev A | 6.2, 7.x | In Progress | Effects, ledger and ETA impact tested (unit + integration) |
+| 6.7 | Reproducibility tests: R1 (hero part: reset → 10:30 rain → 11:10 breakdown → 12:00 twice, identical shipments/ledger/snapshots), R2 (mid-step split ≤ 1 mm), R3/R4 (incl. ledger and snapshots), R5 (SET_SPEED 60× → 10× during a run = constant ADVANCE), R6 (action at 11:07 running vs paused, identical; uses a disruption action — the driver-report variant is re-run when reports exist in Milestone 6), R7, R8. R1 for alerts/options waits for those milestones | Dev A | 6.2–6.5 | Tested | All pass against the real engine and test database |
 
 ## 7. ETA and risk engines
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
-| 7.1 | `projectEta` (gate, transit pieces, closures, stops, WIN with receiving override, L5 precedence) | Dev A | 6.2 | Not Started | Not tested |
-| 7.2 | Identity + largest-remainder rounding (ET-1, ET-2, ET-3) | Dev A | 7.1 | Not Started | Not tested |
-| 7.3 | HIST pace from history + proration (ET-6) | Dev A | 4.3, 7.1 | Not Started | Not tested |
-| 7.4 | Risk level, score, range, confidence (RK-1…RK-3) | Dev A | 7.1 | Not Started | Not tested |
-| 7.5 | Recalculation pipeline + snapshot rule; ETA endpoint (#18), rules (#20), replay (#19) | Dev A | 7.1, 7.4 | Not Started | Not tested |
-| 7.6 | Worked examples 1–3 from the engine doc as unit tests | Dev A | 7.2 | Not Started | Not tested |
+| 7.1 | `projectEta` = the simulation engine run forward on a world copy (`engines/eta.ts` `projectWorld`): gate queue, transit pieces, closures, stops, breakdowns, WIN with receiving override, L5 precedence | Dev A | 6.2 | Tested | Golden checkpoints, closure, pre-departure gate queue, ET-8, ET-10 |
+| 7.2 | Identity + largest-remainder rounding (ET-1, ET-2, ET-3) | Dev A | 7.1 | Tested | ET-1 at every 5-min step 09:30–18:00; ET-2 property test (1,000 ledgers); ET-3 over 12 settles |
+| 7.3 | HIST pace from history + proration (ET-6) | Dev A | 4.3, 7.1 | Tested | 20 → 10 → 0 min |
+| 7.4 | Risk level, score, range, confidence (RK-1…RK-3) | Dev A | 7.1 | Tested | `engines/risk.ts`, 6 unit tests |
+| 7.5 | Recalculation pipeline (`services/etaService.ts`) + snapshot rule + cached fields; ETA endpoint (#18) and rules (#20) done; replay (#19) **not started** (needs the timeline/position DTOs) | Dev A | 7.1, 7.4 | In Progress | Pipeline, snapshot rule, transactions, #18 scoping/AZ-4 scan, #20 tested |
+| 7.6 | Worked examples from the engine doc as unit tests: Example 2 (hero 09:30 / 10:25 / 10:30 / 11:10 / 11:25) and Example 3 (17:50 after the transfer) done with the derived pace; Example 1 (Nashik, designed p = 0.95) not written | Dev A | 7.2 | In Progress | Example 2–3 checkpoints pass |
 
 ## 8. Delay attribution
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
-| 8.1 | Ledger booking in settle (AT-1) incl. L5 overlap rules (ET-8) | Dev A | 6.2 | Not Started | Not tested |
-| 8.2 | WIN knock-on split (ET-7) | Dev A | 8.1 | Not Started | Not tested |
-| 8.3 | Physical arrival, eligible check-in, finalisation at ARRIVED, GAP row, but-for rule (AT-2, AT-4, ET-9) | Dev A | 8.1 | Not Started | Not tested |
+| 8.1 | Ledger booking in settle (AT-1) incl. L5 overlap rules (ET-8) — **pulled into Milestone 5** (needed for the incurred bars) | Dev A | 6.2 | Tested | Gate wait, late truck, pace, slowdown, stops, two stops, two slowdowns, split invariance |
+| 8.2 | WIN knock-on split (ET-7) | Dev A | 8.1 | Tested | Incurred and projected split; UNATTRIBUTED without other minutes; never CUSTOMER |
+| 8.3 | Physical arrival, eligible check-in, no booking after eligibility (ET-9) done; finalisation at ARRIVED (FINAL rows), GAP row, but-for rule (AT-2, AT-4) not started | Dev A | 8.1 | In Progress | ET-9 tested |
 | 8.4 | Attribution endpoints (#34, #35) + overrides (AT-3) | Dev A | 8.3 | Not Started | Not tested |
 
 ## 9. Alerts and recovery
@@ -191,7 +191,7 @@ Last updated: 2026-11-12 — backend Milestones 1–4 (foundation, schema + seed
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
 | 15.1 | Day-1 go/no-go gate (IDEA_HUNT §7.6) by build hour 5 | Both | 4.4, 6.3, 7.5, 3.2, 10.3 | Not Started | Not tested |
-| 15.2 | Golden hero test G0–G8 | Dev A | 6.x–9.x | Not Started | Not tested |
+| 15.2 | Golden hero test G0–G8 — G0 (10:25: 14:20 ON_TRACK, GATE 40) and G1 (10:30 rain: 16:20 WATCH, DISR 120) through the services; the 11:10 checkpoint with a simulator breakdown (Fri 08:00, AT_RISK, WIN split). G2–G8 need reports, alerts and recovery (Milestones 6–7) | Dev A | 6.x–9.x | In Progress | G0, G1 and the 11:10 engine checkpoint pass |
 | 15.3 | Full suite green: unit + integration + typecheck | Both | All | Not Started | Not tested |
 | 15.4 | Acceptance-criteria walk-through (spec §6) in the running app | Both | 11–14 | Not Started | Not tested |
 | 15.5 | Visual QA checklist (UI plan §19) | Dev B | 11–14 | Not Started | Not tested |

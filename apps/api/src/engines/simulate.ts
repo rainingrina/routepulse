@@ -1,7 +1,8 @@
-import type { DisruptionKind, Milestone } from '@routepulse/shared';
-import { eligibleCheckIn, type ReceivingHours } from './receivingWindow.js';
+import type { DisruptionKind, Milestone, Party, ReasonCode } from '@routepulse/shared';
+import { eligibleCheckIn, splitKnockOn, type ReceivingHours } from './receivingWindow.js';
 import { ceilDiv, floorTimes, rat, type Rational } from './rational.js';
-import { segmentAt, type SimRoute, type SimSegment } from './simRoute.js';
+import { largestRemainder } from './rounding.js';
+import { baselineSecondsConsumed, segmentAt, type SimRoute, type SimSegment } from './simRoute.js';
 
 /**
  * Deterministic discrete-event simulation (architecture §9, engine doc §9).
@@ -15,8 +16,15 @@ import { segmentAt, type SimRoute, type SimSegment } from './simRoute.js';
  * action stamped mid-step) can differ from an unsplit run by at most 1 mm per split because
  * movement is floored to whole millimetres; results remain deterministic for the same action times.
  *
- * This engine moves trucks and records milestone/arrival facts. It does NOT compute ETA, risk,
- * attribution or alerts (Milestones 5–7).
+ * This engine moves trucks, records milestone/arrival facts and books the delay LEDGER (incurred
+ * seconds by cause, architecture §10.5) with the L5 precedence. The ETA engine (engines/eta.ts)
+ * runs this same function forward on a copy of the world to obtain the expected delay, so
+ * projection and settlement can never disagree (engine doc §4.3, §11).
+ *
+ * Ledger rounding: per call, the integer seconds booked for a shipment are
+ * round(I(to)) − round(I(from)), where I is the exact incurred time from the clock identity
+ * (now − plannedDeparture − C). The cumulative ledger therefore always equals round(I) exactly and
+ * never drifts; the call's seconds are spread over the causes with the largest-remainder method.
  */
 
 export interface SimDisruption {
@@ -29,6 +37,30 @@ export interface SimDisruption {
   startS: number;
   /** Effective end: endedEarlyAt if set, else endsAt. Active on [startS, endS). */
   endS: number;
+  /** Party and reason the disruption's delay is booked to (Disruption.party / reasonCode). */
+  party: Party;
+  reason: ReasonCode;
+  /** Creation time (tie-break for L5: earliest created wins among equals). */
+  createdS: number;
+  label: string;
+}
+
+/**
+ * Cause of a `stoppedUntil` hold (a driver report, or a recovery transfer that keeps the original
+ * report's cause). Required whenever stoppedUntilS is set.
+ */
+export interface StopCause {
+  sourceKey: string; // "RPT:<reportId>"
+  party: Party;
+  createdS: number;
+}
+
+/** Ledger key = `${sourceKey}|${party}` → integer seconds (DelayAttribution TIME_LOST rows). */
+export type Ledger = Record<string, number>;
+export const ledgerKey = (sourceKey: string, party: Party) => `${sourceKey}|${party}`;
+export function parseLedgerKey(key: string): { sourceKey: string; party: Party } {
+  const i = key.lastIndexOf('|');
+  return { sourceKey: key.slice(0, i), party: key.slice(i + 1) as Party };
 }
 
 export interface SimShipment {
@@ -60,6 +92,11 @@ export interface SimShipment {
   lastUpdateS: number | null;
   pingIntervalMin: number;
   silentFromS: number | null;
+  stopCause: StopCause | null;
+  /** Incurred seconds by cause (TIME_LOST). The engine returns an updated copy. */
+  ledger: Ledger;
+  /** PLAN_CHANGE seconds by party (reroutes); only used as weights for the WIN split. */
+  planChangeByParty: Partial<Record<Party, number>>;
 }
 
 export interface SimConfig {
@@ -104,31 +141,60 @@ export function loadingEndFor(startS: number, disruptions: readonly SimDisruptio
   return startS + config.loadingSec + gateCongestionExtraSec(disruptions, startS);
 }
 
-/** Largest active slowdown on a segment (L5: the largest applicable slowdown wins). */
-function slowdownPct(disruptions: readonly SimDisruption[], segCode: string, t: number): number {
-  let max = 0;
+/** Binding slowdown on a segment (L5: the largest applies; tie → earliest created, then id). */
+function bindingSlowdown(disruptions: readonly SimDisruption[], segCode: string, t: number): SimDisruption | null {
+  let best: SimDisruption | null = null;
   for (const d of disruptions) {
-    if (d.kind === 'WEATHER_SLOWDOWN' && active(d, t) && d.segmentCodes.includes(segCode)) max = Math.max(max, d.slowdownPct ?? 0);
+    if (d.kind !== 'WEATHER_SLOWDOWN' || !active(d, t) || !d.segmentCodes.includes(segCode) || (d.slowdownPct ?? 0) <= 0) continue;
+    const pct = d.slowdownPct ?? 0;
+    const bp = best?.slowdownPct ?? 0;
+    if (!best || pct > bp || (pct === bp && (d.createdS < best.createdS || (d.createdS === best.createdS && d.id < best.id)))) best = d;
   }
-  return max;
+  return best;
+}
+const slowdownPct = (disruptions: readonly SimDisruption[], segCode: string, t: number) => bindingSlowdown(disruptions, segCode, t)?.slowdownPct ?? 0;
+
+export interface BindingCause {
+  sourceKey: string;
+  party: Party;
 }
 
 /**
- * If the truck is held at time t, the time the hold ends (latest-ending applicable stop, L5);
- * otherwise null. Stops: stoppedUntil (driver report / transfer), an active TRUCK_BREAKDOWN for
- * this shipment, and an active ROAD_CLOSURE on the segment the truck is about to enter.
+ * The binding stop at time t (L5): among stoppedUntil (driver report / transfer), an active
+ * TRUCK_BREAKDOWN for this shipment and an active ROAD_CLOSURE on the segment the truck is about
+ * to enter, the one with the LATEST end; tie → earliest created (then id). Null if not held.
  */
-export function holdEnd(sh: SimShipment, route: SimRoute, disruptions: readonly SimDisruption[], t: number): number | null {
-  let end: number | null = sh.stoppedUntilS !== null && sh.stoppedUntilS > t ? sh.stoppedUntilS : null;
+export function bindingHold(
+  sh: SimShipment,
+  route: SimRoute,
+  disruptions: readonly SimDisruption[],
+  t: number,
+): { end: number; cause: BindingCause } | null {
+  let best: { end: number; createdS: number; id: string; cause: BindingCause } | null = null;
+  const consider = (end: number, createdS: number, id: string, cause: BindingCause) => {
+    if (!best || end > best.end || (end === best.end && (createdS < best.createdS || (createdS === best.createdS && id < best.id)))) {
+      best = { end, createdS, id, cause };
+    }
+  };
+  if (sh.stoppedUntilS !== null && sh.stoppedUntilS > t) {
+    if (!sh.stopCause) throw new Error(`shipment ${sh.code} is stopped without a recorded cause`);
+    consider(sh.stoppedUntilS, sh.stopCause.createdS, sh.stopCause.sourceKey, { sourceKey: sh.stopCause.sourceKey, party: sh.stopCause.party });
+  }
   const seg = segmentAt(route, sh.progressMm);
   for (const d of disruptions) {
     if (!active(d, t)) continue;
     const applies =
       (d.kind === 'TRUCK_BREAKDOWN' && d.shipmentId === sh.id) ||
       (d.kind === 'ROAD_CLOSURE' && seg !== null && sh.progressMm === seg.startMm && d.segmentCodes.includes(seg.code));
-    if (applies && (end === null || d.endS > end)) end = d.endS;
+    if (applies) consider(d.endS, d.createdS, d.id, { sourceKey: `DISR:${d.id}`, party: d.party });
   }
-  return end;
+  const b = best as { end: number; cause: BindingCause } | null;
+  return b ? { end: b.end, cause: b.cause } : null;
+}
+
+/** End of the binding hold at time t, or null (see bindingHold). */
+export function holdEnd(sh: SimShipment, route: SimRoute, disruptions: readonly SimDisruption[], t: number): number | null {
+  return bindingHold(sh, route, disruptions, t)?.end ?? null;
 }
 
 /** Speed in mm per second on a segment: length/baseline × pace × (1 − slowdown). Exact. */
@@ -137,11 +203,43 @@ export function speedMmPerSec(seg: SimSegment, pace: Rational, slowPct: number):
 }
 
 const isMoving = (sh: SimShipment) => sh.milestone === 'IN_TRANSIT' && sh.physicalArrivalS === null;
+const DEPARTED: readonly Milestone[] = ['IN_TRANSIT', 'ARRIVED', 'DELIVERED'];
+
+/** Eligible check-in (L1, L4, O-12) for a road arrival at `roadS`. */
+export function eligibleCheckInFor(sh: Pick<SimShipment, 'hours' | 'overrideEndS'>, roadS: number): number {
+  const override = sh.overrideEndS !== null ? new Date(sh.overrideEndS * 1000) : null;
+  return Math.floor(eligibleCheckIn(new Date(roadS * 1000), sh.hours, override).getTime() / 1000);
+}
+
+/**
+ * Exact incurred seconds I at time t from the clock identity (architecture §10.2):
+ * departed → t − plannedDep − C; not departed → max(0, t − plannedDep); frozen at the eligible
+ * check-in time after physical arrival (L6).
+ */
+export function incurredExactSec(sh: SimShipment, route: SimRoute, t: number): number {
+  if (!DEPARTED.includes(sh.milestone)) return Math.max(0, t - sh.plannedDepS);
+  let at = t;
+  if (sh.arrivedS !== null) at = Math.min(t, sh.arrivedS);
+  else if (sh.physicalArrivalS !== null) at = Math.min(t, eligibleCheckInFor(sh, sh.physicalArrivalS));
+  return at - sh.plannedDepS - baselineSecondsConsumed(route, sh.progressMm);
+}
 
 export function simulate(input: SimInput): SimResult {
   const { routes, disruptions, config, fromS, toS } = input;
   if (!Number.isInteger(fromS) || !Number.isInteger(toS) || toS < fromS) throw new RangeError('invalid interval');
-  const ships = input.shipments.map((s) => ({ ...s })).sort((a, b) => (a.code < b.code ? -1 : a.code > b.code ? 1 : 0));
+  const ships = input.shipments
+    .map((s) => ({ ...s, ledger: { ...s.ledger } }))
+    .sort((a, b) => (a.code < b.code ? -1 : a.code > b.code ? 1 : 0));
+  // Exact incurred time at the start (for the drift-free ledger rounding) and the call's raw
+  // seconds per cause (weights for the largest-remainder spread).
+  const iStart = new Map(ships.map((sh) => [sh.id, incurredExactSec(sh, routes.get(sh.routeId) ?? missingRoute(sh.routeId), fromS)]));
+  const raw = new Map<string, Map<string, number>>(); // shipmentId → sourceKey|party (WIN: 'WIN') → seconds
+  const book = (sh: SimShipment, key: string, sec: number) => {
+    if (sec <= 0) return;
+    let m = raw.get(sh.id);
+    if (!m) raw.set(sh.id, (m = new Map()));
+    m.set(key, (m.get(key) ?? 0) + sec);
+  };
   const events: SimEvent[] = [];
   const delivered: string[] = [];
   const routeOf = (sh: SimShipment): SimRoute => {
@@ -248,36 +346,64 @@ export function simulate(input: SimInput): SimResult {
     return next;
   };
 
-  // ── movement over [t, tn) with constant conditions ──
+  // ── movement and ledger booking over [t, tn) with constant conditions (§10.5, L5) ──
+  const overlap = (a: number, b: number, from: number, to: number) => Math.max(0, Math.min(b, to) - Math.max(a, from));
   const moveAll = (t: number, tn: number) => {
+    const dt = tn - t;
     for (const sh of ships) {
-      if (!isMoving(sh)) continue;
+      if (sh.arrivedS !== null || sh.milestone === 'ARRIVED' || sh.milestone === 'DELIVERED') continue; // frozen (L6)
+      if (!DEPARTED.includes(sh.milestone)) {
+        // Before departure: only time after the planned departure is delay.
+        const late = overlap(t, tn, sh.plannedDepS, Infinity);
+        if (PRE_GATE.includes(sh.milestone)) book(sh, ledgerKey('HIST', 'TRANSPORTER'), late);
+        else book(sh, ledgerKey('GATE', 'PLANT'), late);
+        continue;
+      }
+      if (sh.physicalArrivalS !== null) {
+        // Physically arrived: waiting for the applicable receiving window is WIN; waiting for a
+        // manual ARRIVED tap after the eligible time books nothing (L6).
+        book(sh, 'WIN', overlap(t, tn, sh.physicalArrivalS, eligibleCheckInS(sh)));
+        continue;
+      }
       const route = routeOf(sh);
-      if (holdEnd(sh, route, disruptions, t) !== null) continue;
+      const hold = bindingHold(sh, route, disruptions, t);
+      if (hold !== null) {
+        book(sh, ledgerKey(hold.cause.sourceKey, hold.cause.party), dt); // a stopped truck is not slowed (L5)
+        continue;
+      }
       const seg = segmentAt(route, sh.progressMm);
       if (!seg) continue;
-      const v = speedMmPerSec(seg, sh.pace, slowdownPct(disruptions, seg.code, t));
+      const slow = bindingSlowdown(disruptions, seg.code, t);
+      const pct = slow?.slowdownPct ?? 0;
+      const v = speedMmPerSec(seg, sh.pace, pct);
       const remaining = BigInt(seg.endMm - sh.progressMm);
       const crossing = t + Number(ceilDiv(remaining, v));
-      const moved = floorTimes(v, BigInt(tn - t));
+      const moved = floorTimes(v, BigInt(dt));
+      const before = sh.progressMm;
       sh.progressMm = tn >= crossing || moved >= remaining ? seg.endMm : sh.progressMm + Number(moved);
+      // lost = Δ − baseline consumed; DISR = Δ·s to the binding slowdown, HIST = the rest (= Δ(1−s)(1−p)).
+      const consumed = (seg.baselineSec * (sh.progressMm - before)) / (seg.endMm - seg.startMm);
+      const disr = slow ? (dt * pct) / 100 : 0;
+      if (slow) book(sh, ledgerKey(`DISR:${slow.id}`, slow.party), disr);
+      book(sh, ledgerKey('HIST', 'TRANSPORTER'), dt - consumed - disr);
     }
   };
 
-  // ── pings on grid boundaries (autopilot trucks on the road, unless seeded silent) ──
+  // ── simulated GPS pings on grid boundaries (every truck on the road, unless seeded silent) ──
+  // O-14 (decided 2026-11-12): manual (hero) trucks ping too — the driver's phone sends GPS even
+  // though milestones are tapped by hand. A ping only refreshes lastUpdateAt; it never records a
+  // ShipmentEvent and never changes a milestone.
   const pingsAt = (t: number) => {
     if (t % config.stepSec !== 0) return;
     for (const sh of ships) {
-      if (!sh.autopilot || !isMoving(sh)) continue;
+      if (!isMoving(sh)) continue;
       if (sh.silentFromS !== null && t >= sh.silentFromS) continue;
       if (sh.lastUpdateS === null || t - sh.lastUpdateS >= sh.pingIntervalMin * 60) sh.lastUpdateS = t;
     }
   };
 
   function eligibleCheckInS(sh: SimShipment): number {
-    const physical = new Date((sh.physicalArrivalS as number) * 1000);
-    const override = sh.overrideEndS !== null ? new Date(sh.overrideEndS * 1000) : null;
-    return Math.floor(eligibleCheckIn(physical, sh.hours, override).getTime() / 1000);
+    return eligibleCheckInFor(sh, sh.physicalArrivalS as number);
   }
 
   let t = fromS;
@@ -290,7 +416,38 @@ export function simulate(input: SimInput): SimResult {
     t = tn;
   }
 
+  for (const sh of ships) {
+    const route = routeOf(sh);
+    const total = Math.round(incurredExactSec(sh, route, toS)) - Math.round(iStart.get(sh.id) ?? 0);
+    const m = raw.get(sh.id);
+    if (total <= 0 || !m) continue;
+    const keys = [...m.keys()].sort();
+    const parts = largestRemainder(keys.map((k) => m.get(k) ?? 0), total);
+    keys.forEach((k, i) => {
+      const sec = parts[i] ?? 0;
+      if (sec === 0) return;
+      if (k !== 'WIN') {
+        sh.ledger[k] = (sh.ledger[k] ?? 0) + sec;
+        return;
+      }
+      // WIN knock-on split by each party's other minutes at this moment (spec §5.9, AC-F1.4).
+      const byParty: Partial<Record<Party, number>> = { ...sh.planChangeByParty };
+      for (const [lk, v] of Object.entries(sh.ledger)) {
+        const { sourceKey, party } = parseLedgerKey(lk);
+        if (sourceKey !== 'WIN') byParty[party] = (byParty[party] ?? 0) + v;
+      }
+      for (const [party, v] of Object.entries(splitKnockOn(sec, byParty)) as [Party, number][]) {
+        const lk = ledgerKey('WIN', party);
+        sh.ledger[lk] = (sh.ledger[lk] ?? 0) + v;
+      }
+    });
+  }
+
   return { shipments: ships, events, delivered };
+}
+
+function missingRoute(id: string): never {
+  throw new Error(`missing route ${id}`);
 }
 
 /** Arrival outcome (L1): on time = arrivedAt ≤ promisedBy; delay in whole minutes, rounded up. */

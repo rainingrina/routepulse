@@ -4,6 +4,7 @@ import type { AppLocals } from '../../src/app.js';
 import { createPrisma, type PrismaClient } from '../../src/db/prisma.js';
 import { istAt } from '../../src/engines/time.js';
 import { DEMO_DATE } from '../../src/seed/constants.js';
+import { recalculate } from '../../src/services/etaService.js';
 import { createSimulationService, type RecalcHook } from '../../src/services/simulationService.js';
 import { databaseDigest } from '../helpers/digest.js';
 import { loginCookie, startTestServer, type TestServer } from '../helpers/testServer.js';
@@ -13,7 +14,7 @@ const SYSTEM = { userId: null, role: null } as const;
 const COORD = { userId: 'usr_coord_meera', role: 'COORDINATOR' } as const;
 const RAMESH = { userId: 'usr_drv_ramesh', role: 'DRIVER' } as const;
 const at = (h: number, m: number) => istAt(DEMO_DATE, h * 60 + m);
-const SIM_TABLES = ['Shipment', 'ShipmentEvent', 'Truck', 'SimState'] as const;
+const SIM_TABLES = ['Shipment', 'ShipmentEvent', 'Truck', 'DelayAttribution', 'RiskSnapshot', 'SimState'] as const;
 
 let prisma: PrismaClient;
 let real = 0;
@@ -80,11 +81,12 @@ describe('reset and the SHP-1042 hero morning (L2, through the real engine)', ()
     ]);
   });
 
-  it('populates no Milestone-5 fields (no ETA, risk, snapshots, alerts or ledger rows from the simulation)', async () => {
+  it('Milestone 5: every live shipment has an ETA, risk, snapshots and ledger rows; still no alerts (later milestone)', async () => {
     const live = await prisma.shipment.findMany({ where: { isHistorical: false }, select: { etaAt: true, riskLevel: true, riskScore: true, confidence: true, slackMinutes: true } });
-    expect(live.every((s) => s.etaAt === null && s.riskLevel === null && s.riskScore === null && s.confidence === null && s.slackMinutes === null)).toBe(true);
-    expect(await prisma.riskSnapshot.count()).toBe(0);
-    expect(await prisma.delayAttribution.count({ where: { shipment: { isHistorical: false } } })).toBe(0);
+    expect(live.every((s) => s.etaAt !== null && s.riskLevel !== null && s.riskScore !== null && s.confidence !== null && s.slackMinutes !== null)).toBe(true);
+    expect(await prisma.riskSnapshot.count()).toBeGreaterThan(0);
+    expect(await prisma.delayAttribution.count({ where: { shipment: { isHistorical: false } } })).toBeGreaterThan(0);
+    expect(await prisma.alert.count({ where: { shipment: { isHistorical: false } } })).toBe(0);
   });
 });
 
@@ -228,9 +230,10 @@ describe('concurrency and transactions', () => {
     await service().reset(COORD);
     let calls = 0;
     const failing = service({
-      recalc: async () => {
+      recalc: async (tx, ctx) => {
         calls += 1;
         if (calls === 3) throw new Error('injected failure');
+        return recalculate(tx, ctx);
       },
     });
     await expect(failing.control({ action: 'ADVANCE', minutes: 30 }, SYSTEM)).rejects.toThrow('injected failure');

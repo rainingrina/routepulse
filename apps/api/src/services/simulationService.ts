@@ -16,6 +16,7 @@ import {
   loadLiveShipments,
   loadStaticWorld,
   persistEvents,
+  persistLedger,
   persistShipments,
   releaseTrucks,
   toS,
@@ -23,6 +24,7 @@ import {
   type StaticWorld,
 } from '../sim/world.js';
 import { writeAudit } from './auditService.js';
+import { recalculate, type RecalcContext, type RecalcTrigger } from './etaService.js';
 
 /**
  * Simulation service (architecture §6.3, §9). Owns the clock and the mutation pipeline:
@@ -30,14 +32,18 @@ import { writeAudit } from './auditService.js';
  *   world lock → transaction { settle (engine) → apply action → recalculate hook → persist →
  *   worldVersion if material } → commit
  *
- * The recalculate hook is EMPTY in Milestone 4; Milestone 5 plugs the ETA/risk engine in there.
+ * The recalculate step is etaService.recalculate (Milestone 5): ETA, risk, cached fields and
+ * snapshots for every live shipment, inside the same transaction. Every state change — grid steps
+ * (movement, ledger, GPS pings), milestones, reset and any action submitted through applyChange
+ * (disruptions, reports, recovery, receiving-window changes) — goes through this one pipeline.
  * State only settles on 5-minute grid boundaries and at action minutes; advancing to a time between
  * boundaries just moves the continuous clock (positions are extrapolated on read later). This keeps
  * results identical however the time is divided into calls.
  */
 
-export type RecalcTrigger = 'STEP' | 'MILESTONE' | 'RESET';
-export type RecalcHook = (tx: Prisma.TransactionClient, ctx: { simTimeS: number; trigger: RecalcTrigger }) => Promise<void>;
+export type { RecalcTrigger } from './etaService.js';
+/** Returns true when it made a material change (worldVersion is bumped). */
+export type RecalcHook = (tx: Prisma.TransactionClient, ctx: RecalcContext) => Promise<boolean | void>;
 
 export interface Actor {
   userId: string | null;
@@ -84,7 +90,7 @@ interface Clock {
 export function createSimulationService(deps: SimulationServiceDeps) {
   const { prisma, demoMode } = deps;
   const realNow = deps.realNow ?? (() => performance.now());
-  const recalc: RecalcHook = deps.recalc ?? (async () => {});
+  const recalc: RecalcHook = deps.recalc ?? recalculate;
   const lock = new Mutex();
   let clock: Clock | null = null;
   let world: StaticWorld | null = null;
@@ -156,12 +162,14 @@ export function createSimulationService(deps: SimulationServiceDeps) {
           const before = await loadLiveShipments(tx, w, disruptions);
           const result = simulate({ shipments: before, routes: w.routes, disruptions, config: SIM_CONFIG, fromS: fromSec, toS: targetS });
           await persistShipments(tx, before, result.shipments);
+          await persistLedger(tx, before, result.shipments, disruptions, targetS);
           await persistEvents(tx, result.events, 'SIMULATION');
           await releaseTrucks(tx, result.delivered);
           c.lastSettledS = targetS;
           if (c.simMs < targetS * 1000) c.simMs = targetS * 1000;
-          await recalc(tx, { simTimeS: targetS, trigger });
-          await persistClock(tx, c, result.events.length > 0);
+          const eventShipmentIds = [...new Set(result.events.map((e) => e.shipmentId))];
+          const material = await recalc(tx, { simTimeS: targetS, trigger, world: w, eventShipmentIds });
+          await persistClock(tx, c, result.events.length > 0 || material === true);
           return result.events;
         },
         { timeout: 30_000 },
@@ -207,13 +215,49 @@ export function createSimulationService(deps: SimulationServiceDeps) {
 
   // ───────────── driver milestones (manual / hero shipments, D7, L6) ─────────────
 
-  async function recordMilestoneInternal(shipmentId: string, m: Milestone, actor: Actor): Promise<void> {
+  /** Stamps an action to the whole simulation minute and settles up to it (architecture §9.4). */
+  async function settleForAction(): Promise<number> {
     const c = await loadClock();
     await catchUp();
-    // Actions are stamped to the whole simulation minute (architecture §9.4).
     const actionS = Math.max(c.lastSettledS, Math.floor(c.simMs / 60_000) * 60);
     await advanceToInternal(actionS * 1000);
     if (actionS > c.lastSettledS) await settleOnce(actionS, 'STEP');
+    return actionS;
+  }
+
+  /**
+   * Generic action through the single pipeline: lock (caller) → settle to the action minute →
+   * apply the change → recalculate all live shipments → bump worldVersion, in one transaction.
+   * Used for disruptions, driver reports, reviews, recovery and receiving-window changes.
+   */
+  async function applyChangeInternal<T>(
+    trigger: Exclude<RecalcTrigger, 'STEP' | 'MILESTONE' | 'RESET' | 'SEED'>,
+    apply: (tx: Prisma.TransactionClient, actionS: number) => Promise<{ result: T; shipmentIds?: readonly string[] }>,
+  ): Promise<{ result: T; actionS: number }> {
+    const c = await loadClock();
+    const actionS = await settleForAction();
+    const snapshot = { ...c };
+    try {
+      return await prisma.$transaction(
+        async (tx) => {
+          const w = await staticWorld(tx);
+          const { result, shipmentIds = [] } = await apply(tx, actionS);
+          c.lastSettledS = actionS;
+          await recalc(tx, { simTimeS: actionS, trigger, world: w, actionShipmentIds: shipmentIds });
+          await persistClock(tx, c, true);
+          return { result, actionS };
+        },
+        { timeout: 30_000 },
+      );
+    } catch (err) {
+      Object.assign(c, snapshot);
+      throw err;
+    }
+  }
+
+  async function recordMilestoneInternal(shipmentId: string, m: Milestone, actor: Actor): Promise<void> {
+    const c = await loadClock();
+    const actionS = await settleForAction();
 
     const snapshot = { ...c };
     try {
@@ -280,13 +324,14 @@ export function createSimulationService(deps: SimulationServiceDeps) {
         // Apply any consequences at the same instant (e.g. the gate queue assigns a free bay).
         const settled = simulate({ shipments: working, routes: w.routes, disruptions, config: SIM_CONFIG, fromS: actionS, toS: actionS });
         await persistShipments(tx, before, settled.shipments);
+        await persistLedger(tx, before, settled.shipments, disruptions, actionS);
         await persistEvents(tx, driverEvents, actor.role === 'COORDINATOR' ? 'COORDINATOR' : 'DRIVER', actor.userId, { tappedAt: fromS(actionS).toISOString() });
         await persistEvents(tx, systemEvents, 'SYSTEM');
         await persistEvents(tx, settled.events, 'SIMULATION');
         await releaseTrucks(tx, [...delivered, ...settled.delivered]);
         await writeAudit(tx, { actorUserId: actor.userId, actorRole: actor.role, action: 'milestone.record', entityType: 'Shipment', entityId: shipmentId, data: { milestone: m } });
         c.lastSettledS = actionS;
-        await recalc(tx, { simTimeS: actionS, trigger: 'MILESTONE' });
+        await recalc(tx, { simTimeS: actionS, trigger: 'MILESTONE', world: w, actionShipmentIds: [shipmentId], eventShipmentIds: [...new Set(settled.events.map((e) => e.shipmentId))] });
         await persistClock(tx, c, true);
       });
     } catch (err) {
@@ -306,6 +351,14 @@ export function createSimulationService(deps: SimulationServiceDeps) {
     clock = null;
     world = null;
     const c = await loadClock();
+    // First calculation for the seeded world at the seed start (snapshot trigger SEED).
+    await prisma.$transaction(
+      async (tx) => {
+        await recalc(tx, { simTimeS: c.lastSettledS, trigger: 'SEED', world: await staticWorld(tx) });
+        await persistClock(tx, c, true);
+      },
+      { timeout: 30_000 },
+    );
 
     const ramesh: Actor = { userId: 'usr_drv_ramesh', role: 'DRIVER' };
     await advanceToInternal(istAt(DEMO_DATE, 8 * 60 + 10).getTime());
@@ -318,7 +371,7 @@ export function createSimulationService(deps: SimulationServiceDeps) {
     c.speed = 1;
     c.simError = null;
     await prisma.$transaction(async (tx) => {
-      await recalc(tx, { simTimeS: c.lastSettledS, trigger: 'RESET' });
+      await recalc(tx, { simTimeS: c.lastSettledS, trigger: 'RESET', world: await staticWorld(tx) });
       await persistClock(tx, c, true);
       await writeAudit(tx, { actorUserId: actor.userId, actorRole: actor.role, action: 'sim.reset', entityType: 'SimState', entityId: '1' });
     });
@@ -410,6 +463,25 @@ export function createSimulationService(deps: SimulationServiceDeps) {
 
     async recordMilestone(shipmentId: string, milestone: Milestone, actor: Actor): Promise<void> {
       return lock.run(() => recordMilestoneInternal(shipmentId, milestone, actor));
+    },
+
+    /** Any world change (disruption, report, review, recovery, window) through the single pipeline. */
+    async applyChange<T>(
+      trigger: Parameters<typeof applyChangeInternal<T>>[0],
+      apply: Parameters<typeof applyChangeInternal<T>>[1],
+    ): Promise<{ result: T; actionS: number }> {
+      return lock.run(() => applyChangeInternal(trigger, apply));
+    },
+
+    /**
+     * Read-only access at the last settled time (ETA reads). Runs under the world lock so a read
+     * never sees a half-applied step; it does not advance the clock and writes nothing.
+     */
+    async readSettled<T>(fn: (db: PrismaClient, world: StaticWorld, settledS: number) => Promise<T>): Promise<T> {
+      return lock.run(async () => {
+        const c = await loadClock();
+        return fn(prisma, await staticWorld(prisma), c.lastSettledS);
+      });
     },
 
     /** Real-time tick (called by the timer; tests call it directly with an injected clock). */

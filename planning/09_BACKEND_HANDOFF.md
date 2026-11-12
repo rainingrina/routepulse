@@ -2,7 +2,7 @@
 
 Living document maintained by the backend (branch `backend`). It lists **only what is implemented and tested**. The full target contract is `06_API_SPEC.md`; types live in `packages/shared`.
 
-Last updated: 2026-11-12 — **Milestone 4 (deterministic simulation)**.
+Last updated: 2026-11-12 — **Milestone 5 (ETA and risk engine)**.
 
 ---
 
@@ -60,6 +60,17 @@ Status per code: `VALIDATION_ERROR` 400 · `UNAUTHENTICATED` 401 · `FORBIDDEN`/
 | GET | `/api/sync` (#4) | Session (any role) | Implemented + tested |
 | POST | `/api/sim/clock` (#5) | Coordinator + `DEMO_MODE` | Implemented + tested |
 | POST | `/api/sim/reset` (#6) | Coordinator + `DEMO_MODE` | Implemented + tested |
+| GET | `/api/shipments/:shipmentId/eta` (#18) | Coordinator, Customer (own) | Implemented + tested |
+| GET | `/api/engine/rules` (#20) | Session (any role) | Implemented + tested |
+
+### ETA and risk (Milestone 5) — what the SPA must do
+- **`GET /api/shipments/:shipmentId/eta`** → `EtaResponse` (`{ eta }`). Coordinator gets `EtaExplanationCoordinator`, customer (own order) gets `EtaSummaryCustomer`; driver → 403; another customer's or unknown id → 404; delivered → 409 `INVALID_TRANSITION` (show the shipment outcome instead). Refetch when `worldVersion` changes. Read-only: never moves the clock.
+- **Waterfall:** start at `plannedArrivalAt`, add `factors` in the given order (INCURRED "So far" → PLAN_CHANGE → EXPECTED; within a phase GATE, HIST, DISR, RPT, WIN). The bars always sum to `predictedArrivalAt` (`identityHolds: true`); `totals` gives I / P / E. `P` is 0 until reroutes exist. Draw `promisedBy` as a line and `projectedRoadArrivalAt` as the road-arrival tick; WIN (`party: null`) carries `split[]` by party. Show `summary` as the headline sentence and `confidence` + `confidenceReason` as the chip, with "± range" from `etaLowAt`/`etaHighAt`. Always label it "Rule-based estimate" (`isRuleBased: true`).
+- **Hero values after reset (Thu 10:25):** ETA 14:20 IST (`08:50Z`), ON_TRACK, slack 220, ±10, HIGH; bars GATE 40 (Plant, so far), HIST 4 (so far), HIST 16 (expected). After rain at 10:30 → 16:20 WATCH; after an 11:10 breakdown → Fri 08:00 AT_RISK with a WIN bar of 760 split Plant 84 / Transporter 423 / External 253.
+- **Customer view:** only `predictedArrivalAt`, range, `promisedBy`, `level`, `plainReason` (e.g. "Vehicle breakdown on the route"; null when on track) — no parties, factor codes or driver identity.
+- **Lists:** live shipments now have `etaAt`, `etaLowAt`, `etaHighAt`, `slackMinutes`, `riskLevel`, `riskScore`, `confidence` filled (list endpoints come in a later milestone). Level = colour + icon + text; `riskScore` is for sorting only, never a percentage.
+- **GPS (O-14):** every truck on the road, including the manual hero, refreshes `lastUpdateAt` every 30 simulated minutes; this is not an event and does not appear in timelines. Driver milestone taps remain DRIVER events.
+- **`GET /api/engine/rules`** → `EngineRulesResponse` for the "How is this calculated?" page (`ruleVersion` `eta-rules-v1`, thresholds 120/0, range/confidence/score rules, reason defaults, `co2e.enabled: false`).
 
 ### Simulation clock (what the SPA must do)
 - **Poll `GET /api/sync` every 1 s** (every role). Response `SyncResponse`:
@@ -71,7 +82,7 @@ Status per code: `VALIDATION_ERROR` 400 · `UNAUTHENTICATED` 401 · `FORBIDDEN`/
 - **Clock controls** (coordinator only): `POST /api/sim/clock` with `SimClockRequest`:
   `{ "action": "PLAY" }` · `{ "action": "PAUSE" }` · `{ "action": "SET_SPEED", "speed": 1 | 10 | 60 }` · `{ "action": "ADVANCE", "minutes": 5…720, multiple of 5 }` · `{ "action": "ADVANCE_TO", "to": "<ISO, on a 5-min boundary, ≤ 24 h ahead>" }`. Response `SimClockResponse` (state + `stepsExecuted`). ADVANCE/ADVANCE_TO always leave the clock **paused**. Extra fields → 400.
 - **Reset demo:** `POST /api/sim/reset` with `{ "confirm": true }` → `SimResetResponse`; the world returns to **Thu 10:25, paused** (hero SHP-1042 in transit, 25.6 km out). Takes about half a second; the user stays signed in.
-- **What moves:** shipment progress and milestones change on 5-minute simulation steps; between steps nothing is written. Positions/ETA endpoints are not implemented yet (positions #11 in a later milestone; ETA in Milestone 5).
+- **What moves:** shipment progress, milestones, ETA and risk change on 5-minute simulation steps and on actions; between steps nothing is written. Positions (#11) come in a later milestone.
 - **Errors:** customer/driver → 403 `FORBIDDEN`; `DEMO_MODE=false` → 403 `DEMO_MODE_OFF`; invalid time target → 409 `INVALID_TRANSITION` with a plain message.
 
 ### Authentication behaviour (what the SPA must do)
@@ -105,6 +116,7 @@ Type: `HealthResponse`. `serverTime` is wall-clock time, not simulation time.
 | All enum lists and unions (`ROLES`, `MILESTONES`, `RISK_LEVELS`, `PARTIES`, `REASON_CODES`, `DRIVER_REASON_CODES`, `NOTIFICATION_KINDS`, …) | All | Mirror of schema v0.3 (incl. `PHYSICAL_ARRIVAL`, `RECOVERY_APPLIED`, `ARRIVED_LATE`) |
 | `ApiError`, `ErrorCode`, `ValidationIssue`, `ListResponse<T>`, `Id`, `ISODateTime`, `Minutes`, `Pct` | All | |
 | `SimStateDto`, `SyncResponse`, `SimClockRequest`, `SimClockResponse`, `SimResetRequest`, `SimResetResponse` | #4, #5, #6 | **Implemented** (Milestone 4) |
+| `Factor`, `FactorPhase` (`FACTOR_PHASES`), `PartyMinutes`, `EtaExplanationCoordinator`, `EtaSummaryCustomer`, `EtaResponse`, `EngineRulesResponse`, `RULE_VERSION` | #18, #20 (and later #19 replay, #23, #30) | **Implemented** (Milestone 5) |
 | `UserDto`, `LoginRequest`, `LoginResponse`, `MeResponse`, `HomePath`, `SESSION_COOKIE_NAME` | #1–#3 | **Implemented** (Milestone 3) |
 
 You may build against these with fixtures; field names will not change without a note here.
@@ -127,7 +139,7 @@ Run `npm run seed` (needs `SEED_DEMO_PASSWORD` in `apps/api/.env`). Clock: **Thu
 | `driver.suresh@ghatline.test` | DRIVER | replacement truck TRK-11 (D3 hand-over) |
 | 6 more drivers (`driver.*@*.test`) | DRIVER | their live shipments |
 
-Log in with these accounts through `/api/auth/login` (Milestone 3). Live shipments have **no ETA/risk yet** (`etaAt`, `riskLevel` are null) until the simulation and engine milestones; build empty/"calculating" states for that.
+Log in with these accounts through `/api/auth/login` (Milestone 3). Right after `npm run seed` (without a reset) live shipments have no ETA yet until the first simulation step; after `POST /api/sim/reset` every live shipment has its ETA and risk. Keep a "calculating" state for null values.
 
 ## 6. Polling and freshness (planned behaviour, API §15)
 
@@ -135,7 +147,7 @@ Log in with these accounts through `/api/auth/login` (Milestone 3). Live shipmen
 
 ## 7. Known incomplete functionality
 
-Implemented: `/api/health`, authentication (#1–#3) and the simulation clock (#4–#6). Not yet implemented: shipments, orders, map layers and positions, disruptions endpoints, ETA, alerts, recovery, notifications, analytics. Live shipments still have no ETA/risk (null) until Milestone 5. Next: Milestone 5 (ETA and risk), after approval.
+Implemented: `/api/health`, authentication (#1–#3), the simulation clock (#4–#6), ETA explanation (#18) and engine rules (#20). Not yet implemented: shipments/orders lists and detail, timeline, replay (#19), map layers and positions, disruption endpoints (#7–#9), driver reports, alerts, recovery, notifications, attribution endpoints, analytics. Next: Milestone 6, after approval.
 
 ## 8. Contract change log
 
@@ -144,4 +156,5 @@ Implemented: `/api/health`, authentication (#1–#3) and the simulation clock (#
 | 2026-11-12 | Initial publish: enums, base types, `HealthResponse`, `SimStateDto`, `SyncResponse` | — |
 | 2026-11-12 | Added `Segment`, `GeoJSONLineString`, `GeometrySource`, `PLANT`, `DISPLAY_TIME_ZONE`, `RISK_THRESHOLDS`, `SMALL_FLEET_MAX` | No |
 | 2026-11-12 | Added `SimClockRequest`, `SimClockResponse`, `SimResetRequest`, `SimResetResponse` (as specified in API §5); #4–#6 implemented | No |
+| 2026-11-12 | Added `Factor`, `FactorPhase`, `FACTOR_PHASES`, `PartyMinutes`, `EtaExplanationCoordinator`, `EtaSummaryCustomer`, `EtaResponse`, `EngineRulesResponse`, `RULE_VERSION` (as specified in API §2 and §8); #18 and #20 implemented; manual hero truck now refreshes `lastUpdateAt` via simulated GPS (O-14) | No |
 | 2026-11-12 | Added `UserDto`, `HomePath`, `LoginRequest`, `LoginResponse`, `MeResponse`, `SESSION_COOKIE_NAME` (already specified in API §2.2/§4; now published). Unauthenticated calls to unknown `/api` paths now return 401 instead of 404 | No (new types); behaviour change for unknown paths only |

@@ -6,7 +6,24 @@ No application code has been written yet. Entries below describe documentation o
 
 ## [Unreleased]
 
-### Added
+### Added (Milestone 5)
+- **Backend Milestone 5 (ETA and risk engine), branch `backend`:**
+  - Four-term ETA (L3) at the receiving gate (L1): `predicted = planned + incurred (I) + plan change (P) + expected (E)`; I from the clock, P from route baselines (0 without a reroute), E from a forward projection; largest-remainder rounding so the bars always add up (`identityHolds`).
+  - Projection = the **same simulation engine** run forward on a copy of the world (manual steps as soon as allowed): gate queue, history pace (HIST), slowdowns/closures/breakdowns (DISR), stops (RPT), L5 precedence and the receiving window with the shipment override (WIN, L4/O-12) are implemented once (`engines/eta.ts`).
+  - Live delay ledger booked during settle (pulled forward from task 8.1): GATE, HIST, DISR, RPT and WIN rows in `DelayAttribution` with deterministic ids; drift-free rounding (cumulative ledger = round(I) at every step); WIN knock-on split, never to the customer.
+  - Risk rules (`engines/risk.ts`): level thresholds 120/0, LATE, score, range (5% + 30 stale + 20 per pending report, nearest 5), confidence HIGH/MEDIUM/LOW; `ruleVersion = eta-rules-v1`.
+  - **O-14:** the manual hero truck sends simulated GPS pings every 30 min like background trucks (also while stopped); pings only refresh `lastUpdateAt`, never create events or milestones.
+  - Recalculation pipeline (`services/etaService.ts`) inside every settle, milestone, reset (incl. a SEED calculation at 08:00) and the new `simulationService.applyChange` entry point for disruptions, reports, recovery and window changes; cached ETA/risk fields on `Shipment`; `RiskSnapshot` per the snapshot rule (no overwrite, no identical duplicate at one minute); `worldVersion` bumped on material change.
+  - Endpoints #18 `GET /api/shipments/:shipmentId/eta` (coordinator explanation; customer plain summary) and #20 `GET /api/engine/rules`.
+  - Shared contracts: `Factor`, `FactorPhase`, `PartyMinutes`, `EtaExplanationCoordinator`, `EtaSummaryCustomer`, `EtaResponse`, `EngineRulesResponse`, `RULE_VERSION`; hand-written guard `isFactorArray` for snapshot factors.
+  - Tests: 234 passing (new: 26 ETA-engine unit tests, 6 risk-rule tests, 19 ETA integration tests incl. R1 hero part, R5, R6 and HTTP scoping); O-14, L5, snapshot-cadence and customer-leak mutations each caught.
+
+### Changed (Milestone 5)
+- `SimDisruption` carries party, reason, label and a simulation-time "created" order (start time, then id) for deterministic L5 tie-breaks; `SimShipment` carries its ledger and stop cause.
+- Recalculation hook signature: receives the static world and the shipments touched by events/actions, and returns whether it made a material change.
+- Simulation integration digests now include `DelayAttribution` and `RiskSnapshot`.
+
+### Added (Milestone 4)
 - **Backend Milestone 4 (deterministic simulation), branch `backend`:**
   - Pure discrete-event engine `engines/simulate.ts`: integer seconds and millimetres, exact BigInt rational speeds and paces, every 5-minute grid boundary is an event boundary; segment crossings, disruption edges, gate queue (FCFS over 3 bays, 40-min loading, never leaving before planned departure), autopilot milestones, physical arrival, eligible check-in (L1/L4/O-12), delivery after unloading, truck release, tracking pings and seeded silence.
   - Disruption effects: weather slowdown (largest wins), road closure held at segment entry, truck breakdown hold, gate congestion (largest extra wins); stop beats slowdown (L5).

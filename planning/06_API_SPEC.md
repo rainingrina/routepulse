@@ -606,7 +606,7 @@ interface GeoJSONLineString { type: 'LineString'; coordinates: [number, number][
 - **Roles:** coordinator → `EtaExplanationCoordinator`; customer (own) → `EtaSummaryCustomer`.
 - **Response 200:** `{ eta: EtaExplanationCoordinator | EtaSummaryCustomer }`
 - **Errors:** `403 FORBIDDEN` (driver), `404 NOT_FOUND`, `409 INVALID_TRANSITION` if the shipment is delivered (use the shipment detail instead).
-- Read-only: returns the latest cached calculation; does not trigger a recalculation.
+- Read-only: returns the latest cached calculation; does not trigger a recalculation. **As implemented (Milestone 5):** the explanation is recomputed read-only at the last settled simulation time with the same pure functions as the pipeline, so it equals the cached fields (tested); nothing is written and the clock does not move. A live shipment without a truck has no estimate yet → `409 CONFLICT` (does not occur in the seed).
 
 ### 8.2 `GET /api/shipments/:shipmentId/replay`
 - **Purpose:** snapshot history for the replay scrubber (AC-X1.1, AC-X1.2, J6).

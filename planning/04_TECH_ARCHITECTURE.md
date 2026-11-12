@@ -379,7 +379,7 @@ Arithmetic: distance in integer metres, time in integer seconds, ledger in integ
 - Arrival delay is recorded in whole minutes rounded **up** (`delayMinutes = ceil(late seconds / 60)`); on time = `arrivedAt ≤ promisedBy`.
 - On DELIVERED the truck becomes AVAILABLE at the customer's site.
 - Pace per (transporter, lane) is derived from the seeded history (O-13).
-- Ledger booking of incurred delay (§10.5) is **not yet** done by the settle step; it is PROGRESS task 8.1 (Milestone 6). The 40-minute plant gate wait is visible from the timestamps (gate-out − planned departure).
+- **Milestone 5:** the settle step books the incurred-delay ledger (§10.5, L5) into `DelayAttribution` (deterministic ids `da_<shipment>_<sourceKey>_<party>`); per call the booked seconds equal `round(I(to)) − round(I(from))`, so the ledger always sums to round(I). Every grid step, milestone, reset and `applyChange` action then runs `etaService.recalculate` in the same transaction (§6.3).
 
 ### 9.3 What happens on a grid boundary (`step(b)`)
 After `settleTo(b)`:
@@ -392,7 +392,7 @@ After `settleTo(b)`:
 | Loading finished (manual) | Driver may now tap GATE_OUT; the system records IN_TRANSIT at the same time. |
 | End of route (autopilot) | Record `physicalArrivalAt` (event PHYSICAL_ARRIVAL); record ARRIVED at the eligible check-in time (§10.1), `arrivedAt` = that time; record DELIVERED at `arrivedAt + unloadingMinutes` (source SIMULATION). |
 | End of route (manual / hero, L6) | Record `physicalArrivalAt` (event PHYSICAL_ARRIVAL); the truck holds at the gate. From the eligible check-in time the driver may tap ARRIVED; `arrivedAt` = the eligible check-in time, **not** the tap time. From `arrivedAt + unloadingMinutes` the driver may tap DELIVERED; `deliveredAt` = `arrivedAt + unloadingMinutes` (+ any confirmed "waiting to unload" minutes), not the tap time. Waiting for a tap books nothing. |
-| Pings (autopilot) | Every `pingIntervalMinutes`, set `lastUpdateAt = b`, unless inside a seeded `silentFrom` period. |
+| Pings (every truck on the road; O-14) | Every `pingIntervalMinutes`, set `lastUpdateAt = b`, unless inside a seeded `silentFrom` period. Applies to the manual hero too (decided 2026-11-12: the driver's phone sends GPS while milestones stay manual), including while stopped. A ping never creates a `ShipmentEvent` and never changes a milestone; driver taps remain events with source DRIVER. |
 | Any live shipment | Recalculate ETA/risk (§10); snapshot if the snapshot rule fires (§9.5). |
 
 Speed never exceeds the segment baseline speed (`pace ≤ 1`, slowdown ≥ 0): trucks never "catch up". This keeps every incurred delay ≥ 0 and the ledger additive.
@@ -536,6 +536,12 @@ Hero numbers are illustrative; the seed fixes the real values.
 
 ### 10.7 Recovery consistency rule
 Recovery options are evaluated by running **the same `projectEta` on a modified copy of the context** (alternate route, new stop time, new child plan, new promise). On choose, the service applies the same modification to the database and runs the normal pipeline. A test asserts that the pipeline's new ETA equals the chosen option's `newEtaAt` at the same `actionTime` (§20.1, RC-4). If feasibility changed between display and choose, the request fails with `409 STALE_OPTIONS` instead of applying a different result.
+
+### 10.7a As implemented (Milestone 5)
+- `projectEta` = `engines/eta.ts`: `projectWorld` runs `simulate()` forward on a copy of all live shipments (manual steps as soon as allowed) until each reaches its eligible check-in; E per cause = projected ledger − current ledger; `explainEta` builds I/P/E, the factor bars (largest remainder), slack, level, score, range and confidence. Settlement and projection therefore share one implementation of every rule (§10.3 = §10.5).
+- `etaService.recalculate` (the pipeline step) updates `Shipment.etaAt/etaLowAt/etaHighAt/slackMinutes/riskLevel/riskScore/confidence` and writes `RiskSnapshot` rows per the snapshot rule (§9.5): no overwrite; an action snapshot is skipped only when identical to one already stored at the same minute; a disruption action snapshots only shipments whose result changed. Snapshot ids are deterministic (`rs_<shipment>_<epochSeconds>[_n]`).
+- `simulationService.applyChange(trigger, apply)` is the single entry point for later actions (disruptions, reports, reviews, recovery, window changes): lock → settle to the action minute → apply → recalculate → `worldVersion`, in one transaction.
+- `GET /api/shipments/:id/eta` recomputes read-only, under the world lock, at the last settled time — the same pure functions and inputs as the cached pipeline result, so it equals the cache (tested) and also returns fields that are not stored (`projectedRoadArrivalAt`, `receivingWindow`, `totals`, `summary`).
 
 ### 10.8 Range, confidence, level, score
 - Range: `± (5% of R+E + 30 if lastUpdate > 2 h + 20 per pending report)`, rounded to 5 min.
@@ -745,6 +751,11 @@ Status: **Resolved** (by a decision or by design), **Open** (team decision neede
 | 25 | Activity feed source | Resolved (L7) | `GET /api/audit` |
 | 26 | Hero replacement "transfer ~90 min" vs engine timing | Resolved by calculation | Total stoppage 11:10–12:40 ≈ 90 min = 15 min before the decision + 30 min travel + 45 min transfer; reproduces ETA 17:50 (engine doc Ex 3) |
 | 27 | `pmtiles` browser library needed for the tiled basemap but not in the L9 dependency list | **Open** | Approve `pmtiles`, or use the GeoJSON fallback basemap (no extra dependency) |
+| 28 | Manual hero truck had no tracking pings, so confidence would fall in the afternoon | Resolved (O-14, 2026-11-12) | Every truck on the road pings every 30 min; pings never trigger milestones (§9.3) |
+| 29 | Projection gate-queue formula vs the simulated queue | Resolved by design (Milestone 5) | The projection runs the simulation itself (§10.7a); the documented formula is the approximation it reduces to |
+| 30 | Confidence for a shipment that has never sent an update | Interpretation (Milestone 5) | Treated as older than 3 h: LOW, +30 range (engine doc §9) |
+| 31 | Ledger needed before Milestone 6 for the incurred bars | Resolved (Milestone 5) | Task 8.1 pulled forward; finalisation, GAP row, but-for and overrides stay in Milestone 6 |
+| 32 | L5 "earliest created" with wall-clock `createdAt` would be non-deterministic | Interpretation (Milestone 5) | Disruption simulation start time, then id |
 
 ---
 

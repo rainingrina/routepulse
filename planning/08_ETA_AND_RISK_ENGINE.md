@@ -19,7 +19,7 @@ All values live in `apps/api/src/config/`. Values marked **[A]** are fictional a
 | Standard loading time per truck | 40 min **[A]** | — |
 | Loading bays | 3 **[A]** | Spec §5.1 |
 | Unloading time | `Customer.unloadingMinutes` (default 60) | Schema |
-| Ping interval (autopilot) | 30 min | Architecture §9.3 |
+| Ping interval (every truck on the road, incl. the manual hero — O-14) | 30 min | Architecture §9.3 |
 | Level thresholds | ON_TRACK slack ≥ 120 · WATCH 0–119 · AT_RISK < 0 | Spec §5.4 |
 | Range | ± (5% of minutes to predicted arrival + 30 if last update > 2 h + 20 per pending report), rounded to the nearest 5 min (halves up) | Spec §5.4 |
 | Confidence | HIGH ≤ 1 h & no pending report · MEDIUM 1–3 h or pending report · LOW > 3 h | Spec §5.4 |
@@ -161,9 +161,12 @@ The same precedence is applied by the settle step (incurred) and by the forward 
 5. **Receiving window.** If the projected arrival falls outside receiving hours: extra = time until the window next opens, to WIN (§6).
 6. Arrival = `now + R + Σ extras`. Factors are returned with phase EXPECTED.
 
+**As implemented (Milestone 5, `engines/eta.ts`).** Steps 1–5 are not coded a second time: the projection runs the **same simulation engine** forward on a copy of the world (every manual step assumed as soon as it is allowed) until each shipment's eligible check-in time, and E per cause is the ledger that run books from `now` on. This makes §4.3 and §11 ("projection and settle use the same decomposition") true by construction: with no new information, every expected second becomes the identical incurred second (ET-3 tested over 12 settles). One consequence **[INTERPRETATION]**: the gate queue in step 2 is the exact first-come-first-served simulation over the loading bays, not the approximation "trucks ahead ÷ bays × loading time"; both agree when every bay frees on schedule.
+
 ### 5.1 Historical transporter performance (HIST) and proration (D6)
 - **Pace** `p` for (transporter, lane) comes from delivered history: `r` = median over those shipments of (TRANSPORTER-attributed TIME_LOST seconds ÷ baseline seconds); `p = 1 ÷ (1 + r)`, clamped to `[0.80, 1.00]`. Fallbacks in §1.
 - **Proration:** HIST applies only to the **remaining** baseline time: `E_HIST = Σ over remaining pieces b·(1/p − 1) = R·r` when no slowdown applies.
+- **Golden values recomputed with the derived pace (Milestone 5, `tests/unit/etaEngine.test.ts`):** 09:30 → 14:20 (I 40 GATE, E 20 HIST) · 10:25 → 14:20 (I 40 + 4, E 16) · 10:30 rain → **16:20**, DISR 120, HIST 16, slack 100, WATCH · 11:10 breakdown 180 → road 19:20, **Fri 08:00**, I 49 = 40/7/2, E HIST 13 + DISR 118 + stop 180 + WIN 760, slack −840, AT_RISK · 11:25 → I 64 = 40/7/2/15 · transfer to 12:40 → **17:50**. Only the WIN split moves by a minute: **84 / 423 / 253** (Plant / Transporter / External) instead of the illustrative 85 / 422 / 253 (weights are ledger seconds). With a simulator breakdown (no pending report) the 11:10 range is ±65 and confidence HIGH; the ±85/MEDIUM in Example 2 apply to the driver-report path (Milestone 6).
 - **Decided 2026-11-12:** the pace used by the engine and by the Milestone 5 golden tests is the one **derived from the seeded history**, not a designed value. For Ghatline on the Pune lane this is **r = 20 / 270 = 0.0741** (p ≈ 0.931), not 0.0753. The worked examples in §10 below still show the designed p = 0.93; their expected-HIST minutes are unchanged (20 at R = 270, 16 at R = 214, 13 at R = 179), and any one-minute differences elsewhere will be fixed by recomputing the golden values with the derived pace in Milestone 5.
 - Examples with `r = 0.0753` (p = 0.93) on a 270-minute route (illustrative; see the note above):
 
@@ -255,8 +258,16 @@ Implemented in Milestone 4 (`apps/api/src/engines/simulate.ts`, `services/simula
 | Reset (L2) | Truncate + deterministic reseed (Thu 08:00) + hero pre-script through the normal services (AT_GATE 08:10, LOADING 08:50 by simulation, GATE_OUT 09:30) + advance to **Thu 10:25**, paused |
 | Background shipments (D7) | Autopilot: AT_GATE at `plannedGateAt`, LOADING by bay availability, GATE_OUT when loaded and not before `plannedDepartureAt`, PHYSICAL_ARRIVAL at the exact crossing minute, ARRIVED at the eligible check-in time, DELIVERED after unloading |
 | Hero shipment (D7, L6) | Manual: driver taps AT_GATE, GATE_OUT, ARRIVED, DELIVERED. LOADING is always recorded by the simulation (plant activity). The truck holds at the gate after physical arrival; `arrivedAt` and `deliveredAt` come from the simulation's times, not the taps |
-| Pings | Autopilot pings every 30 min unless seeded silent; driver actions also count |
+| Pings | Every truck on the road (autopilot **and** the manual hero, O-14) pings every 30 min unless seeded silent — also while stopped, not after physical arrival; driver actions also count. A ping only refreshes `lastUpdateAt`; it never creates an event or a milestone |
+| Ledger (Milestone 5) | Booked during settle per §4.2 with L5; per settle call the shipment's booked seconds are `round(I(to)) − round(I(from))` (I exact from the clock), spread over the causes by largest remainder, so the cumulative ledger always equals round(I) and never drifts |
 | Long gap | > 12 boundaries in one tick → process 12, pause, show `simError` |
+
+**Implementation interpretations (Milestone 5) [INTERPRETATION]:**
+- "Earliest created" in the L5 tie-breaks uses the disruption's simulation start time, then its id (never the wall-clock `createdAt`), so results are reproducible.
+- A shipment that has never sent an update (e.g. not yet at the gate) is treated as older than 3 h: confidence LOW and +30 on the range.
+- LATE: `now > promisedBy` and the truck has not physically arrived with an eligible check-in time ≤ `promisedBy` (an on-time physical arrival awaiting the ARRIVED tap is not late, L6).
+- The range is applied symmetrically around the predicted arrival as written; the lower bound is not clamped to `now`.
+- Summary: the largest factor by minutes across both phases of one cause, excluding the WIN knock-on; customer `plainReason` is that factor's reason in plain words (null when ON_TRACK).
 
 ---
 
