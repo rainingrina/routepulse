@@ -1,0 +1,36 @@
+{
+  "name": "@routepulse/api",
+  "private": true,
+  "version": "0.0.0",
+  "description": "RoutePulse API — Express v5 + Prisma + PostgreSQL.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file=.env src/server.ts",
+    "start": "tsx --env-file=.env src/server.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "seed": "tsx --env-file=.env src/seed/cli.ts"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "@routepulse/shared": "*",
+    "bcryptjs": "3.0.3",
+    "express": "5.3.0",
+    "helmet": "8.3.0",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/node": "24.19.2",
+    "@types/pg": "8.23.1",
+    "prisma": "7.10.1",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "4.1.12"
+  }
+}

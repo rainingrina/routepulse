@@ -795,6 +795,8 @@ model SimState {
 
 Reset inserts ≈ 3,500 rows with `createMany` in one transaction — well inside the 5 s target (AC-X4.3).
 
+**Implemented (Milestone 2):** actual counts and values are recorded in `10_SEED_DATA.md` (189 shipments, 1,786 events, 405 attribution rows; ≈ 0.5 s). All timestamps are stored as UTC; every API database session sets `TimeZone=UTC`.
+
 ---
 
 ## 8. Requirement coverage (spec and journeys → schema)

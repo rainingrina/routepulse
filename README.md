@@ -5,7 +5,7 @@ Know it will be late hours before it is — know why, and fix it.
 
 Built for the LYB Mumbai Hackathon 2026, Round 2, Problem Statement 3 (Order-to-Delivery Control Tower). All companies, people and data are **fictional**; "Plant X" is a fictional polymer producer.
 
-> **Project status (2026-11-12): planning complete and decisions locked (L1–L10); implementation not started.** The repository currently contains planning documents only. The commands and configuration below describe the **planned** setup from `planning/04_TECH_ARCHITECTURE.md`; they do not work yet and will be updated to match the real `package.json` scripts when the code exists. See `PROGRESS.md`.
+> **Project status (2026-11-12): planning complete and decisions locked (L1–L10); backend Milestones 1–3 (foundation, schema + seed, authentication and authorisation) implemented on branch `backend`; other features not yet implemented.** The commands below match the real `package.json` scripts. See `PROGRESS.md` for exact status.
 
 ---
 
@@ -33,7 +33,7 @@ RoutePulse gives three roles one shared view:
 - Disruption simulator on a deterministic simulation clock.
 - Driver problem reporting by typed input with reason confirmation.
 
-None of these is implemented yet.
+None of these features is implemented yet; only the backend foundation (health check, error handling, database setup) exists.
 
 ---
 
@@ -64,32 +64,60 @@ Browser (React SPA)  ──JSON /api/*──▶  Express v5 API  ──Prisma─
 
 ---
 
-## Getting started (planned — not yet available)
+## Getting started (backend — Milestones 1–3)
 
-The repository has no `package.json`, `.env.example`, Docker Compose file or Prisma schema yet. When they are added, this section will list the exact commands. The planned shape (architecture §4 and §15) is:
+The backend foundation, full database schema, deterministic seed and authentication (login, logout, session, roles, data scoping) exist (branch `backend`). Product data endpoints arrive in later milestones. The web app is developed separately.
 
-### Prerequisites (planned)
-- Node.js LTS and npm.
-- PostgreSQL (planned via Docker Compose, or a local install).
+### Prerequisites
+- Node.js ≥ 20.19 and npm.
+- PostgreSQL 17: either `docker compose up -d` (uses `docker-compose.yml`, creates `routepulse_dev` and `routepulse_test`) or a local install with those two databases created (`createdb routepulse_dev`, `createdb routepulse_test`).
 
-### Environment variables (planned)
-| Variable | Purpose | Source |
-|---|---|---|
-| `SESSION_SECRET` | Signs the session cookie | Architecture §7.1 |
-| `DEMO_MODE` | Enables simulator, clock and reset endpoints when `true` | Architecture §14 |
-| Database connection URL | Prisma datasource; exact name set in `schema.prisma` at setup | To be defined |
+### Setup
+```bash
+npm install
+cp apps/api/.env.example apps/api/.env   # set DATABASE_URL, TEST_DATABASE_URL, SESSION_SECRET (≥ 32 chars)
+npm run db:migrate                       # apply migrations to DATABASE_URL
+npm run seed                             # deterministic fictional demo data (clock: Thu 08:00, paused)
+npm run dev:api                          # API on http://localhost:4000 — check GET /api/health
+```
 
-A `.env.example` will be added during setup. Real `.env` files are never committed.
+### Environment variables (`apps/api/.env`)
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection for the API and migrations |
+| `TEST_DATABASE_URL` | Separate database for integration tests (must differ from `DATABASE_URL`) |
+| `SESSION_SECRET` | Signs the session cookie; at least 32 characters |
+| `SEED_DEMO_PASSWORD` | Password for all seeded demo accounts (fictional `.test` users); at least 12 characters; keep it local |
+| `DEMO_MODE` | `true` enables simulator, clock and reset endpoints (coordinator only) |
+| `PORT` | API port (default 4000) |
+| `NODE_ENV` | `development` · `test` · `production` |
+| `LOG_LEVEL` | `info` · `silent` |
 
-### Database and Prisma (planned)
-- Schema in `apps/api/prisma/schema.prisma`; migrations include hand-added CHECK constraints and partial indexes.
-- A deterministic seed creates fictional customers, lanes, transporters, 60 days of history and the live demo shipments.
+### Scripts (root)
+| Script | What it does |
+|---|---|
+| `npm run dev:api` | Start the API with reload |
+| `npm run typecheck` | TypeScript checks for `packages/shared` and `apps/api` |
+| `npm test` | Typecheck, then all API tests (migrates the test database first) |
+| `npm run db:migrate` | `prisma migrate dev` on `DATABASE_URL` |
+| `npm run db:generate` | Regenerate the Prisma client |
+| `npm run seed` | Re-create the deterministic demo data (idempotent; see `planning/10_SEED_DATA.md`) |
 
-### Development scripts (planned names, architecture §4)
-`dev` · `build` · `typecheck` · `test` · `demo` · `seed` · `reset` — not yet defined in any `package.json`.
+Planned for later milestones: `reset`, `demo`, `build`. Route lines in the seed are hand-traced demo geometry, not routing-engine output. The frontend contract for implemented endpoints is in `planning/09_BACKEND_HANDOFF.md`.
 
-### Testing (planned)
-Unit tests for the ETA, risk, attribution and recovery engines; integration tests for authorisation and data isolation; reproducibility tests; and one golden end-to-end hero scenario test. See `planning/04_TECH_ARCHITECTURE.md` §20.
+## Getting started (web app — frontend Phases 1–2)
+
+The web app is the workspace package `@routepulse/web` (`apps/web`, branch `frontend`). After `npm install` at the root:
+
+| Script (from the repo root) | What it does |
+|---|---|
+| `npm run dev -w @routepulse/web` | Vite dev server on http://localhost:5173; proxies `/api`, `/tiles`, `/glyphs` to the API on :4000 |
+| `npm run dev:mock -w @routepulse/web` | Same app with an in-browser **development mock** (fictional fixtures, scripted SHP-1042 scenario, no backend needed) |
+| `npm run typecheck -w @routepulse/web` | TypeScript check of the web app |
+| `npm test -w @routepulse/web` | Web unit tests (Vitest) |
+| `npm run build -w @routepulse/web` | Typecheck + production build (no mock code included) |
+
+Most API endpoints are not implemented yet, so screens beyond login only show data in mock mode. Frontend ↔ backend notes: `docs/FRONTEND_BACKEND_HANDOFF.md`.
 
 ---
 
@@ -106,7 +134,7 @@ Unit tests for the ETA, risk, attribution and recovery engines; integration test
 - All data is fictional and simulated; there is no real GPS, telematics, traffic or weather integration.
 - The ETA and risk are deterministic rules with hand-set values, not a trained model; a pilot would fit the rates on real history.
 - CO₂e is shown only after an emissions factor is verified (gate G-CO2); a second language only after a team member verifies it (gate G-LANG).
-- Prototype security limits: no token revocation, no MFA, single-process lock, local database.
+- Prototype security limits: logout revocation is held in memory (a restart forgets it until tokens expire, ≤ 8 h), no MFA, single-process lock, local database.
 - Remaining open item: whether to add the `pmtiles` browser library for the tiled basemap or use the GeoJSON fallback (`PROGRESS.md` §0).
 
 ## Generative AI declaration

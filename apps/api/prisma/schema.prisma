@@ -1,0 +1,659 @@
+// RoutePulse database schema — the single source of truth for the data model (decision D9).
+// Design reference: planning/05_DATABASE_SCHEMA.md (v0.3). CHECK constraints and partial unique
+// indexes that Prisma cannot express live in the migration SQL next to this file.
+// Referential actions: onDelete Restrict everywhere unless the design marks Cascade (schema §1).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────── Enums (schema §4) ─────────────────────────────
+
+enum Role {
+  COORDINATOR
+  CUSTOMER
+  DRIVER
+}
+
+enum Milestone {
+  ORDER_CONFIRMED
+  TRUCK_ASSIGNED
+  AT_GATE
+  LOADING
+  GATE_OUT
+  IN_TRANSIT
+  ARRIVED
+  DELIVERED
+}
+
+enum RiskLevel {
+  ON_TRACK
+  WATCH
+  AT_RISK
+  LATE
+}
+
+enum Confidence {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum Party {
+  PLANT
+  TRANSPORTER
+  CUSTOMER
+  EXTERNAL
+  UNATTRIBUTED
+}
+
+enum FactorCode {
+  GATE
+  HIST
+  DISR
+  RPT
+  WIN
+}
+
+enum ReasonCode {
+  BREAKDOWN
+  PLANT_GATE_WAIT
+  TRAFFIC
+  ROAD_CLOSED
+  HEAVY_RAIN
+  DOCUMENTS
+  UNLOADING_WAIT
+  OTHER
+  TRANSPORTER_PACE
+  RECEIVING_WINDOW
+}
+
+enum EventType {
+  MILESTONE
+  DRIVER_REPORT
+  REPORT_REVIEWED
+  DISRUPTION_STARTED
+  DISRUPTION_ENDED
+  ALERT_OPENED
+  ALERT_RESOLVED
+  CUSTOMER_NOTIFIED
+  CUSTOMER_RESPONDED
+  RECOVERY_CHOSEN
+  RECOVERY_APPLIED
+  ATTRIBUTION_OVERRIDDEN
+  PHYSICAL_ARRIVAL
+}
+
+enum EventSource {
+  DRIVER
+  COORDINATOR
+  SIMULATION
+  SEED
+  SYSTEM
+}
+
+enum DisruptionKind {
+  WEATHER_SLOWDOWN
+  ROAD_CLOSURE
+  GATE_CONGESTION
+  TRUCK_BREAKDOWN
+}
+
+enum DisruptionOrigin {
+  SEED
+  SIMULATOR
+}
+
+enum ReportStatus {
+  PENDING_REVIEW
+  CONFIRMED
+}
+
+enum AlertStatus {
+  OPEN
+  ACTION_CHOSEN
+  RESOLVED
+}
+
+enum CustomerResponse {
+  ACCEPT_PROPOSAL
+  PREFER_TO_WAIT
+  REQUEST_CALL
+}
+
+enum RecoveryKind {
+  REROUTE
+  SPLIT
+  REPLACEMENT_TRUCK
+  NEW_WINDOW
+  NOTIFY_ONLY
+}
+
+enum OptionStatus {
+  PROPOSED
+  AWAITING_CUSTOMER
+  CHOSEN
+  SUPERSEDED
+}
+
+enum Audience {
+  COORDINATOR
+  CUSTOMER
+}
+
+enum NotificationKind {
+  AT_RISK
+  AT_RISK_CUSTOMER
+  RECOVERY_CONFIRMED
+  PLAN_UPDATED
+  REPORT_NEEDS_REVIEW
+  CUSTOMER_RESPONDED
+  BACK_ON_TRACK
+  DELIVERED
+  ARRIVED_LATE
+}
+
+enum TruckStatus {
+  AVAILABLE
+  ASSIGNED
+  MAINTENANCE
+}
+
+enum AttributionStatus {
+  LIVE
+  FINAL
+}
+
+enum AttributionKind {
+  TIME_LOST
+  PLAN_CHANGE
+  GAP
+}
+
+enum SnapshotTrigger {
+  STEP
+  MILESTONE
+  REPORT
+  REVIEW
+  DISRUPTION
+  RECOVERY
+  SEED
+}
+
+// ───────────────────────────── Models (schema §5) ─────────────────────────────
+
+/// §5.1 Login identity for all three roles.
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique // stored lower-case (CHECK)
+  passwordHash  String
+  name          String
+  phone         String? // fictional; never sent to customers
+  role          Role
+  customerId    String?
+  transporterId String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+
+  customer        Customer?      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  transporter     Transporter?   @relation(fields: [transporterId], references: [id], onDelete: Restrict)
+  drivenShipments Shipment[]     @relation("ShipmentDriver")
+  defaultTrucks   Truck[]        @relation("TruckDefaultDriver")
+  reports         DriverReport[] @relation("ReportReporter")
+  reviews         DriverReport[] @relation("ReportReviewer")
+  auditEntries    AuditLog[]
+
+  @@index([customerId])
+  @@index([transporterId])
+}
+
+/// §5.2 Customer company, site location, receiving hours.
+model Customer {
+  id                String @id @default(cuid())
+  code              String @unique
+  name              String
+  city              String
+  lat               Float
+  lng               Float
+  receivingOpenMin  Int // minutes after local midnight, e.g. 480 = 08:00
+  receivingCloseMin Int // e.g. 1080 = 18:00
+  unloadingMinutes  Int    @default(60)
+  timezone          String @default("Asia/Kolkata")
+
+  users         User[]
+  lane          Lane?
+  orders        Order[]
+  notifications Notification[]
+}
+
+/// §5.3 Transport company (incl. small fleets: fleetSize ≤ 10, derived).
+model Transporter {
+  id        String @id @default(cuid())
+  code      String @unique
+  name      String
+  fleetSize Int
+
+  users     User[]
+  trucks    Truck[]
+  shipments Shipment[]
+}
+
+/// §5.4 Vehicle, availability and location.
+model Truck {
+  id                  String      @id @default(cuid())
+  code                String      @unique
+  transporterId       String
+  capacityT           Decimal     @db.Decimal(6, 1)
+  status              TruckStatus @default(AVAILABLE)
+  locationLabel       String
+  lat                 Float
+  lng                 Float
+  defaultDriverUserId String?
+
+  transporter   Transporter @relation(fields: [transporterId], references: [id], onDelete: Restrict)
+  defaultDriver User?       @relation("TruckDefaultDriver", fields: [defaultDriverUserId], references: [id], onDelete: Restrict)
+  shipments     Shipment[]
+
+  @@index([status, transporterId])
+}
+
+/// §5.5 Plant → customer lane ("route" in the dashboard sense).
+model Lane {
+  id              String  @id @default(cuid())
+  code            String  @unique
+  name            String
+  customerId      String  @unique // one lane per customer site [A]
+  baselineMinutes Int // = primary Route.baselineMinutes (seed check)
+  distanceKm      Decimal @db.Decimal(7, 2)
+
+  customer  Customer   @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  routes    Route[]
+  shipments Shipment[]
+}
+
+/// §5.6 Concrete path of a lane (primary / alternate). Geometry and segments are Json.
+model Route {
+  id              String  @id @default(cuid())
+  code            String  @unique
+  laneId          String
+  name            String
+  isPrimary       Boolean
+  lengthKm        Decimal @db.Decimal(7, 2)
+  baselineMinutes Int // Σ segment minutes, each rounded once at seed
+  geometry        Json // GeoJSON LineString
+  segments        Json // Segment[]: { segmentCode, name, startKm, endKm, speedKmh }
+
+  lane      Lane           @relation(fields: [laneId], references: [id], onDelete: Restrict)
+  shipments Shipment[]
+  snapshots RiskSnapshot[]
+
+  @@index([laneId])
+}
+
+/// §5.7 Customer order and its promised arrival time (arrival-based, L1).
+model Order {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  customerId String
+  promisedBy DateTime @db.Timestamptz(3)
+  placedAt   DateTime @db.Timestamptz(3)
+
+  customer  Customer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  lines     OrderLine[]
+  shipments Shipment[]
+
+  @@index([customerId, promisedBy])
+}
+
+/// §5.8 Grade + quantity per order.
+model OrderLine {
+  id        String  @id @default(cuid())
+  orderId   String
+  gradeCode String
+  quantityT Decimal @db.Decimal(6, 1)
+  isUrgent  Boolean @default(false)
+
+  order Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  items ShipmentItem[]
+
+  @@unique([orderId, gradeCode])
+}
+
+/// §5.9 One truck movement for (part of) an order: plan, live state, cached ETA/risk, outcome.
+model Shipment {
+  id               String  @id @default(cuid())
+  code             String  @unique
+  orderId          String
+  laneId           String
+  routeId          String
+  transporterId    String
+  truckId          String?
+  driverUserId     String?
+  parentShipmentId String?
+  autopilot        Boolean @default(true)
+  isHistorical     Boolean @default(false)
+
+  // Plan and promise (simulation time)
+  currentMilestone             Milestone
+  plannedGateAt                DateTime  @db.Timestamptz(3)
+  plannedDepartureAt           DateTime  @db.Timestamptz(3)
+  plannedArrivalAt             DateTime  @db.Timestamptz(3)
+  promisedBy                   DateTime  @db.Timestamptz(3)
+  originalPromisedBy           DateTime  @db.Timestamptz(3)
+  renegotiated                 Boolean   @default(false)
+  receivingWindowOverrideEndAt DateTime? @db.Timestamptz(3)
+
+  // Live movement state
+  progressM           Int       @default(0)
+  progressCarryMm     Int       @default(0)
+  stoppedUntil        DateTime? @db.Timestamptz(3)
+  gateQueuedAt        DateTime? @db.Timestamptz(3)
+  loadingStartedAt    DateTime? @db.Timestamptz(3)
+  gateOutAt           DateTime? @db.Timestamptz(3)
+  lastUpdateAt        DateTime? @db.Timestamptz(3)
+  pingIntervalMinutes Int       @default(30)
+  silentFrom          DateTime? @db.Timestamptz(3)
+
+  // Cached result of the latest recalculation
+  etaAt              DateTime?   @db.Timestamptz(3)
+  etaLowAt           DateTime?   @db.Timestamptz(3)
+  etaHighAt          DateTime?   @db.Timestamptz(3)
+  slackMinutes       Int?
+  riskLevel          RiskLevel?
+  riskScore          Int?
+  confidence         Confidence?
+  currentOptionSetId String?
+
+  // Impact indicators
+  firstAtRiskAt      DateTime? @db.Timestamptz(3)
+  customerNotifiedAt DateTime? @db.Timestamptz(3)
+
+  // Arrival and delivery outcome (L1, L6)
+  physicalArrivalAt DateTime? @db.Timestamptz(3)
+  arrivedAt         DateTime? @db.Timestamptz(3)
+  deliveredAt       DateTime? @db.Timestamptz(3)
+  delayMinutes      Int?
+  onTime            Boolean?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  order         Order              @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  lane          Lane               @relation(fields: [laneId], references: [id], onDelete: Restrict)
+  route         Route              @relation(fields: [routeId], references: [id], onDelete: Restrict)
+  transporter   Transporter        @relation(fields: [transporterId], references: [id], onDelete: Restrict)
+  truck         Truck?             @relation(fields: [truckId], references: [id], onDelete: Restrict)
+  driver        User?              @relation("ShipmentDriver", fields: [driverUserId], references: [id], onDelete: Restrict)
+  parent        Shipment?          @relation("ShipmentSplit", fields: [parentShipmentId], references: [id], onDelete: Restrict)
+  children      Shipment[]         @relation("ShipmentSplit")
+  items         ShipmentItem[]
+  events        ShipmentEvent[]
+  snapshots     RiskSnapshot[]
+  disruptions   Disruption[]
+  reports       DriverReport[]
+  alerts        Alert[]
+  options       RecoveryOption[]
+  attributions  DelayAttribution[]
+  notifications Notification[]
+
+  @@index([isHistorical, riskScore(sort: Desc)])
+  @@index([driverUserId, currentMilestone])
+  @@index([orderId])
+  @@index([laneId, arrivedAt])
+  @@index([transporterId, arrivedAt])
+}
+
+/// §5.10 Which order lines (and how much) are on a shipment.
+model ShipmentItem {
+  id          String  @id @default(cuid())
+  shipmentId  String
+  orderLineId String
+  quantityT   Decimal @db.Decimal(6, 1)
+
+  shipment  Shipment  @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  orderLine OrderLine @relation(fields: [orderLineId], references: [id], onDelete: Restrict)
+
+  @@unique([shipmentId, orderLineId])
+}
+
+/// §5.11 Timeline: milestones and domain events.
+model ShipmentEvent {
+  id          String      @id @default(cuid())
+  shipmentId  String
+  type        EventType
+  milestone   Milestone?
+  simTime     DateTime    @db.Timestamptz(3)
+  source      EventSource
+  actorUserId String?
+  data        Json        @default("{}")
+  createdAt   DateTime    @default(now()) @db.Timestamptz(3)
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId, simTime])
+}
+
+/// §5.12 ETA/risk result with factor breakdown at a point in time.
+model RiskSnapshot {
+  id                 String          @id @default(cuid())
+  shipmentId         String
+  routeId            String
+  simTime            DateTime        @db.Timestamptz(3)
+  trigger            SnapshotTrigger
+  ruleVersion        String
+  plannedArrivalAt   DateTime        @db.Timestamptz(3)
+  predictedArrivalAt DateTime        @db.Timestamptz(3)
+  etaLowAt           DateTime        @db.Timestamptz(3)
+  etaHighAt          DateTime        @db.Timestamptz(3)
+  slackMinutes       Int
+  level              RiskLevel
+  score              Int
+  confidence         Confidence
+  progressKm         Decimal         @db.Decimal(7, 2)
+  factors            Json
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  route    Route    @relation(fields: [routeId], references: [id], onDelete: Restrict)
+
+  @@index([shipmentId, simTime])
+}
+
+/// §5.13 Simulated or seeded event affecting segments, the gate or a shipment.
+model Disruption {
+  id                   String           @id @default(cuid())
+  kind                 DisruptionKind
+  origin               DisruptionOrigin
+  label                String
+  segmentCodes         String[]
+  shipmentId           String?
+  slowdownPct          Int?
+  extraMinutesPerTruck Int?
+  stopMinutes          Int?
+  party                Party
+  reasonCode           ReasonCode
+  startsAt             DateTime         @db.Timestamptz(3)
+  endsAt               DateTime         @db.Timestamptz(3)
+  endedEarlyAt         DateTime?        @db.Timestamptz(3)
+  createdByUserId      String?
+  createdAt            DateTime         @default(now()) @db.Timestamptz(3)
+
+  shipment     Shipment?          @relation(fields: [shipmentId], references: [id], onDelete: Restrict)
+  attributions DelayAttribution[]
+
+  @@index([startsAt, endsAt])
+}
+
+/// §5.14 Driver problem report and its two-step confirmation.
+model DriverReport {
+  id               String       @id @default(cuid())
+  shipmentId       String
+  reporterUserId   String
+  simTime          DateTime     @db.Timestamptz(3)
+  chipReason       ReasonCode?
+  text             String?
+  suggestedReason  ReasonCode?
+  matchedKeywords  String[]
+  reason           ReasonCode
+  estimatedMinutes Int?
+  appliedMinutes   Int
+  party            Party
+  status           ReportStatus @default(PENDING_REVIEW)
+  reviewedByUserId String?
+  reviewedAt       DateTime?    @db.Timestamptz(3)
+  reviewNote       String?
+  originalReason   ReasonCode?
+  originalParty    Party?
+  createdAt        DateTime     @default(now()) @db.Timestamptz(3)
+
+  shipment     Shipment           @relation(fields: [shipmentId], references: [id], onDelete: Restrict)
+  reporter     User               @relation("ReportReporter", fields: [reporterUserId], references: [id], onDelete: Restrict)
+  reviewer     User?              @relation("ReportReviewer", fields: [reviewedByUserId], references: [id], onDelete: Restrict)
+  attributions DelayAttribution[]
+
+  @@index([status, simTime])
+  @@index([shipmentId, simTime])
+}
+
+/// §5.15 An at-risk episode with the decision and the customer response.
+/// proposedOptionId / chosenOptionId are plain ids (validated by the service) to avoid a cycle.
+model Alert {
+  id                        String            @id @default(cuid())
+  shipmentId                String
+  status                    AlertStatus       @default(OPEN)
+  openedAt                  DateTime          @db.Timestamptz(3)
+  resolvedAt                DateTime?         @db.Timestamptz(3)
+  topFactor                 FactorCode?
+  topReason                 ReasonCode?
+  proposedOptionId          String?
+  chosenOptionId            String?
+  chosenByUserId            String?
+  chosenAt                  DateTime?         @db.Timestamptz(3)
+  customerResponse          CustomerResponse?
+  customerRespondedAt       DateTime?         @db.Timestamptz(3)
+  customerRespondedByUserId String?
+
+  shipment      Shipment         @relation(fields: [shipmentId], references: [id], onDelete: Restrict)
+  options       RecoveryOption[]
+  notifications Notification[]
+
+  @@index([status, openedAt])
+  @@index([shipmentId])
+}
+
+/// §5.16 Each option shown to the coordinator, grouped by option set.
+model RecoveryOption {
+  id                   String       @id @default(cuid())
+  shipmentId           String
+  alertId              String?
+  optionSetId          String
+  createdAtSim         DateTime     @db.Timestamptz(3)
+  kind                 RecoveryKind
+  feasible             Boolean
+  infeasibleReason     String?
+  newEtaAt             DateTime?    @db.Timestamptz(3)
+  etaLowAt             DateTime?    @db.Timestamptz(3)
+  etaHighAt            DateTime?    @db.Timestamptz(3)
+  meetsPromise         Boolean
+  minutesSavedVsNotify Int
+  extraCostInr         Int
+  co2eDeltaKg          Decimal?     @db.Decimal(8, 1) // null until G-CO2 passes (L10)
+  co2eMethod           String?
+  isSuggested          Boolean      @default(false)
+  suggestionRule       String
+  constraints          String[]
+  params               Json
+  status               OptionStatus @default(PROPOSED)
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Restrict)
+  alert    Alert?   @relation(fields: [alertId], references: [id], onDelete: Restrict)
+
+  @@unique([optionSetId, kind])
+  @@index([shipmentId, optionSetId])
+}
+
+/// §5.17 In-app messages to coordinators and customers.
+model Notification {
+  id          String           @id @default(cuid())
+  audience    Audience
+  customerId  String?
+  shipmentId  String?
+  alertId     String?
+  kind        NotificationKind
+  templateKey String
+  params      Json
+  text        String
+  simTime     DateTime         @db.Timestamptz(3)
+  readAt      DateTime?        @db.Timestamptz(3)
+  createdAt   DateTime         @default(now()) @db.Timestamptz(3)
+
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  shipment Shipment? @relation(fields: [shipmentId], references: [id], onDelete: Restrict)
+  alert    Alert?    @relation(fields: [alertId], references: [id], onDelete: Restrict)
+
+  @@index([audience, customerId, readAt])
+  @@index([shipmentId])
+}
+
+/// §5.18 Delay by party and cause: incurred TIME_LOST, reroute PLAN_CHANGE, unexplained GAP.
+model DelayAttribution {
+  id                 String            @id @default(cuid())
+  shipmentId         String
+  sourceKey          String
+  kind               AttributionKind   @default(TIME_LOST)
+  factor             FactorCode?
+  reason             ReasonCode?
+  party              Party
+  delaySeconds       Int
+  status             AttributionStatus @default(LIVE)
+  disruptionId       String?
+  driverReportId     String?
+  originalParty      Party?
+  overrideNote       String?
+  overriddenByUserId String?
+  overriddenAt       DateTime?         @db.Timestamptz(3)
+  updatedAtSim       DateTime          @db.Timestamptz(3)
+
+  shipment     Shipment      @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  disruption   Disruption?   @relation(fields: [disruptionId], references: [id], onDelete: Restrict)
+  driverReport DriverReport? @relation(fields: [driverReportId], references: [id], onDelete: Restrict)
+
+  @@unique([shipmentId, sourceKey, party])
+  @@index([party, status])
+  @@index([shipmentId])
+}
+
+/// §5.19 Who did what, when.
+model AuditLog {
+  id          String    @id @default(cuid())
+  actorUserId String?
+  actorRole   Role?
+  action      String
+  entityType  String
+  entityId    String?
+  simTime     DateTime? @db.Timestamptz(3)
+  data        Json      @default("{}")
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+
+  actor User? @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([createdAt])
+}
+
+/// §5.20 Single-row simulation clock.
+model SimState {
+  id            Int      @id @default(1)
+  simTime       DateTime @db.Timestamptz(3)
+  running       Boolean  @default(false)
+  speed         Int      @default(1)
+  stepMinutes   Int      @default(5)
+  lastSettledAt DateTime @db.Timestamptz(3)
+  worldVersion  Int      @default(0)
+  seedName      String
+  simError      String?
+}
