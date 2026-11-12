@@ -105,6 +105,20 @@ npm run dev:api                          # API on http://localhost:4000 — chec
 
 Planned for later milestones: `reset`, `demo`, `build`. Route lines in the seed are hand-traced demo geometry, not routing-engine output. The frontend contract for implemented endpoints is in `planning/09_BACKEND_HANDOFF.md`.
 
+## Getting started (web app — frontend Phases 1–2)
+
+The web app is the workspace package `@routepulse/web` (`apps/web`, branch `frontend`). After `npm install` at the root:
+
+| Script (from the repo root) | What it does |
+|---|---|
+| `npm run dev -w @routepulse/web` | Vite dev server on http://localhost:5173; proxies `/api`, `/tiles`, `/glyphs` to the API on :4000 |
+| `npm run dev:mock -w @routepulse/web` | Same app with an in-browser **development mock** (fictional fixtures, scripted SHP-1042 scenario, no backend needed) |
+| `npm run typecheck -w @routepulse/web` | TypeScript check of the web app |
+| `npm test -w @routepulse/web` | Web unit tests (Vitest) |
+| `npm run build -w @routepulse/web` | Typecheck + production build (no mock code included) |
+
+Most API endpoints are not implemented yet, so screens beyond login only show data in mock mode. Frontend ↔ backend notes: `docs/FRONTEND_BACKEND_HANDOFF.md`.
+
 ---
 
 ## Demo
