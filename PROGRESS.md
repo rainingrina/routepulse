@@ -1,6 +1,6 @@
 # PROGRESS — RoutePulse
 
-Last updated: 2026-11-12 — backend Milestone 1 (foundation) on branch `backend`; frontend Phases 1–2 (foundation + control tower) on branch `frontend`. Frontend work runs against an in-browser development mock until the API endpoints exist; nothing frontend is **Verified** against the real API yet. Frontend ↔ backend contract notes: `docs/FRONTEND_BACKEND_HANDOFF.md`.
+Last updated: 2026-11-12 — backend Milestones 1 (foundation), 2 (schema + deterministic seed) and 3 (authentication and authorisation) on branch `backend`; frontend Phases 1–2 (foundation + control tower) on branch `frontend`, built against an in-browser development mock. Nothing is marked Verified. Frontend ↔ backend notes: `docs/FRONTEND_BACKEND_HANDOFF.md`.
 
 **Status values:** Not Started · In Progress · Implemented · Tested · Verified
 - *Implemented* = code written. *Tested* = automated tests written and passing (ran by us). *Verified* = checked in the running app against the acceptance criteria.
@@ -37,7 +37,9 @@ Last updated: 2026-11-12 — backend Milestone 1 (foundation) on branch `backend
 | O-8 | Schema simplification S-1 | **Rejected — L8** (relational schema retained) |
 | O-9 | G-CO2: verified emissions factor | **Gate closed (L10)** — CO₂e stays disabled until verified; does not block implementation |
 | O-10 | G-LANG: verified second language | **Gate closed (L10)** — English only until verified; does not block implementation |
-| O-11 | `pmtiles` browser library for the tiled basemap (not in the L9 list) | **Open** — approve it, or use the GeoJSON fallback basemap (architecture §16.2, §19 #27); blocks only task 10.2's tiled variant |
+| O-11 | `pmtiles` browser library for the tiled basemap (not in the L9 list) | **Deferred** (2026-11-12) — frontend coordination; not a backend dependency. GeoJSON fallback basemap remains available (architecture §16.3) |
+| O-12 | Receiving override and arrivals before normal opening | **Decided (2026-11-12): literal rule** — an accepted override accepts any road arrival up to its end, including before opening. Implemented in `engines/receivingWindow.ts`, tested. Gate access, unloading availability and on-time eligibility are separate concepts |
+| O-13 | Historical pace for the engine | **Decided (2026-11-12):** derive from seeded history (Pune/Ghatline r = 0.0741); Milestone 5 golden tests use the derived pace |
 
 ---
 
@@ -46,12 +48,12 @@ Last updated: 2026-11-12 — backend Milestone 1 (foundation) on branch `backend
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
 | 1.1 | npm workspaces: `apps/api`, `packages/shared` (backend side); strict `tsconfig` — `apps/web` is added by Dev B | Dev A | Approval to start | Tested | `npm run typecheck` + `npm test` pass (12 tests) |
-| 1.2 | Root scripts: `dev:api`, `typecheck`, `test`, `db:migrate`, `db:generate` exist; `build`, `demo`, `seed`, `reset` pending (later milestones) | Dev A | 1.1 | In Progress | Partial — existing scripts run |
+| 1.2 | Root scripts: `dev:api`, `typecheck`, `test`, `db:migrate`, `db:generate`, `seed` exist; `build`, `demo`, `reset` pending (later milestones) | Dev A | 1.1 | In Progress | Existing scripts run |
 | 1.3 | Docker Compose for PostgreSQL; `apps/api/.env.example` (`DATABASE_URL`, `TEST_DATABASE_URL`, `SESSION_SECRET`, `DEMO_MODE`, `PORT`, `NODE_ENV`, `LOG_LEVEL`) | Dev A | 1.1 | Implemented | Compose file **not run** (Docker daemon off on this machine); development and tests verified against local PostgreSQL 17 |
 | 1.4 | Vite + React app shell; dev proxy for `/api`, `/tiles`, `/glyphs` — `apps/web` joined the workspace; scripts `dev`, `dev:mock`, `build`, `typecheck`, `test` (run with `-w @routepulse/web`) | Dev B | 1.1 | Implemented | Typecheck + production build pass; mock dev server serves every module; not yet run against the API |
 | 1.5 | Express v5 app: helmet (same-origin CSP), JSON-only (415) + 100 kB limit, requestId, error envelope middleware, request log, `GET /api/health` | Dev A | 1.1 | Tested | 7 integration tests pass; a deliberately broken 415 guard made the suite fail (test can fail) |
 | 1.6 | Vitest set-up (api workspace); test DB `routepulse_test` migrated by global setup; guard refuses non-test databases | Dev A | 1.3 | Tested | Runs green; guard proven by refusing the dev DB |
-| 1.7 | `packages/shared`: enum mirror + base types (`ApiError`, primitives, `HealthResponse`, `SimStateDto`, `SyncResponse`) done; endpoint DTOs and fixtures added per milestone | Both | 1.1 | In Progress | Typechecked; Prisma drift check arrives with 2.4 |
+| 1.7 | `packages/shared`: enum mirror, base types, `HealthResponse`, `SimStateDto`, `SyncResponse`, `Segment`, `GeoJSONLineString`, constants (`PLANT`, thresholds); endpoint DTOs and fixtures added per milestone | Both | 1.1 | In Progress | Typechecked; enum drift check passes (2.4) |
 | 1.8 | Design tokens (`tokens.css`), Tailwind theme, self-hosted Inter | Dev B | 1.4 | In Progress | Tokens (UI plan §2) and Tailwind theme done; default palette disabled; Inter files not added yet (handoff Q5) |
 | 1.9 | `.gitignore` covers `.env*` (except `.env.example`), `dist/`, `node_modules/`, generated Prisma client (developers commit) | Dev A | 1.1 | Implemented | N/A |
 
@@ -59,30 +61,30 @@ Last updated: 2026-11-12 — backend Milestone 1 (foundation) on branch `backend
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
-| 2.1 | `schema.prisma` (20 models, enums) per schema doc v0.3, incl. `physicalArrivalAt` and `receivingWindowOverrideEndAt` — **SimState model done (M1)**; remaining 19 models in M2 | Dev A | 1.3 | In Progress | SimState covered by tests |
-| 2.2 | Migrations + raw SQL CHECKs and partial unique indexes — `init_sim_state` + `sim_state_checks` applied to dev and test DBs | Dev A | 2.1 | In Progress | SimState CHECKs tested (constraint list + rejected `speed = 7`) |
-| 2.3 | Json column types + hand-written guards (`guards/`) | Dev A | 2.1 | Not Started | Not tested |
-| 2.4 | Enum drift check (`contract-checks.ts`) + CT-1 test | Dev A | 1.7, 2.1 | Not Started | Not tested |
+| 2.1 | `schema.prisma`: all 20 models and 22 enums per schema doc v0.3 (incl. `physicalArrivalAt`, `receivingWindowOverrideEndAt`); explicit `onDelete: Restrict` except the 5 documented Cascades | Dev A | 1.3 | Tested | `prisma validate` passes; migration applied to dev and test; integration tests query real tables |
+| 2.2 | Migrations `init_sim_state`, `sim_state_checks`, `full_schema`: 49 CHECK constraints + 5 partial unique indexes; `prisma migrate diff` against the schema is empty (Prisma will not drop them) | Dev A | 2.1 | Tested | Constraint and index lists asserted; 10 behavioural rejection tests pass |
+| 2.3 | Json guards: `isLineString`, `isSegmentArray`, `routeProblems` done (used by the seed); guards for factors, option params and notification params come with their milestones | Dev A | 2.1 | In Progress | Route guards tested |
+| 2.4 | Enum drift check: compile-time equality of 22 shared unions vs Prisma enums (`contract-checks.ts`) + runtime order test (CT-1) | Dev A | 1.7, 2.1 | Tested | Passes; renaming one shared value failed both `tsc` (1 error) and the test |
 
 ## 3. Authentication and authorisation
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
-| 3.1 | Login / logout / me (#1–#3), bcrypt, JWT cookie, in-memory login rate limit | Dev A | 2.2 | Not Started | Not tested |
-| 3.2 | `requireRole`, `scopeForUser`, 404-for-out-of-scope | Dev A | 3.1 | Not Started | Not tested |
-| 3.3 | Validation helpers (`validation/`) + CT-2 | Dev A | 1.5 | Not Started | Not tested |
-| 3.4 | Login page, role guard, three route trees (UI plan §3, §5) | Dev B | 1.8, 3.1 | Implemented | Guard decision, login validation and session-expiry rule unit-tested; not run against #1–#3 (task 3.1 not built) |
-| 3.5 | AZ-1 … AZ-8 integration tests | Dev A | 3.2, 5.x | Not Started | Not tested |
+| 3.1 | Login / logout / me (#1–#3): bcrypt verification with dummy-hash timing guard, HS256 session cookie (`node:crypto`), 8 h expiry, logout revocation (in-memory deny-list), in-memory login rate limit 10/min/IP, audit `auth.login` / `auth.login.failed` / `auth.logout` | Dev A | 2.2 | Tested | 23 HTTP integration tests + 13 unit tests; smoke-tested on the dev server; revocation mutation caught |
+| 3.2 | `requireAuth` (deny by default), `requireRole`, `requireDemoMode`, session middleware loading the DB user; scope policies for shipments, orders, alerts, notifications, customers, driver reports; 404-for-out-of-scope guards | Dev A | 3.1 | Tested | 12 authorisation tests against the seeded DB; scope and token-role mutations caught |
+| 3.3 | Validation helpers (`validation/validator.ts`) + CT-2 | Dev A | 1.5 | Tested | 8 unit tests |
+| 3.4 | Login page, role guard, three route trees (UI plan §3, §5) | Dev B | 1.8, 3.1 | Implemented | Guard decision, login validation and session-expiry rule unit-tested; not yet run against the now-implemented #1–#3 |
+| 3.5 | AZ-1 … AZ-8 integration tests — **AZ-6, AZ-7 (middleware level), AZ-8 (validation/415) done**; AZ-1 (full role matrix), AZ-2/3/5 (per endpoint), AZ-4 (deep key scan per endpoint) are written as each product endpoint lands, using the tested scope policies | Dev A | 3.2, 5.x | In Progress | Identity endpoints and scope layer covered |
 
 ## 4. Seed data
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
-| 4.1 | Route geometry: one-time open routing export → GeoJSON; segments by hand (D5) | Dev A | — | Not Started | N/A |
-| 4.2 | Reference data: customers, lanes, routes, transporters, trucks, users (incl. second driver, D3) | Dev A | 2.2, 4.1 | Not Started | Not tested |
-| 4.3 | Deterministic 60-day history (~200 shipments) with attribution matching designed paces | Dev A | 4.2 | Not Started | Not tested |
-| 4.4 | Live shipments + hero SHP-1042 + hero pre-script through the real services to Thu 10:25 (L2) | Dev A | 4.2, 6.x | Not Started | Not tested |
-| 4.5 | Facts/assumptions file listing every seeded value and config value | Dev A | 4.3 | Not Started | N/A |
+| 4.1 | Route geometry: **hand-traced demo GeoJSON** (open-routing export unavailable), labelled `x_source: HAND_TRACED_DEMO`; 9 routes, segments chosen to match approved baselines | Dev A | — | Tested | Structural route checks pass; Pune 270 min with ghat at 90–150 |
+| 4.2 | Reference data: 6 customers, 5 transporters, 20 trucks, 6 lanes, 9 routes, 15 users (incl. second Ghatline driver Suresh + TRK-11 at Khopoli, D3) | Dev A | 2.2 | Tested | Seed reproducibility + data tests pass |
+| 4.3 | Deterministic 60-day history: 177 delivered shipments, ledger reconciles exactly, knock-on WIN split, alerts from known-delay timing | Dev A | 4.2 | Tested | Reconciliation (unit + SQL), L1 on-time, no WIN→customer; reconciliation test proven to fail when WIN rows are dropped |
+| 4.4 | Live shipments + hero SHP-1042 at Thu 08:00 **done**; hero pre-script 08:00 → 10:25 through the real services pending (needs Milestone 4 simulation) | Dev A | 4.2, 6.x | In Progress | Hero plan/promise/truck/driver/order and gate arrangement tested |
+| 4.5 | Facts/assumptions file: `planning/10_SEED_DATA.md` | Dev A | 4.3 | Implemented | N/A |
 
 ## 5. Shipment APIs
 
@@ -102,7 +104,7 @@ Last updated: 2026-11-12 — backend Milestone 1 (foundation) on branch `backend
 | 6.2 | `settleTo(t)` movement (integer metres + carry), boundaries, disruption edges | Dev A | 6.1 | Not Started | Not tested |
 | 6.3 | Autopilot milestones, gate queue, pings; manual hero rules | Dev A | 6.2 | Not Started | Not tested |
 | 6.4 | Clock controls (#5): play/pause/speed/advance/advance-to; long-gap guard | Dev A | 6.2 | Not Started | Not tested |
-| 6.5 | Reset (#6) ≤ 5 s | Dev A | 4.4, 6.1 | Not Started | Not tested |
+| 6.5 | Reset (#6) ≤ 5 s — the seed half is done (≈ 0.5 s, idempotent, two-reset digest identical); the endpoint and hero pre-script are pending | Dev A | 4.4, 6.1 | In Progress | Seed reproducibility tested (dev + test DB) |
 | 6.6 | Disruptions (#7–#9) with impact summary | Dev A | 6.2, 7.x | Not Started | Not tested |
 | 6.7 | Reproducibility tests R1–R8 | Dev A | 6.2–6.5 | Not Started | Not tested |
 

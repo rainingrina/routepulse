@@ -36,18 +36,13 @@ import type {
   Minutes,
   Pct,
   SimStateDto,
+  Segment,
+  GeoJSONLineString,
 } from '@routepulse/shared';
 
 // ---------- §2.2 Core objects ----------
-
-export interface UserDto {
-  id: Id;
-  name: string;
-  email: string;
-  role: Role;
-  customer: { id: Id; name: string } | null;
-  transporter: { id: Id; name: string } | null;
-}
+// Published by Dev A (no longer pending): UserDto, LoginRequest, LoginResponse, MeResponse, HomePath,
+// Segment, GeoJSONLineString — imported from @routepulse/shared.
 
 export interface PartyMinutes {
   party: Party;
@@ -316,35 +311,6 @@ export interface DisruptionDto {
   endsAt: ISODateTime;
   endedEarlyAt: ISODateTime | null;
   active: boolean;
-}
-
-export interface Segment {
-  segmentCode: string;
-  name: string;
-  startKm: number;
-  endKm: number;
-  speedKmh: number;
-}
-
-export interface GeoJSONLineString {
-  type: 'LineString';
-  coordinates: [number, number][];
-}
-
-// ---------- §4 Authentication ----------
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface LoginResponse {
-  user: UserDto;
-  homePath: '/control-tower' | '/orders' | '/trip';
-}
-
-export interface MeResponse {
-  user: UserDto;
 }
 
 // ---------- §5 Simulation ----------

@@ -18,6 +18,45 @@ No application code has been written yet. Entries below describe documentation o
   - DTOs not yet published in `@routepulse/shared` are transcribed verbatim from `06_API_SPEC.md` into `apps/web/src/api/contract/pending.ts` as a temporary, single-file exception (see handoff §3).
   - 72 unit tests (API client, retry/session rules, role guard, formatting, login validation, status badges, list filters, activity summaries, recovery ordering, map geometry, mock fixture identity checks).
   - `docs/FRONTEND_BACKEND_HANDOFF.md`.
+- **Backend Milestone 3 (authentication and authorisation), branch `backend`:**
+  - `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` (#1–#3).
+  - HS256 session tokens with `node:crypto` (no JWT dependency): exact-header check (rejects `alg=none`), constant-time signature check, 8 h real-time expiry, per-session id; httpOnly SameSite=Lax cookie, `Secure` in production.
+  - Logout revocation via an in-memory deny-list (AZ-6); deactivated or deleted users lose access on the next request.
+  - Session middleware that loads the user from the database on every request (role and scope never taken from the token or the client); `requireAuth` (deny by default for every `/api` route except login and health), `requireRole`, `requireDemoMode`.
+  - Scope policies for shipments, orders, alerts, notifications, customers and driver reports, plus 404-for-out-of-scope guards.
+  - Uniform login failure (wrong password / unknown email / inactive) with a dummy bcrypt comparison against timing leaks; in-memory login rate limit 10/min/IP (429).
+  - Audit rows `auth.login`, `auth.login.failed` (email only), `auth.logout`.
+  - Hand-written request validator (`apps/api/src/validation/validator.ts`, CT-2).
+  - Shared contracts published from API spec §2.2/§4: `UserDto`, `HomePath`, `LoginRequest`, `LoginResponse`, `MeResponse`, `SESSION_COOKIE_NAME`.
+  - Tests: 135 passing in total (new: session/cookie/rate-limit/validator units, 23 auth HTTP tests, 12 authorisation tests); three injected security regressions were each caught.
+
+### Changed
+- **O-12 decided:** an accepted receiving-window override accepts any road arrival up to its end, including before normal opening (`engines/receivingWindow.ts`; tested). Gate access, unloading availability and on-time eligibility are documented as separate concepts.
+- **Historical pace:** the engine and Milestone 5 golden tests use the history-derived pace (Pune/Ghatline r = 0.0741), recorded in the engine doc, seed facts and PROGRESS (O-13).
+- **O-11 (`pmtiles`)** deferred for frontend coordination; not a backend dependency.
+- Unauthenticated requests to unknown `/api` paths now return 401 instead of 404 (deny by default); the foundation test was updated accordingly.
+
+### Added (Milestone 2)
+- **Backend Milestone 2 (schema + deterministic seed), branch `backend`:**
+  - Complete `schema.prisma`: 20 models, 22 enums (schema doc v0.3), all documented relations and indexes; explicit `onDelete: Restrict` except the 5 documented Cascades.
+  - Migration `full_schema` with 49 CHECK constraints and 5 partial unique indexes; `prisma migrate diff` confirms Prisma will not drop them.
+  - Enum drift check: compile-time equality of shared unions vs Prisma enums (`apps/api/src/contract-checks.ts`) + runtime order test.
+  - Pure helpers reused by later engines: largest-remainder rounding, IST time helpers, receiving-window eligibility and knock-on WIN split.
+  - Hand-written Json guards for route geometry and segments.
+  - Deterministic, idempotent seed (`npm run seed`): 6 customers, 5 transporters, 15 users, 20 trucks, 6 lanes, 9 routes with **hand-traced demo geometry** (labelled `HAND_TRACED_DEMO`), 177-shipment 60-day history with an exactly reconciling attribution ledger, 12 live shipments incl. hero SHP-1042 at Thu 08:00 (paused).
+  - Shared: `Segment`, `GeoJSONLineString`, `GeometrySource`, `PLANT`, `DISPLAY_TIME_ZONE`, `RISK_THRESHOLDS`, `SMALL_FLEET_MAX`.
+  - `SEED_DEMO_PASSWORD` environment variable (gitignored `.env`); `bcryptjs` 3.0.3 dependency.
+  - `planning/10_SEED_DATA.md` (seed facts and assumptions, task 4.5).
+  - Tests: 80 passing (enum drift, helpers, pure seed data, two-reset reproducibility digest, idempotency, SQL invariants, constraint presence, 10 constraint-rejection cases, time-zone regression).
+
+### Fixed
+- **Time-zone storage bug:** with a PostgreSQL server whose default time zone is not UTC (here Asia/Kolkata), timestamps written through the Prisma pg adapter were stored shifted by the server offset while still round-tripping through Prisma. Every API database session now sets `TimeZone=UTC`; regression test reads stored values with SQL.
+
+### Changed
+- Seed code lives in `apps/api/src/seed/` (not `apps/api/prisma/seed/` as sketched in architecture §4) so the Milestone 4 reset service can import it.
+- Foundation test for SimState CHECKs now targets the existing singleton row (the old version could pass on the primary-key error instead of the CHECK).
+
+### Added (Milestone 1)
 - **Backend Milestone 1 (foundation), branch `backend`:**
   - npm workspaces (`apps/api`, `packages/shared`); strict TypeScript base config.
   - `@routepulse/shared`: enum lists mirroring schema v0.3; `ApiError`, `ErrorCode`, `ValidationIssue`, `ListResponse`, primitives; `HealthResponse`, `SimStateDto`, `SyncResponse`.

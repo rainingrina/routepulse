@@ -31,13 +31,13 @@ Request to Dev A: add `@routepulse/web` to the root `typecheck` and `test` scrip
 
 ## 3. Contract types — what is imported, what is pending
 
-Imported from `@routepulse/shared` (published by Dev A): all enum lists/unions, `Id`, `ISODateTime`, `Minutes`, `Pct`, `ApiError`, `ErrorCode`, `ERROR_CODES`, `ValidationIssue`, `ListResponse`, `SimStateDto`, `SyncResponse`.
+Imported from `@routepulse/shared` (published by Dev A): all enum lists/unions, `Id`, `ISODateTime`, `Minutes`, `Pct`, `ApiError`, `ErrorCode`, `ERROR_CODES`, `ValidationIssue`, `ListResponse`, `SimStateDto`, `SyncResponse`, and since backend Milestones 2–3: `UserDto`, `HomePath`, `LoginRequest`, `LoginResponse`, `MeResponse`, `Segment`, `GeoJSONLineString` (removed from `pending.ts`; shapes were identical).
 
 **Pending (not yet in `packages/shared`):** every other DTO in API §2.2 and §4–§14a is transcribed verbatim into `apps/web/src/api/contract/pending.ts`, because the frontend may not edit `packages/shared` alone and `09_BACKEND_HANDOFF.md` asks not to copy DTOs. This is a deliberate, temporary exception:
 - Nothing imports `pending.ts` directly; all code imports from `api/contract/index.ts`.
 - When a type is published in `@routepulse/shared`, delete it from `pending.ts` and re-export it from `index.ts`; `tsc` shows any drift.
 - **Request to Dev A:** publish the DTOs in `packages/shared/src/api/` (you may move `pending.ts` as a starting point). Names I gave to shapes that are inline in the spec — rename freely, I will follow yours:
-  `MeResponse`, `PositionItem`, `OrderDetail`, `OrderListQuery`, `SimClockResponse`, `SimResetResponse`, `ReplaySnapshot`, `DriverTripResponse`, `ClassifyRequest`, `ReviewDriverReportResponse`, `CustomerResponseRequest`, `NotificationsResponse`, `AttributionOverrideRequest`, `AuditItem`, `AuditQuery`.
+  `PositionItem`, `OrderDetail`, `OrderListQuery`, `SimClockResponse`, `SimResetResponse`, `ReplaySnapshot`, `DriverTripResponse`, `ClassifyRequest`, `ReviewDriverReportResponse`, `CustomerResponseRequest`, `NotificationsResponse`, `AttributionOverrideRequest`, `AuditItem`, `AuditQuery`.
 
 ## 4. Endpoints the frontend calls today
 
@@ -104,4 +104,5 @@ Imported from `@routepulse/shared` (published by Dev A): all enum lists/unions, 
 
 | Date | Change |
 |---|---|
+| 2026-11-12 | Merged backend Milestones 2–3: auth and geometry types now imported from `@routepulse/shared`. |
 | 2026-11-12 | Created. Phases 1–2: client, services, sync, layouts, role guard, login, control tower, map, alerts, activity, quick panel, recovery cards and choose flow. |

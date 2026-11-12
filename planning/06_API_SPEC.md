@@ -372,21 +372,28 @@ interface GeoJSONLineString { type: 'LineString'; coordinates: [number, number][
   ```
   Sets `rp_session` (httpOnly, SameSite=Lax, 8 h).
 - **Validation:** `email` valid email, ≤ 254 chars, lower-cased by the server; `password` 1–128 chars.
-- **Errors:** `401 UNAUTHENTICATED` "Email or password is incorrect" (same message for unknown email and wrong password); `429 RATE_LIMITED`.
-- **Audit:** `auth.login` (success and failure, without the password).
+- **Errors:** `401 UNAUTHENTICATED` "Email or password is incorrect." (same message for unknown email, wrong password and inactive account; no cookie set); `429 RATE_LIMITED`; `400 VALIDATION_ERROR` lists every issue, including unknown fields such as an injected `role` or `userId`.
+- **Audit:** `auth.login` on success; `auth.login.failed` on failure (attempted email only, never the password).
+- **Implemented (Milestone 3).** Set-Cookie: `rp_session=<token>; Path=/; HttpOnly; SameSite=Lax; Max-Age=28800` (+ `Secure` when `NODE_ENV=production`).
 
 ### 4.2 `POST /api/auth/logout`
 - **Purpose:** end the session (AC-M1.5).
 - **Roles:** any signed-in user.
 - **Request:** empty body.
-- **Response 204.** Clears the cookie.
-- **Errors:** none beyond common.
+- **Response 204.** Clears the cookie (`Max-Age=0`) and revokes this session server-side; the old cookie then gets 401 (AZ-6). Other sessions of the same user stay valid.
+- **Errors:** `401` without a session.
+- **Audit:** `auth.logout`. **Implemented (Milestone 3).**
 
 ### 4.3 `GET /api/auth/me`
 - **Purpose:** current user for the role guard.
 - **Roles:** any.
-- **Response 200:** `{ user: UserDto }`
-- **Errors:** `401` if no or expired session.
+- **Response 200:** `{ user: UserDto }` (`MeResponse`). Built from the database row; the token's role claim is never used.
+- **Errors:** `401` if there is no session, or it is expired, revoked, forged, malformed, or names a deactivated/deleted user (an invalid cookie is also cleared). **Implemented (Milestone 3).**
+
+### 4.4 Authentication rules for every other endpoint (Milestone 3)
+- Every `/api` route except #1 and `GET /api/health` requires a valid session (deny by default). Without one: `401 UNAUTHENTICATED`, also for unknown paths.
+- Role checks return `403 FORBIDDEN`; demo-only endpoints additionally return `403 DEMO_MODE_OFF` when `DEMO_MODE=false`.
+- Row scope comes from `apps/api/src/auth/policies.ts` (`shipmentScope`, `orderScope`, `alertScope`, `notificationScope`, `customerScope`, `driverReportScope`); an id outside the caller's scope returns `404 NOT_FOUND`, identical to a missing id.
 
 ---
 

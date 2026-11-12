@@ -146,8 +146,9 @@ Dependencies deliberately **not** used: Zod or any schema-validation library (D9
 │     ├─ prisma/
 │     │  ├─ schema.prisma         ← single source of truth for the data model (D9)
 │     │  ├─ migrations/           generated SQL + hand-added CHECKs / partial indexes
-│     │  └─ seed/                 deterministic seed + hero pre-script (§9.6)
+│     │  (seed code lives in src/seed/ — see below)
 │     └─ src/
+│        ├─ seed/                 deterministic seed (+ hero pre-script, §9.6); importable by the reset service
 │        ├─ controllers/          one file per resource; validate → authorise → service → serializer
 │        ├─ validation/           hand-written helpers (§8.2); enum lists from Prisma Client
 │        ├─ services/             use cases; transactions; world lock
@@ -288,8 +289,12 @@ sequenceDiagram
 ### 7.1 Authentication
 - `POST /api/auth/login` with email + password; bcrypt hashes (cost 10); seeded fictional `.test` accounts.
 - Cookie `rp_session`: httpOnly, SameSite=Lax, signed JWT (HS256) with `sub`, `role`, `exp` (8 h); `Secure` over HTTPS; secret `SESSION_SECRET` in a gitignored `.env`.
-- Logout clears the cookie (AC-M1.5). No server-side revocation list (prototype limit, §14).
-- Login rate limit 10/min/IP — implemented as a small in-memory counter (no extra dependency).
+- Logout clears the cookie (AC-M1.5) **and** revokes that session: each token carries a session id (`jti`) and logout puts it on an **in-memory deny-list** until the token's own expiry (implemented Milestone 3; needed for test AZ-6). Prototype limit: a process restart forgets the list, so a token logged out before a restart is accepted again until it expires (≤ 8 h). Other sessions of the same user are not affected.
+- **Never trust the token or the request for identity:** the session middleware loads the user row by the token's `sub` on every request and uses the **database** role, customer and transporter ids; a deactivated or deleted user loses access immediately. Client-supplied ids, roles or headers are ignored.
+- **Deny by default:** every `/api` route except `POST /api/auth/login` and `GET /api/health` requires a session; unauthenticated calls to unknown paths get 401 (not 404), so the API surface cannot be enumerated.
+- Login failures return one message for wrong password, unknown email and inactive account; a dummy bcrypt comparison runs when the account does not exist so timing does not reveal it.
+- Tokens: HS256 implemented with `node:crypto` (no JWT dependency); only the exact header `{"alg":"HS256","typ":"JWT"}` is accepted (rejects `alg=none`); signatures compared in constant time; expiry uses real time, never simulation time.
+- Login rate limit 10 attempts/min/IP (all attempts count) — a small in-memory fixed-window counter (no extra dependency); `429 RATE_LIMITED`.
 - **Stable user ids** across demo resets, so open sessions stay valid.
 - **Demo [DECIDED D2]:** three Chrome cookie jars — normal profile (coordinator), Incognito (customer), Guest (driver, 360 px). For the hand-over (D3), the Guest window logs out of `driver.ramesh@…` and logs in as the replacement driver.
 
@@ -437,7 +442,7 @@ Tests drive `simulationService` directly with explicit times; the real-time tick
   | Term | Meaning |
   |---|---|
   | Road arrival (`projectedRoadArrivalAt` / `physicalArrivalAt`) | When the truck reaches the customer's gate (projected / actual) |
-  | Applicable receiving window | The customer's default hours (`Customer.receivingOpenMin`–`receivingCloseMin`, Asia/Kolkata); **or**, after an accepted NEW_WINDOW, additionally any road arrival up to this shipment's `receivingWindowOverrideEndAt` |
+  | Applicable receiving window | The customer's default hours (`Customer.receivingOpenMin`–`receivingCloseMin`, Asia/Kolkata); **or**, after an accepted NEW_WINDOW, additionally any road arrival up to this shipment's `receivingWindowOverrideEndAt` — literally any road arrival up to the override end, including before the default opening time (O-12, 2026-11-12). Physical gate access and unloading availability are separate concepts and are not modelled by this rule |
   | Eligible check-in time | The road arrival if it falls inside the applicable window; otherwise the next default opening time after it |
   | **ETA = `predictedArrivalAt`** | Predicted arrival at the receiving gate = eligible check-in time of the projected road arrival |
   | `arrivedAt` | Actual arrival at the receiving gate = eligible check-in time of `physicalArrivalAt`; confirmed by the ARRIVED milestone but never set to the tap time (L6) |
@@ -605,7 +610,7 @@ stateDiagram-v2
 | Demo powers | Simulator, clock and reset are coordinator-only **and** require `DEMO_MODE=true` |
 | Audit | Spec §5.14 list |
 | Data | Fictional only; `.test` emails; obviously fictional phone numbers |
-| Prototype limits (say if asked) | No token revocation; no MFA; single-process lock; local DB. Pilot: SSO, server sessions, managed Postgres with encryption, tenant scoping |
+| Prototype limits (say if asked) | Logout revocation is in memory only (lost on restart); no MFA; single-process lock; local DB. Pilot: SSO, server sessions, managed Postgres with encryption, tenant scoping |
 
 ---
 

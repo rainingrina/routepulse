@@ -5,7 +5,7 @@ Know it will be late hours before it is — know why, and fix it.
 
 Built for the LYB Mumbai Hackathon 2026, Round 2, Problem Statement 3 (Order-to-Delivery Control Tower). All companies, people and data are **fictional**; "Plant X" is a fictional polymer producer.
 
-> **Project status (2026-11-12): planning complete and decisions locked (L1–L10); backend Milestone 1 (foundation) implemented on branch `backend`; other features not yet implemented.** The commands below match the real `package.json` scripts. See `PROGRESS.md` for exact status.
+> **Project status (2026-11-12): planning complete and decisions locked (L1–L10); backend Milestones 1–3 (foundation, schema + seed, authentication and authorisation) implemented on branch `backend`; other features not yet implemented.** The commands below match the real `package.json` scripts. See `PROGRESS.md` for exact status.
 
 ---
 
@@ -64,9 +64,9 @@ Browser (React SPA)  ──JSON /api/*──▶  Express v5 API  ──Prisma─
 
 ---
 
-## Getting started (backend — Milestone 1)
+## Getting started (backend — Milestones 1–3)
 
-Only the backend foundation exists so far (branch `backend`). The web app is developed separately.
+The backend foundation, full database schema, deterministic seed and authentication (login, logout, session, roles, data scoping) exist (branch `backend`). Product data endpoints arrive in later milestones. The web app is developed separately.
 
 ### Prerequisites
 - Node.js ≥ 20.19 and npm.
@@ -77,6 +77,7 @@ Only the backend foundation exists so far (branch `backend`). The web app is dev
 npm install
 cp apps/api/.env.example apps/api/.env   # set DATABASE_URL, TEST_DATABASE_URL, SESSION_SECRET (≥ 32 chars)
 npm run db:migrate                       # apply migrations to DATABASE_URL
+npm run seed                             # deterministic fictional demo data (clock: Thu 08:00, paused)
 npm run dev:api                          # API on http://localhost:4000 — check GET /api/health
 ```
 
@@ -86,6 +87,7 @@ npm run dev:api                          # API on http://localhost:4000 — chec
 | `DATABASE_URL` | PostgreSQL connection for the API and migrations |
 | `TEST_DATABASE_URL` | Separate database for integration tests (must differ from `DATABASE_URL`) |
 | `SESSION_SECRET` | Signs the session cookie; at least 32 characters |
+| `SEED_DEMO_PASSWORD` | Password for all seeded demo accounts (fictional `.test` users); at least 12 characters; keep it local |
 | `DEMO_MODE` | `true` enables simulator, clock and reset endpoints (coordinator only) |
 | `PORT` | API port (default 4000) |
 | `NODE_ENV` | `development` · `test` · `production` |
@@ -99,8 +101,9 @@ npm run dev:api                          # API on http://localhost:4000 — chec
 | `npm test` | Typecheck, then all API tests (migrates the test database first) |
 | `npm run db:migrate` | `prisma migrate dev` on `DATABASE_URL` |
 | `npm run db:generate` | Regenerate the Prisma client |
+| `npm run seed` | Re-create the deterministic demo data (idempotent; see `planning/10_SEED_DATA.md`) |
 
-Planned for later milestones: `seed`, `reset`, `demo`, `build`. The frontend contract for implemented endpoints is in `planning/09_BACKEND_HANDOFF.md`.
+Planned for later milestones: `reset`, `demo`, `build`. Route lines in the seed are hand-traced demo geometry, not routing-engine output. The frontend contract for implemented endpoints is in `planning/09_BACKEND_HANDOFF.md`.
 
 ## Getting started (web app — frontend Phases 1–2)
 
@@ -131,7 +134,7 @@ Most API endpoints are not implemented yet, so screens beyond login only show da
 - All data is fictional and simulated; there is no real GPS, telematics, traffic or weather integration.
 - The ETA and risk are deterministic rules with hand-set values, not a trained model; a pilot would fit the rates on real history.
 - CO₂e is shown only after an emissions factor is verified (gate G-CO2); a second language only after a team member verifies it (gate G-LANG).
-- Prototype security limits: no token revocation, no MFA, single-process lock, local database.
+- Prototype security limits: logout revocation is held in memory (a restart forgets it until tokens expire, ≤ 8 h), no MFA, single-process lock, local database.
 - Remaining open item: whether to add the `pmtiles` browser library for the tiled basemap or use the GeoJSON fallback (`PROGRESS.md` §0).
 
 ## Generative AI declaration
