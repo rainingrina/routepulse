@@ -399,7 +399,7 @@ interface GeoJSONLineString { type: 'LineString'; coordinates: [number, number][
 
 ## 5. Sync and simulation
 
-### 5.1 `GET /api/sync`
+### 5.1 `GET /api/sync` — implemented (Milestone 4)
 - **Purpose:** 1-second poll. Tells the client whether anything changed.
 - **Roles:** any.
 - **Response 200**
@@ -408,7 +408,7 @@ interface GeoJSONLineString { type: 'LineString'; coordinates: [number, number][
   ```
 - **Errors:** common only.
 
-### 5.2 `POST /api/sim/clock`
+### 5.2 `POST /api/sim/clock` — implemented (Milestone 4)
 - **Purpose:** play, pause, set speed, advance by minutes, or advance to a time (architecture §9.1).
 - **Roles:** coordinator; `DEMO_MODE` required.
 - **Request**
@@ -424,14 +424,17 @@ interface GeoJSONLineString { type: 'LineString'; coordinates: [number, number][
 - **Validation:** as in the comments. `ADVANCE`/`ADVANCE_TO` run synchronously; the response returns after all steps.
 - **Errors:** `403 FORBIDDEN`, `403 DEMO_MODE_OFF`, `409 INVALID_TRANSITION` if `to` is not in the future.
 - **Audit:** `sim.clock` with action and parameters.
+- **Implemented notes:** fields that do not belong to the chosen action (e.g. `speed` with `PLAY`) → 400. `ADVANCE`/`ADVANCE_TO` pause the clock first and process every 5-minute boundary up to the target in order. Every control increments `worldVersion`.
+- **Implemented notes:** unknown or action-specific fields that do not belong to the chosen action (e.g. `speed` with `PLAY`) → 400. `ADVANCE`/`ADVANCE_TO` pause the clock first and process every 5-minute boundary up to the target in order. Every control increments `worldVersion`.
 
-### 5.3 `POST /api/sim/reset`
+### 5.3 `POST /api/sim/reset` — implemented (Milestone 4)
 - **Purpose:** restore the seeded demo state (AC-X4.3, J9).
 - **Roles:** coordinator; `DEMO_MODE` required.
 - **Request:** `{ confirm: true }`
 - **Response 200:** `SimStateDto & { durationMs: number }`
 - **Validation:** `confirm` must be literal `true`.
-- **Errors:** `403 FORBIDDEN`, `403 DEMO_MODE_OFF`.
+- **Errors:** `403 FORBIDDEN`, `403 DEMO_MODE_OFF`, `400 VALIDATION_ERROR` (missing `confirm: true`), `409 CONFLICT` when the server has no `SEED_DEMO_PASSWORD` configured.
+- **Behaviour (implemented):** truncates and re-seeds, then runs the hero pre-script through the real simulation services (AT_GATE 08:10 by the hero driver, LOADING 08:50 by the simulation, GATE_OUT 09:30 by the hero driver) and stops at **Thu 10:25, paused**, speed 1×. Sessions stay valid (stable user ids). Takes ≈ 0.5–0.7 s on the development laptop.
 - **Audit:** `sim.reset` (written after the reseed).
 
 ### 5.4 `GET /api/disruptions`

@@ -5,7 +5,7 @@ Know it will be late hours before it is — know why, and fix it.
 
 Built for the LYB Mumbai Hackathon 2026, Round 2, Problem Statement 3 (Order-to-Delivery Control Tower). All companies, people and data are **fictional**; "Plant X" is a fictional polymer producer.
 
-> **Project status (2026-11-12): planning complete and decisions locked (L1–L10); backend Milestones 1–3 (foundation, schema + seed, authentication and authorisation) implemented on branch `backend`; other features not yet implemented.** The commands below match the real `package.json` scripts. See `PROGRESS.md` for exact status.
+> **Project status (2026-11-12): planning complete and decisions locked (L1–L10); backend Milestones 1–4 (foundation, schema + seed, authentication and authorisation, deterministic simulation clock) implemented on branch `backend`; ETA, alerts, recovery and analytics not yet implemented.** The commands below match the real `package.json` scripts. See `PROGRESS.md` for exact status.
 
 ---
 
@@ -87,7 +87,7 @@ npm run dev:api                          # API on http://localhost:4000 — chec
 | `DATABASE_URL` | PostgreSQL connection for the API and migrations |
 | `TEST_DATABASE_URL` | Separate database for integration tests (must differ from `DATABASE_URL`) |
 | `SESSION_SECRET` | Signs the session cookie; at least 32 characters |
-| `SEED_DEMO_PASSWORD` | Password for all seeded demo accounts (fictional `.test` users); at least 12 characters; keep it local |
+| `SEED_DEMO_PASSWORD` | Password for all seeded demo accounts (fictional `.test` users); at least 12 characters; keep it local. Also needed by the API for `POST /api/sim/reset` |
 | `DEMO_MODE` | `true` enables simulator, clock and reset endpoints (coordinator only) |
 | `PORT` | API port (default 4000) |
 | `NODE_ENV` | `development` · `test` · `production` |

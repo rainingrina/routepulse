@@ -289,6 +289,7 @@ sequenceDiagram
 ### 7.1 Authentication
 - `POST /api/auth/login` with email + password; bcrypt hashes (cost 10); seeded fictional `.test` accounts.
 - Cookie `rp_session`: httpOnly, SameSite=Lax, signed JWT (HS256) with `sub`, `role`, `exp` (8 h); `Secure` over HTTPS; secret `SESSION_SECRET` in a gitignored `.env`.
+- **Production requirement (O-15):** persistent session revocation (a session table or per-user session version). The prototype's in-memory deny-list is accepted for the hackathon only.
 - Logout clears the cookie (AC-M1.5) **and** revokes that session: each token carries a session id (`jti`) and logout puts it on an **in-memory deny-list** until the token's own expiry (implemented Milestone 3; needed for test AZ-6). Prototype limit: a process restart forgets the list, so a token logged out before a restart is accepted again until it expires (≤ 8 h). Other sessions of the same user are not affected.
 - **Never trust the token or the request for identity:** the session middleware loads the user row by the token's `sub` on every request and uses the **database** role, customer and transporter ids; a deactivated or deleted user loses access immediately. Client-supplied ids, roles or headers are ignored.
 - **Deny by default:** every `/api` route except `POST /api/auth/login` and `GET /api/health` requires a session; unauthenticated calls to unknown paths get 401 (not 404), so the API surface cannot be enumerated.
@@ -368,6 +369,18 @@ The in-memory copy of `simTime` is authoritative while the process runs; `GET /a
 
 Arithmetic: distance in integer metres, time in integer seconds, ledger in integer seconds. Rounding rule: `floor` for metres per sub-interval, remainder carried in `Shipment.progressCarryMm` (persisted). With this carry, splitting an interval into two sub-intervals gives exactly the same total as one interval. This is what makes actions between boundaries safe.
 
+**As implemented (Milestone 4, `engines/simulate.ts`) — recorded assumptions:**
+- The engine is a pure discrete-event function over integer seconds and integer **millimetres** (`progressM` × 1000 + `progressCarryMm`). Segment speeds (length ÷ rounded baseline seconds) and paces are exact rationals (BigInt); no floating point influences movement.
+- Every 5-minute grid boundary is an event boundary, so one long call and many grid-stopping calls are **bit-identical** (tested). Movement is floored to whole millimetres per sub-interval: positions can be up to 1 mm per grid step behind the exact real-number value, and an extra mid-step split (a driver action) can differ from an unsplit run by at most 1 mm. Results are always identical for the same action times.
+- State settles only at grid boundaries and at action minutes. `ADVANCE`/`ADVANCE_TO` and the ticker move the continuous clock and settle the boundaries they cross; a pause between boundaries does not settle (positions between boundaries will be extrapolated on read by the positions endpoint).
+- Road closures hold a truck **at the entry** of the closed segment; a truck already inside the segment continues (interpretation of §9.4 "stops at the segment start").
+- Gate congestion: the largest active `extraMinutesPerTruck` applies to a truck that starts loading while it is active (L5 analogue).
+- Gate queue: first-come-first-served by gate arrival time, tie by shipment code; LOADING is always recorded by the simulation.
+- Arrival delay is recorded in whole minutes rounded **up** (`delayMinutes = ceil(late seconds / 60)`); on time = `arrivedAt ≤ promisedBy`.
+- On DELIVERED the truck becomes AVAILABLE at the customer's site.
+- Pace per (transporter, lane) is derived from the seeded history (O-13).
+- Ledger booking of incurred delay (§10.5) is **not yet** done by the settle step; it is PROGRESS task 8.1 (Milestone 6). The 40-minute plant gate wait is visible from the timestamps (gate-out − planned departure).
+
 ### 9.3 What happens on a grid boundary (`step(b)`)
 After `settleTo(b)`:
 | Shipment state | Behaviour at a boundary |
@@ -417,6 +430,9 @@ Speed never exceeds the segment baseline speed (`pace ≤ 1`, slowdown ≥ 0): t
 - Second driver for the hand-over (D3): a seeded driver of the same fictional transporter, default driver of the replacement truck (e.g. TRK-11, parked at a yard near the hero route).
 
 ### 9.7 Concurrency
+
+**Implemented (Milestone 4):** `sim/mutex.ts` serialises every simulation mutation (ticker, controls, reset, driver milestones) in call order; each grid step and each action is one Prisma transaction, and the in-memory clock is restored if a transaction rolls back. **Limitation:** the lock is in-process — exactly one API instance may run against a database; several instances would need a database advisory lock or a single simulation worker.
+
 All mutations (ticker steps and user actions) run through one in-process mutex, each inside one Prisma transaction. Reads take no lock. Valid because there is exactly one API process (§15).
 
 ### 9.8 Reproducibility test scenarios

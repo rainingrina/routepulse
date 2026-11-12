@@ -7,6 +7,22 @@ No application code has been written yet. Entries below describe documentation o
 ## [Unreleased]
 
 ### Added
+- **Backend Milestone 4 (deterministic simulation), branch `backend`:**
+  - Pure discrete-event engine `engines/simulate.ts`: integer seconds and millimetres, exact BigInt rational speeds and paces, every 5-minute grid boundary is an event boundary; segment crossings, disruption edges, gate queue (FCFS over 3 bays, 40-min loading, never leaving before planned departure), autopilot milestones, physical arrival, eligible check-in (L1/L4/O-12), delivery after unloading, truck release, tracking pings and seeded silence.
+  - Disruption effects: weather slowdown (largest wins), road closure held at segment entry, truck breakdown hold, gate congestion (largest extra wins); stop beats slowdown (L5).
+  - Pace per (transporter, lane) derived from seeded history as exact rationals (`engines/pace.ts`, O-13).
+  - Simulation service: in-process world lock, one Prisma transaction per grid step and per action, in-memory clock restored on rollback, explicit (still empty) recalculation hook for Milestone 5, `worldVersion` on material changes and controls, long-gap guard.
+  - Driver milestone service for manual shipments (AT_GATE, GATE_OUT, ARRIVED, DELIVERED) with plain-language 409 reasons; `arrivedAt`/`deliveredAt` from simulation times, not tap times (L6).
+  - Reset: seed + hero pre-script through the real services → Thu 10:25 paused (L2): SHP-1042 AT_GATE 08:10, LOADING 08:50, GATE_OUT 09:30, 25.603 km at 10:25.
+  - Endpoints #4 `GET /api/sync`, #5 `POST /api/sim/clock`, #6 `POST /api/sim/reset`; shared `SimClockRequest`, `SimClockResponse`, `SimResetRequest`, `SimResetResponse`.
+  - Tests: 183 passing (22 engine unit tests, 26 simulation integration tests); gate-order, mutex and rollback mutations each caught.
+
+### Changed
+- `writeAudit` accepts a transaction client so audit rows commit atomically with the state they describe.
+- Config: optional `SEED_DEMO_PASSWORD` (≥ 12 chars when set) is now also read by the API for the demo reset.
+- Test server exposes the app (for the simulation service) and never starts real timers.
+
+### Added (Milestone 3)
 - **Backend Milestone 3 (authentication and authorisation), branch `backend`:**
   - `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` (#1–#3).
   - HS256 session tokens with `node:crypto` (no JWT dependency): exact-header check (rejects `alg=none`), constant-time signature check, 8 h real-time expiry, per-session id; httpOnly SameSite=Lax cookie, `Secure` in production.

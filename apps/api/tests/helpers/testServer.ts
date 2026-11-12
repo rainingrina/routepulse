@@ -1,6 +1,7 @@
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
-import { createApp } from '../../src/app.js';
+import type { Express } from 'express';
+import { createApp, type AppDeps } from '../../src/app.js';
 import { loadConfig, type AppConfig } from '../../src/config/env.js';
 import { createPrisma, type PrismaClient } from '../../src/db/prisma.js';
 import { createLogger } from '../../src/logging/logger.js';
@@ -9,6 +10,7 @@ export const TEST_SESSION_SECRET = 'test-secret-that-is-at-least-32-characters-l
 
 export interface TestServer {
   baseUrl: string;
+  app: Express;
   prisma: PrismaClient;
   config: AppConfig;
   close(): Promise<void>;
@@ -20,6 +22,7 @@ export interface TestServerOptions {
   /** Injected real-time clock for sessions and rate limits. */
   now?: () => number;
   loginRateLimit?: { limit: number; windowMs: number };
+  simulation?: AppDeps['simulation'];
 }
 
 /**
@@ -40,6 +43,8 @@ export async function startTestServer(opts: TestServerOptions = {}): Promise<Tes
     logger: createLogger('silent'),
     ...(opts.now ? { now: opts.now } : {}),
     ...(opts.loginRateLimit ? { loginRateLimit: opts.loginRateLimit } : {}),
+    // Tests never start real timers unless they ask for them.
+    simulation: { timers: false, ...opts.simulation },
   });
   const server: Server = await new Promise((resolveServer) => {
     const s = app.listen(0, () => resolveServer(s));
@@ -47,6 +52,7 @@ export async function startTestServer(opts: TestServerOptions = {}): Promise<Tes
   const { port } = server.address() as AddressInfo;
   return {
     baseUrl: `http://127.0.0.1:${port}`,
+    app,
     prisma,
     config,
     close: async () => {

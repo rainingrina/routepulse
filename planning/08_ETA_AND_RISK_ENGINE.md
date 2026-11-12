@@ -242,6 +242,9 @@ All options are computed by running `projectEta` on a **modified copy** of the c
 
 ## 9. Simulation rules (summary)
 
+Implemented in Milestone 4 (`apps/api/src/engines/simulate.ts`, `services/simulationService.ts`); implementation assumptions are recorded in architecture §9.2. Delay at arrival is `ceil(late seconds / 60)` minutes.
+
+
 | Topic | Rule (architecture §9) |
 |---|---|
 | Grid | State moves forward on 5-minute boundaries; movement and ledger are computed by `settleTo(t)`, split at boundaries and disruption edges |

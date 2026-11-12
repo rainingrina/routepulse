@@ -13,6 +13,8 @@ export interface AppConfig {
   sessionSecret: string;
   demoMode: boolean;
   logLevel: LogLevel;
+  /** Needed by the demo reset (re-seeds demo accounts). Optional otherwise. */
+  seedDemoPassword: string | null;
 }
 
 export class ConfigError extends Error {
@@ -60,7 +62,20 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     ? (logRaw as LogLevel)
     : (problems.push(`LOG_LEVEL must be one of ${LOG_LEVELS.join(', ')}`), 'info' as const);
 
+  const seedRaw = env['SEED_DEMO_PASSWORD'];
+  if (seedRaw !== undefined && seedRaw.length > 0 && seedRaw.length < 12) {
+    problems.push('SEED_DEMO_PASSWORD must be at least 12 characters when set');
+  }
+
   if (problems.length > 0) throw new ConfigError(problems);
 
-  return { nodeEnv, port, databaseUrl, sessionSecret, demoMode: demoRaw === 'true', logLevel };
+  return {
+    nodeEnv,
+    port,
+    databaseUrl,
+    sessionSecret,
+    demoMode: demoRaw === 'true',
+    logLevel,
+    seedDemoPassword: seedRaw && seedRaw.length > 0 ? seedRaw : null,
+  };
 }

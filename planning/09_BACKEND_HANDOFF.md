@@ -2,7 +2,7 @@
 
 Living document maintained by the backend (branch `backend`). It lists **only what is implemented and tested**. The full target contract is `06_API_SPEC.md`; types live in `packages/shared`.
 
-Last updated: 2026-11-12 — **Milestone 3 (authentication and authorisation)**.
+Last updated: 2026-11-12 — **Milestone 4 (deterministic simulation)**.
 
 ---
 
@@ -57,6 +57,22 @@ Status per code: `VALIDATION_ERROR` 400 · `UNAUTHENTICATED` 401 · `FORBIDDEN`/
 | POST | `/api/auth/login` (#1) | Public | Implemented + tested |
 | POST | `/api/auth/logout` (#2) | Session | Implemented + tested |
 | GET | `/api/auth/me` (#3) | Session | Implemented + tested |
+| GET | `/api/sync` (#4) | Session (any role) | Implemented + tested |
+| POST | `/api/sim/clock` (#5) | Coordinator + `DEMO_MODE` | Implemented + tested |
+| POST | `/api/sim/reset` (#6) | Coordinator + `DEMO_MODE` | Implemented + tested |
+
+### Simulation clock (what the SPA must do)
+- **Poll `GET /api/sync` every 1 s** (every role). Response `SyncResponse`:
+  ```json
+  { "simTime": "2026-11-19T04:55:00.000Z", "running": false, "speed": 1, "stepMinutes": 5,
+    "worldVersion": 42, "simError": null, "demoMode": true, "unreadNotifications": 0 }
+  ```
+  `simTime` 04:55 UTC = **Thu 10:25 IST** (display in Asia/Kolkata). When `worldVersion` changes, refetch the queries in API §15. Show "PAUSED" when `running` is false and an amber banner when `simError` is set.
+- **Clock controls** (coordinator only): `POST /api/sim/clock` with `SimClockRequest`:
+  `{ "action": "PLAY" }` · `{ "action": "PAUSE" }` · `{ "action": "SET_SPEED", "speed": 1 | 10 | 60 }` · `{ "action": "ADVANCE", "minutes": 5…720, multiple of 5 }` · `{ "action": "ADVANCE_TO", "to": "<ISO, on a 5-min boundary, ≤ 24 h ahead>" }`. Response `SimClockResponse` (state + `stepsExecuted`). ADVANCE/ADVANCE_TO always leave the clock **paused**. Extra fields → 400.
+- **Reset demo:** `POST /api/sim/reset` with `{ "confirm": true }` → `SimResetResponse`; the world returns to **Thu 10:25, paused** (hero SHP-1042 in transit, 25.6 km out). Takes about half a second; the user stays signed in.
+- **What moves:** shipment progress and milestones change on 5-minute simulation steps; between steps nothing is written. Positions/ETA endpoints are not implemented yet (positions #11 in a later milestone; ETA in Milestone 5).
+- **Errors:** customer/driver → 403 `FORBIDDEN`; `DEMO_MODE=false` → 403 `DEMO_MODE_OFF`; invalid time target → 409 `INVALID_TRANSITION` with a plain message.
 
 ### Authentication behaviour (what the SPA must do)
 - **Login:** `POST /api/auth/login` with `LoginRequest` (`{ email, password }`, JSON). 200 → `LoginResponse` (`user`, `homePath`) and an httpOnly cookie `rp_session` (8 h). The SPA never sees or stores the token; `fetch` must run same-origin (Vite proxy in dev) so the browser sends the cookie.
@@ -88,7 +104,7 @@ Type: `HealthResponse`. `serverTime` is wall-clock time, not simulation time.
 |---|---|---|
 | All enum lists and unions (`ROLES`, `MILESTONES`, `RISK_LEVELS`, `PARTIES`, `REASON_CODES`, `DRIVER_REASON_CODES`, `NOTIFICATION_KINDS`, …) | All | Mirror of schema v0.3 (incl. `PHYSICAL_ARRIVAL`, `RECOVERY_APPLIED`, `ARRIVED_LATE`) |
 | `ApiError`, `ErrorCode`, `ValidationIssue`, `ListResponse<T>`, `Id`, `ISODateTime`, `Minutes`, `Pct` | All | |
-| `SimStateDto`, `SyncResponse` | #4 `GET /api/sync`, #5, #6 | Shape is final per API spec; endpoint arrives in Milestone 4 |
+| `SimStateDto`, `SyncResponse`, `SimClockRequest`, `SimClockResponse`, `SimResetRequest`, `SimResetResponse` | #4, #5, #6 | **Implemented** (Milestone 4) |
 | `UserDto`, `LoginRequest`, `LoginResponse`, `MeResponse`, `HomePath`, `SESSION_COOKIE_NAME` | #1–#3 | **Implemented** (Milestone 3) |
 
 You may build against these with fixtures; field names will not change without a note here.
@@ -119,7 +135,7 @@ Log in with these accounts through `/api/auth/login` (Milestone 3). Live shipmen
 
 ## 7. Known incomplete functionality
 
-Implemented: `/api/health` and authentication (#1–#3). Not yet implemented: shipments, orders, map, simulation, ETA, alerts, recovery, notifications, analytics. Next: Milestone 4 (simulation), after approval.
+Implemented: `/api/health`, authentication (#1–#3) and the simulation clock (#4–#6). Not yet implemented: shipments, orders, map layers and positions, disruptions endpoints, ETA, alerts, recovery, notifications, analytics. Live shipments still have no ETA/risk (null) until Milestone 5. Next: Milestone 5 (ETA and risk), after approval.
 
 ## 8. Contract change log
 
@@ -127,4 +143,5 @@ Implemented: `/api/health` and authentication (#1–#3). Not yet implemented: sh
 |---|---|---|
 | 2026-11-12 | Initial publish: enums, base types, `HealthResponse`, `SimStateDto`, `SyncResponse` | — |
 | 2026-11-12 | Added `Segment`, `GeoJSONLineString`, `GeometrySource`, `PLANT`, `DISPLAY_TIME_ZONE`, `RISK_THRESHOLDS`, `SMALL_FLEET_MAX` | No |
+| 2026-11-12 | Added `SimClockRequest`, `SimClockResponse`, `SimResetRequest`, `SimResetResponse` (as specified in API §5); #4–#6 implemented | No |
 | 2026-11-12 | Added `UserDto`, `HomePath`, `LoginRequest`, `LoginResponse`, `MeResponse`, `SESSION_COOKIE_NAME` (already specified in API §2.2/§4; now published). Unauthenticated calls to unknown `/api` paths now return 401 instead of 404 | No (new types); behaviour change for unknown paths only |

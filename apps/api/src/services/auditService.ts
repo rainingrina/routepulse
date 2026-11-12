@@ -1,6 +1,6 @@
 import type { Role } from '@routepulse/shared';
-import type { PrismaClient } from '../db/prisma.js';
 import type { Prisma } from '../generated/prisma/client.js';
+import type { Db } from '../sim/world.js';
 
 export interface AuditEntry {
   actorUserId: string | null;
@@ -15,7 +15,7 @@ export interface AuditEntry {
  * Writes one AuditLog row (spec §5.14). `simTime` is the current simulation time when a clock
  * exists. Never put passwords, tokens or cookies in `data`.
  */
-export async function writeAudit(prisma: PrismaClient, entry: AuditEntry): Promise<void> {
+export async function writeAudit(prisma: Db, entry: AuditEntry): Promise<void> {
   const sim = await prisma.simState.findUnique({ where: { id: 1 }, select: { simTime: true } });
   await prisma.auditLog.create({
     data: {

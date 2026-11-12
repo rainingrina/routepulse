@@ -1,6 +1,6 @@
 # PROGRESS — RoutePulse
 
-Last updated: 2026-11-12 — backend Milestones 1 (foundation), 2 (schema + deterministic seed) and 3 (authentication and authorisation) on branch `backend`. Frontend tasks (Dev B) are untouched. Nothing is marked Verified.
+Last updated: 2026-11-12 — backend Milestones 1–4 (foundation, schema + seed, auth, deterministic simulation) on branch `backend`. Frontend tasks (Dev B) are untouched. Nothing is marked Verified.
 
 **Status values:** Not Started · In Progress · Implemented · Tested · Verified
 - *Implemented* = code written. *Tested* = automated tests written and passing (ran by us). *Verified* = checked in the running app against the acceptance criteria.
@@ -40,6 +40,8 @@ Last updated: 2026-11-12 — backend Milestones 1 (foundation), 2 (schema + dete
 | O-11 | `pmtiles` browser library for the tiled basemap (not in the L9 list) | **Deferred** (2026-11-12) — frontend coordination; not a backend dependency. GeoJSON fallback basemap remains available (architecture §16.3) |
 | O-12 | Receiving override and arrivals before normal opening | **Decided (2026-11-12): literal rule** — an accepted override accepts any road arrival up to its end, including before opening. Implemented in `engines/receivingWindow.ts`, tested. Gate access, unloading availability and on-time eligibility are separate concepts |
 | O-13 | Historical pace for the engine | **Decided (2026-11-12):** derive from seeded history (Pune/Ghatline r = 0.0741); Milestone 5 golden tests use the derived pace |
+| O-14 | Manual hero truck sends no automatic tracking pings (architecture §9.3: pings are autopilot-only; driver taps count as updates). With the Milestone 5 confidence rule, the hero would drop to MEDIUM/LOW confidence on long quiet stretches (e.g. 12:40–17:50) and the ±range would widen beyond the journeys' ±20 | **Open — decide before Milestone 5:** (a) keep as documented, or (b) let manual shipments also ping (the driver's phone sends GPS even when milestones are manual) |
+| O-15 | Logout revocation is in memory | **Accepted for the prototype (2026-11-12).** Production requirement: persistent revocation (e.g. a session table or a per-user session version) — not built without approval |
 
 ---
 
@@ -83,7 +85,7 @@ Last updated: 2026-11-12 — backend Milestones 1 (foundation), 2 (schema + dete
 | 4.1 | Route geometry: **hand-traced demo GeoJSON** (open-routing export unavailable), labelled `x_source: HAND_TRACED_DEMO`; 9 routes, segments chosen to match approved baselines | Dev A | — | Tested | Structural route checks pass; Pune 270 min with ghat at 90–150 |
 | 4.2 | Reference data: 6 customers, 5 transporters, 20 trucks, 6 lanes, 9 routes, 15 users (incl. second Ghatline driver Suresh + TRK-11 at Khopoli, D3) | Dev A | 2.2 | Tested | Seed reproducibility + data tests pass |
 | 4.3 | Deterministic 60-day history: 177 delivered shipments, ledger reconciles exactly, knock-on WIN split, alerts from known-delay timing | Dev A | 4.2 | Tested | Reconciliation (unit + SQL), L1 on-time, no WIN→customer; reconciliation test proven to fail when WIN rows are dropped |
-| 4.4 | Live shipments + hero SHP-1042 at Thu 08:00 **done**; hero pre-script 08:00 → 10:25 through the real services pending (needs Milestone 4 simulation) | Dev A | 4.2, 6.x | In Progress | Hero plan/promise/truck/driver/order and gate arrangement tested |
+| 4.4 | Live shipments + hero SHP-1042 at Thu 08:00, and the hero pre-script 08:00 → 10:25 through the real simulation services (AT_GATE 08:10 driver, LOADING 08:50 simulation, GATE_OUT 09:30 driver) | Dev A | 4.2, 6.x | Tested | Hero sequence, sources, 40-min gate wait and 25.603 km at 10:25 asserted |
 | 4.5 | Facts/assumptions file: `planning/10_SEED_DATA.md` | Dev A | 4.3 | Implemented | N/A |
 
 ## 5. Shipment APIs
@@ -100,13 +102,13 @@ Last updated: 2026-11-12 — backend Milestones 1 (foundation), 2 (schema + dete
 
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
-| 6.1 | `SimState`, sync (#4), world lock | Dev A | 2.2 | Not Started | Not tested |
-| 6.2 | `settleTo(t)` movement (integer metres + carry), boundaries, disruption edges | Dev A | 6.1 | Not Started | Not tested |
-| 6.3 | Autopilot milestones, gate queue, pings; manual hero rules | Dev A | 6.2 | Not Started | Not tested |
-| 6.4 | Clock controls (#5): play/pause/speed/advance/advance-to; long-gap guard | Dev A | 6.2 | Not Started | Not tested |
-| 6.5 | Reset (#6) ≤ 5 s — the seed half is done (≈ 0.5 s, idempotent, two-reset digest identical); the endpoint and hero pre-script are pending | Dev A | 4.4, 6.1 | In Progress | Seed reproducibility tested (dev + test DB) |
-| 6.6 | Disruptions (#7–#9) with impact summary | Dev A | 6.2, 7.x | Not Started | Not tested |
-| 6.7 | Reproducibility tests R1–R8 | Dev A | 6.2–6.5 | Not Started | Not tested |
+| 6.1 | `SimState` clock service, `GET /api/sync` (#4), in-process world lock (`sim/mutex.ts`) | Dev A | 2.2 | Tested | Sync for all roles; concurrency tests; mutex mutation caught |
+| 6.2 | Pure discrete-event engine (`engines/simulate.ts`): integer seconds and millimetres, exact rational speeds/paces, grid boundaries always event boundaries, segment crossings, disruption edges; persisted position (`progressM` + `progressCarryMm`) | Dev A | 6.1 | Tested | 22 engine unit tests; restart-midway carry test; one-call vs many-calls bit-identical |
+| 6.3 | Autopilot milestones (AT_GATE at planned gate, FCFS gate queue over 3 bays, LOADING, GATE_OUT not before planned departure, physical arrival, ARRIVED at eligible check-in, DELIVERED after unloading, truck release), pings + seeded silence; manual hero via `recordMilestone` (L6: `arrivedAt` = physical/eligible time, never the tap time) | Dev A | 6.2 | Tested | Gate order (arrival-vs-code mutation caught), L6 late-tap test, autopilot delivery test |
+| 6.4 | Clock controls (#5): PLAY, PAUSE, SET_SPEED 1×/10×/60×, ADVANCE, ADVANCE_TO; long-gap guard (12 steps, pause, `simError`) | Dev A | 6.2 | Tested | Speed tests per speed, pause/resume without jump, R8, validation and role tests |
+| 6.5 | Reset (#6): deterministic seed + hero pre-script → Thu 10:25 paused, ≈ 0.5–0.7 s; sessions survive (stable user ids); audit `sim.reset` | Dev A | 4.4, 6.1 | Tested | R7 two-reset digest identical; < 5 s asserted |
+| 6.6 | Disruptions: **effects in the engine done** (weather slowdown, road closure at segment entry, truck breakdown hold, gate congestion; L5 precedence). Endpoints #7–#9 with the impact summary need risk levels → after Milestone 5 | Dev A | 6.2, 7.x | In Progress | Effects tested (unit + one service-level ghat-rain test) |
+| 6.7 | Reproducibility tests: R1 (via R7 + pure-engine equality), R2 (mid-step split ≤ 1 mm, deterministic), R3/R4 (ADVANCE 60 = 12 × ADVANCE 5 = 60× ticker, bit-identical), R7 (two resets identical), R8 (long gap). **Partial:** R5 only via the speed change inside the R4 ticker path; R6 only as "a mid-step tap is stamped to the whole minute" (no running-vs-paused comparison yet) | Dev A | 6.2–6.5 | In Progress | R1–R4, R7, R8 pass against the real engine and test database |
 
 ## 7. ETA and risk engines
 

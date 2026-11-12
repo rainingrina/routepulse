@@ -1,4 +1,4 @@
-import { createApp } from './app.js';
+import { createApp, type AppLocals } from './app.js';
 import { ConfigError, loadConfig } from './config/env.js';
 import { createPrisma } from './db/prisma.js';
 import { createLogger } from './logging/logger.js';
@@ -25,6 +25,7 @@ async function main(): Promise<void> {
 
   const shutdown = (signal: string) => {
     logger.info('api_stopping', { signal });
+    (app.locals as AppLocals).simulation.stop();
     server.close(() => {
       void prisma.$disconnect().finally(() => process.exit(0));
     });

@@ -13,6 +13,8 @@ import { requestLog } from './middleware/requestLog.js';
 import { authRouter } from './routes/auth.js';
 import { healthRouter } from './routes/health.js';
 import { createAuthService } from './services/authService.js';
+import { createSimulationService, type RecalcHook, type SimulationService } from './services/simulationService.js';
+import { simRouter } from './routes/sim.js';
 
 export interface AppDeps {
   config: AppConfig;
@@ -22,10 +24,16 @@ export interface AppDeps {
   now?: () => number;
   /** Login rate limit override (tests). */
   loginRateLimit?: { limit: number; windowMs: number };
+  /** Simulation options (tests inject a real-time clock, disable timers, or a failing recalc hook). */
+  simulation?: { realNow?: () => number; timers?: boolean; recalc?: RecalcHook };
+}
+
+export interface AppLocals {
+  simulation: SimulationService;
 }
 
 /** Builds the Express app. No listening here, so tests can mount it on an ephemeral port. */
-export function createApp({ config, prisma, logger, now = Date.now, loginRateLimit = LOGIN_RATE_LIMIT }: AppDeps): Express {
+export function createApp({ config, prisma, logger, now = Date.now, loginRateLimit = LOGIN_RATE_LIMIT, simulation = {} }: AppDeps): Express {
   const app = express();
   app.disable('x-powered-by');
   app.set('etag', false);
@@ -34,6 +42,13 @@ export function createApp({ config, prisma, logger, now = Date.now, loginRateLim
   const loginLimiter = new RateLimiter(loginRateLimit.limit, loginRateLimit.windowMs);
   const authService = createAuthService({ prisma, sessionSecret: config.sessionSecret, revoked, loginLimiter, now });
   const secureCookies = config.nodeEnv === 'production';
+  const sim = createSimulationService({
+    prisma,
+    demoMode: config.demoMode,
+    ...(config.seedDemoPassword ? { seedDemoPassword: config.seedDemoPassword } : {}),
+    ...simulation,
+  });
+  (app.locals as AppLocals).simulation = sim;
 
   app.use(requestId);
   app.use(requestLog(logger));
@@ -61,7 +76,8 @@ export function createApp({ config, prisma, logger, now = Date.now, loginRateLim
   // Deny by default: every other /api route requires a valid session. Unauthenticated callers get
   // 401 even for unknown paths, so the API surface cannot be enumerated without signing in.
   app.use('/api', requireAuth);
-  // (Protected routers are mounted here in later milestones, each with requireRole + scope policies.)
+  app.use('/api', simRouter(sim, prisma, config));
+  // (Further protected routers are mounted here in later milestones, each with requireRole + scope policies.)
   app.use('/api', apiNotFound);
 
   app.use(errorHandler(logger));
