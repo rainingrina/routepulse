@@ -1,8 +1,13 @@
 import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
+const root = fileURLToPath(new URL('.', import.meta.url));
+const envPath = resolve(root, '.env');
+
 // Tests always run against TEST_DATABASE_URL, never the dev database.
-if (existsSync('.env')) process.loadEnvFile('.env');
+if (existsSync(envPath)) process.loadEnvFile(envPath);
 const testDatabaseUrl = process.env['TEST_DATABASE_URL'];
 if (!testDatabaseUrl) {
   throw new Error('TEST_DATABASE_URL is not set (see apps/api/.env.example).');
@@ -12,6 +17,7 @@ if (testDatabaseUrl === process.env['DATABASE_URL']) {
 }
 
 export default defineConfig({
+  root,
   test: {
     include: ['tests/**/*.test.ts'],
     globalSetup: ['tests/setup/globalSetup.ts'],
