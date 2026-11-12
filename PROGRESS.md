@@ -37,7 +37,7 @@ Last updated: 2026-11-12 — backend Milestones 1–6 and **Combined Milestone 1
 | O-8 | Schema simplification S-1 | **Rejected — L8** (relational schema retained) |
 | O-9 | G-CO2: verified emissions factor | **Gate closed (L10)** — CO₂e stays disabled until verified; does not block implementation |
 | O-10 | G-LANG: verified second language | **Gate closed (L10)** — English only until verified; does not block implementation |
-| O-11 | `pmtiles` browser library for the tiled basemap (not in the L9 list) | **Deferred** (2026-11-12) — frontend coordination; not a backend dependency. GeoJSON fallback basemap remains available (architecture §16.3) |
+| O-11 | `pmtiles` browser library for the tiled basemap (not in the L9 list) | **Approved** (2026-11-12, Phase A) — `pmtiles@4.5.0` (BSD-3-Clause) added to the web app; self-hosted Protomaps OSM regional extract, state borders only, map locked to western India, file outside Git (architecture §16.5) |
 | O-12 | Receiving override and arrivals before normal opening | **Decided (2026-11-12): literal rule** — an accepted override accepts any road arrival up to its end, including before opening. Implemented in `engines/receivingWindow.ts`, tested. Gate access, unloading availability and on-time eligibility are separate concepts |
 | O-13 | Historical pace for the engine | **Decided (2026-11-12):** derive from seeded history (Pune/Ghatline r = 0.0741); Milestone 5 golden tests use the derived pace |
 | O-14 | Simulated GPS for the manual hero truck | **Decided (2026-11-12): (b)** — manual trucks ping every 30 min like autopilot trucks (also while stopped); pings only refresh `lastUpdateAt`, never create events or milestones; AT_GATE, GATE_OUT, ARRIVED, DELIVERED stay manual. Implemented in `engines/simulate.ts`, tested (afternoon confidence stays HIGH) |
@@ -146,7 +146,7 @@ Last updated: 2026-11-12 — backend Milestones 1–6 and **Combined Milestone 1
 | ID | Task | Owner | Depends on | Status | Test status |
 |---|---|---|---|---|---|
 | 10.1 | One-hour offline tiles spike (architecture §16.2) — record PASS/FAIL | Dev B | 1.4 | Not Started | N/A |
-| 10.2 | Basemap (PMTiles, if O-11 approved) or GeoJSON fallback; CSP check | Dev B | 10.1, O-11 | In Progress | Offline style without tiles/glyphs (land colour only); basemap data pending (handoff Q8); MapLibre worker served same-origin (Q4) |
+| 10.2 | Basemap (Phase A): same-origin PMTiles at `/tiles` with HTTP Range, `pmtiles://` protocol, token-coloured land/water/roads/state borders below all overlays, `maxBounds` western India, OSM attribution, land-only fallback when the file is missing; `npm run basemap:fetch` (pinned build 20261109) | Dev B / Dev A | 10.1, O-11 | In Progress | API Range/404/416/CSP tests and web style/bounds/fallback tests pass; fallback browser-checked. **Basemap file not yet created**: the PMTiles CLI could not be installed in this session — rendering, file size and offline check pending |
 | 10.3 | Layers, HTML truck/site markers, legend, selection sync — now on real #10/#11; map container height bug fixed; legend labels hand-traced routes; positions-unavailable notice | Dev B / Dev A | 10.2, 5.3 | Implemented | Browser-checked at 1440/1024/768/390 (manual); no automated map rendering test (WebGL) |
 | 10.4 | Marker interpolation, reduced-motion behaviour | Dev B | 10.3 | Not Started | Not tested |
 

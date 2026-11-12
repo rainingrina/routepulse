@@ -102,6 +102,7 @@ npm run dev:api                          # API on http://localhost:4000 — chec
 | `npm run db:migrate` | `prisma migrate dev` on `DATABASE_URL` |
 | `npm run db:generate` | Regenerate the Prisma client |
 | `npm run seed` | Re-create the deterministic demo data (idempotent; see `planning/10_SEED_DATA.md`) |
+| `npm run basemap:fetch` | One-time download of the offline western-India basemap (`apps/api/static/basemap/`, outside Git; needs the PMTiles CLI, e.g. `brew install pmtiles`) |
 
 Web app: `npm run dev:web` (http://localhost:5173, proxies `/api` to the API), `npm run dev:web:mock` (scripted in-browser mock), `npm run build:web`. Full, verified setup/run/test instructions: `docs/DEVELOPMENT_AND_TESTING.md`. Planned for later milestones: `reset`, `demo`, an API-served production build. Route lines in the seed are hand-traced demo geometry, not routing-engine output. The frontend contract for implemented endpoints is in `planning/09_BACKEND_HANDOFF.md`.
 

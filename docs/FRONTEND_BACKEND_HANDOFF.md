@@ -93,7 +93,7 @@ Imported from `@routepulse/shared` (published by Dev A): all enum lists/unions, 
 | Q5 | Inter font | L9 approves self-hosted Inter; no font files are in the repo yet. Architecture §2.4 says the API serves them. Where should the woff2 files live (`apps/web/public/fonts` or the API)? Until then the system font fallback is used. | Open |
 | Q6 | "Live" list | `status=live` is assumed to include ARRIVED-but-not-DELIVERED shipments (they show "Arrived 09:50 · unloading"). | Please confirm |
 | Q7 | Customer notifications | `NotificationDto` has `shipmentId` but no `orderId`; the customer portal routes are `/orders/:id`. The customer UI will map shipment → order through `GET /api/orders`. | FYI (no change requested) |
-| Q8 | Basemap | `pmtiles` is not approved (O-11). The map currently draws a land-colour background only, plus API layers. The GeoJSON fallback basemap (architecture §16.3) needs a data file — who provides it, and where? | Open (task 10.1/10.2) |
+| Q8 | Basemap | Resolved 2026-11-12 (O-11 approved): self-hosted western-India PMTiles at `/tiles` (`npm run basemap:fetch`), `pmtiles` protocol in `map/basemap.ts`; land-only fallback when the file is missing (architecture §16.5) | Resolved |
 | Q9 | Recovery dialog | The "customer message preview" in the confirm dialog is built in the UI from the option fields and labelled as a preview; the sent text is the server template. | FYI |
 
 ## 6. Development mock (`--mode mock`)
@@ -114,7 +114,8 @@ Imported from `@routepulse/shared` (published by Dev A): all enum lists/unions, 
 | UI plan | Current state | Reason |
 |---|---|---|
 | §2.4 Inter self-hosted | System font fallback | Font files not added yet (Q5) |
-| §8.1 basemap (tiles or GeoJSON) | Land colour only | Basemap data pending (Q8) |
+| §8.1 basemap: "major city names in text-muted" (tiled variant) | No basemap labels; customer sites and the plant are HTML markers with names | Labels would need glyph files; §16.1 keeps all text as HTML markers |
+| §8.1 basemap layers | Adds main roads (white, `--rp-surface`) to land, water and state borders | Lets coordinators judge route position; no POIs |
 | §8.3 marker interpolation over 1 s | Markers jump to each new position | Task 10.4 not started |
 | §6.6 toast "SHP-1042 is at risk — View options" | One-time row highlight + `aria-live` announcement; no toast component yet | Kept the dependency set minimal; toast to follow |
 | §6.4 dock "Advance to…" time picker | Not in the dock yet ("+1 h" is) | Simulation page is Phase 5 |
@@ -129,6 +130,7 @@ Imported from `@routepulse/shared` (published by Dev A): all enum lists/unions, 
 
 | Date | Change |
 |---|---|
+| 2026-11-12 | Phase A: offline basemap (`pmtiles` protocol, same-origin `/tiles`), map locked to western India, land-only fallback. |
 | 2026-11-12 | M10: dashboard page on the real #36; Control Tower #36 cards live; `pending.ts` removed. |
 | 2026-11-12 | M9: customer portal, driver portal, replay page and driver-report queue on the real API; M9 DTOs imported from `@routepulse/shared`. |
 | 2026-11-12 | Merged backend Milestones 2–3: auth and geometry types now imported from `@routepulse/shared`. |

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { GeoJSONSource, LngLatBounds, Map as MlMap, Marker, NavigationControl, setWorkerUrl, type StyleSpecification } from 'maplibre-gl';
+import { AttributionControl, GeoJSONSource, LngLatBounds, Map as MlMap, Marker, NavigationControl, setWorkerUrl, type StyleSpecification } from 'maplibre-gl';
+import { useQuery } from '@tanstack/react-query';
+import { qk } from '../api/queryClient';
+import { BASEMAP_BOUNDS, BASEMAP_SOURCE, basemapInstalled, basemapLayers, basemapSource, registerBasemapProtocol } from './basemap';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import type { MapLayersResponse, PositionItem } from '../api/contract';
 import { IconButton } from '../components/primitives/Button';
@@ -23,7 +26,11 @@ function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-/** Offline style (architecture §16): no tiles, no glyphs, no sprites. Basemap polygons pending task 10.1/10.2. */
+/**
+ * Base style (architecture §16): a land-colour background only — no tiles, glyphs or sprites. It is
+ * also the fallback when the offline basemap file is not installed. The basemap layers are added on
+ * top of it (below every overlay) once the same-origin PMTiles file is confirmed.
+ */
 function offlineStyle(): StyleSpecification {
   return {
     version: 8,
@@ -110,6 +117,8 @@ export function MapView({
   const containerRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<MlMap | null>(null);
   const [failed, setFailed] = useState(false);
+  const basemap = useQuery({ queryKey: qk.basemap, queryFn: () => basemapInstalled(), staleTime: Infinity, retry: false });
+  const basemapState = basemap.data === true ? 'installed' : basemap.data === false ? 'missing' : 'checking';
 
   // ----- create the map once -----
   useEffect(() => {
@@ -121,6 +130,8 @@ export function MapView({
         style: offlineStyle(),
         center: [73.5, 20.5],
         zoom: 5,
+        // Locked to western India (approved decision): the regional extract's bounds.
+        maxBounds: BASEMAP_BOUNDS,
         attributionControl: false,
         dragRotate: false,
         pitchWithRotate: false,
@@ -145,6 +156,19 @@ export function MapView({
       setMap(null);
     };
   }, []);
+
+  // ----- offline basemap: same-origin PMTiles, inserted below every overlay -----
+  useEffect(() => {
+    if (!map || basemap.data !== true || map.getSource(BASEMAP_SOURCE)) return;
+    registerBasemapProtocol();
+    map.addSource(BASEMAP_SOURCE, basemapSource(window.location.origin));
+    const below = map.getLayer('routes-alt') ? 'routes-alt' : undefined;
+    for (const layer of basemapLayers({ land: cssVar('--rp-map-land'), water: cssVar('--rp-map-water'), border: cssVar('--rp-map-border'), road: cssVar('--rp-surface') })) {
+      map.addLayer(layer, below);
+    }
+    // ODbL: "© OpenStreetMap contributors" stays visible whenever OSM-derived tiles are shown.
+    map.addControl(new AttributionControl({ compact: true }), 'bottom-right');
+  }, [map, basemap.data]);
 
   const selectedTruck = trucks.find((t) => t.item.shipmentId === selectedId) ?? null;
   const selectedRouteId = selectedTruck?.item.routeId ?? null;
@@ -349,7 +373,7 @@ export function MapView({
       <div className="pointer-events-none absolute top-[88px] right-[10px] z-10">
         <IconButton icon={Maximize2} label="Fit all shipments" size="sm" onClick={fitAll} className="pointer-events-auto border border-border bg-surface shadow-xs" />
       </div>
-      <MapLegend showDisruptions={showDisruptions} illustrativeRoutes={layers.routes.some((r) => r.geometry.x_source === 'HAND_TRACED_DEMO')} initiallyOpen={legendOpen} />
+      <MapLegend showDisruptions={showDisruptions} illustrativeRoutes={layers.routes.some((r) => r.geometry.x_source === 'HAND_TRACED_DEMO')} initiallyOpen={legendOpen} basemap={basemapState} />
       {children}
     </div>
   );

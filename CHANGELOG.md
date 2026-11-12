@@ -19,6 +19,17 @@ Entries below describe the backend (branch `backend`) and frontend (branch `fron
   - 72 unit tests (API client, retry/session rules, role guard, formatting, login validation, status badges, list filters, activity summaries, recovery ordering, map geometry, mock fixture identity checks).
   - `docs/FRONTEND_BACKEND_HANDOFF.md`.
 
+### Added (Phase A — offline geographic basemap)
+- **Decision O-11 approved (2026-11-12):** `pmtiles@4.5.0` (BSD-3-Clause) added to the web app; CLAUDE.md's approved-dependency line updated accordingly.
+- **Backend:** `/tiles` serves the regional basemap file same-origin with HTTP Range (206 / 416), public, before `/api`; missing file → 404 with a setup hint; optional `BASEMAP_DIR` (absolute path). CSP unchanged.
+- **Frontend:** `map/basemap.ts` (protocol, source, four token-coloured layers: land, water, main roads, state borders only — no country or disputed boundaries), inserted below every overlay in `MapView`; `maxBounds` locks the map to western India (71.0,16.5 – 80.5,24.5); OSM/Protomaps attribution; legend states whether the basemap is installed; land-only fallback.
+- **Setup:** `npm run basemap:fetch` (`scripts/fetch-basemap.sh`, PMTiles CLI) extracts the pinned Protomaps build `20261109` into `apps/api/static/basemap/` (gitignored), writes `SOURCE.txt` and prints size and SHA-256.
+- **Tests:** API 5 (Range, HEAD, 416, CSP, 404, hidden/traversal, config), web 7 (same-origin only, no glyphs/symbols, state borders only, tokens, attribution, bounds = script bbox, all sites/routes inside, availability check).
+
+### Fixed (CI)
+- `apps/api` now runs `prisma generate` on `postinstall`: the generated client (`apps/api/src/generated/`, gitignored) was missing on a fresh CI checkout, so `npm run typecheck` failed with "Cannot find module '../generated/prisma/client.js'" and hundreds of follow-on implicit-any errors. Generation needs no database.
+- API Vitest `hookTimeout` 60 s (setup hooks reset the demo world). With the old 5 s test timeout, a slow runner timed out a long test while its simulation kept running, and the next test's reset collided with it (Postgres `40P01 deadlock detected`, duplicate `RiskSnapshot` ids, `largestRemainder` RangeError) — the 30 s `testTimeout` from M9 must be in the pushed config.
+
 ### Added (M10 — analytics endpoint and dashboard)
 - **Backend:** `GET /api/analytics/dashboard` (#36, coordinator only, read-only): `engines/analytics.ts` (pure) + `services/analyticsService.ts` (one query) + `routes/analytics.ts`. One filtered set per request — shipments whose `arrivedAt` is in [to − 7/30/60 d, to] with `to` = last settled simulation time, optional lane and transporter (unknown id → 404). KPIs, on-time by lane/transporter, weekly trend, causes by party/reason/lane/transporter and the transporter table (raw vs fair on-time by the existing but-for rule) exactly as API §13; definitions and data note returned with the numbers.
 - **Decisions recorded (2026-11-12, M10):** cause charts sum all attributed minutes of the set (GAP rows under Unattributed by party only); weekly buckets are calendar weeks from Monday 00:00 IST; the window ends at the last settled simulation time; even-count medians = mean of the two middle values rounded half-up. Also: percentages have one decimal and are null when there is nothing to divide; `gapPct` is computed from the counts; "recovery chosen" = a CHOSEN RecoveryOption (a NEW_WINDOW counts once accepted).

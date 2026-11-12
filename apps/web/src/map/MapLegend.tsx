@@ -10,7 +10,10 @@ export function MapLegend({
   showDisruptions,
   illustrativeRoutes = false,
   initiallyOpen = true,
+  basemap = 'checking',
 }: {
+  /** Offline basemap state (architecture §16): installed, missing (land-only fallback) or still checking. */
+  basemap?: 'installed' | 'missing' | 'checking';
   showDisruptions: boolean;
   illustrativeRoutes?: boolean;
   /** Small maps (portals, replay) start collapsed so the legend does not cover the route. */
@@ -58,7 +61,13 @@ export function MapLegend({
             </li>
           ) : null}
           {illustrativeRoutes ? <li className="pt-1 text-[11px] leading-4 text-text-muted">Route lines are hand-traced illustrations, not routing output</li> : null}
-          <li className="pt-1 text-[11px] leading-4 text-text-muted">Offline map · basemap detail pending</li>
+          <li className="pt-1 text-[11px] leading-4 text-text-muted">
+            {basemap === 'installed'
+              ? 'Offline basemap: © OpenStreetMap contributors (ODbL), state borders only'
+              : basemap === 'missing'
+                ? 'Basemap not installed: showing land only'
+                : 'Offline map'}
+          </li>
         </ul>
       ) : null}
     </div>

@@ -90,6 +90,11 @@ export function createApp({ config, prisma, logger, now = Date.now, loginRateLim
   app.use('/tiles', (_req, res) => {
     res.status(404).type('text/plain').send('Basemap not installed. Run `npm run basemap:fetch` (see docs/DEVELOPMENT_AND_TESTING.md).');
   });
+  // Static-file errors keep their HTTP status (e.g. 416 for an unsatisfiable Range, 403 for a bad path).
+  app.use('/tiles', (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    const status = typeof err === 'object' && err !== null && typeof (err as { status?: unknown }).status === 'number' ? (err as { status: number }).status : 500;
+    res.status(status).end();
+  });
   app.use('/api', sessionMiddleware({ config, prisma, revoked, now }));
 
   // Public endpoints.

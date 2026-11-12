@@ -19,6 +19,7 @@
     "db:migrate": "npm run db:migrate -w @routepulse/api",
     "db:generate": "npm run db:generate -w @routepulse/api",
     "seed": "npm run seed -w @routepulse/api",
-    "build:web": "npm run build -w @routepulse/web"
+    "build:web": "npm run build -w @routepulse/web",
+    "basemap:fetch": "sh scripts/fetch-basemap.sh"
   }
 }

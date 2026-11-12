@@ -89,6 +89,7 @@ Status per code: `VALIDATION_ERROR` 400 · `UNAUTHENTICATED` 401 · `FORBIDDEN`/
 | GET | `/api/shipments/:shipmentId/replay` (#19) | Coordinator | Implemented + tested (M9, read-only) |
 | GET | `/api/driver/trip` (#21) | Driver | Implemented + tested (M9) |
 | GET | `/api/analytics/dashboard` (#36) | Coordinator | Implemented + tested (M10, read-only) |
+| GET/HEAD | `/tiles/western-india.pmtiles` (not an API endpoint: static file) | Public (OSM data) | Implemented + tested (Phase A): HTTP Range 206/416, `application/vnd.pmtiles`, 404 when not installed |
 
 ### Analytics (M10) — what the SPA does
 - **#36** `?period=7d|30d|60d` (default 30d) `&laneId=&transporterId=`; unknown fields → 400, unknown ids → 404, non-coordinators → 403. Every section comes from one filtered set (arrivals in the window ending at the last settled sim time), so render all charts from one response. `null` percentages / medians mean "nothing to measure" — show "—", never 0. `causesByParty` is always five parties in fixed order. `weeklyTrend` includes empty weeks (Monday 00:00 IST). Drill-down: #14 with `status=all&arrivedFrom=filter.from&arrivedTo=filter.to` plus the same lane/transporter.
@@ -221,6 +222,7 @@ Implemented: #1–#38 and `/api/health` (all planned endpoints). Next: the separ
 | 2026-11-12 | Initial publish: enums, base types, `HealthResponse`, `SimStateDto`, `SyncResponse` | — |
 | 2026-11-12 | Added `Segment`, `GeoJSONLineString`, `GeometrySource`, `PLANT`, `DISPLAY_TIME_ZONE`, `RISK_THRESHOLDS`, `SMALL_FLEET_MAX` | No |
 | 2026-11-12 | Added `SimClockRequest`, `SimClockResponse`, `SimResetRequest`, `SimResetResponse` (as specified in API §5); #4–#6 implemented | No |
+| 2026-11-12 | Phase A: static `/tiles` basemap serving (no API contract change); optional `BASEMAP_DIR` | No |
 | 2026-11-12 | M10: published `DashboardQuery`, `DashboardResponse` (as API §13; `period` typed as `DashboardPeriod`), `DASHBOARD_PERIODS` (`api/analytics.ts`); #36 implemented | No |
 | 2026-11-12 | M9: published `OrderSummary`, `OrderDetail`, `OrderListQuery`, `RecordMilestoneRequest`, `RecordMilestoneResponse`, `ReplaySnapshot`, `ReplayResponse`, `DriverTripResponse` (moved from the web's `pending.ts`, identical; `api/orders.ts`); #12, #13, #17, #19, #21 implemented; a tap on a passed milestone now returns 409 ALREADY_DONE (was INVALID_TRANSITION in the service) | No (types); behaviour: error code for repeated taps |
 | 2026-11-12 | M8: published `RecoveryOptionsResponse`, `ChooseRecoveryRequest`, `ChooseRecoveryResponse` (moved from the web's `pending.ts`, identical); #29/#30 and the #28 NEW_WINDOW branch implemented; alerts now carry `proposedOption`/`chosenOption` and customer `action`; ACTION_CHOSEN alerts stay active until arrival | No (fields were already in the contract; values change from null) |

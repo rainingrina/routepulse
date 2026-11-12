@@ -56,6 +56,15 @@ npm run seed                        # deterministic fictional data; clock left a
 
 `npm run db:migrate` (`prisma migrate dev`) is for developers who change `apps/api/prisma/schema.prisma`; it can prompt and create new migrations. Use `db:deploy` just to apply existing ones. The test database is migrated automatically by the test runner.
 
+### B.1 Offline basemap (one time, optional but recommended)
+
+```bash
+brew install pmtiles          # PMTiles CLI (or a release binary from github.com/protomaps/go-pmtiles/releases)
+npm run basemap:fetch         # extracts western India from the pinned Protomaps OSM build 20261109
+```
+
+Writes `apps/api/static/basemap/western-india.pmtiles` (outside Git) and `SOURCE.txt`, and prints the file's metadata, size and SHA-256. Needs internet once; afterwards the map works with Wi-Fi off. Overrides: `BASEMAP_BUILD=YYYYMMDD` (if the pinned build has expired: Protomaps keeps daily builds 1 week, Monday builds 1 month), `BASEMAP_MAXZOOM` (default 11; each level roughly doubles the size), `BASEMAP_DIR` (absolute; the API reads the same variable). Restart the API afterwards. Without the file the app runs normally and the map shows land only ("Basemap not installed" in the legend). Data © OpenStreetMap contributors (ODbL).
+
 ## C. Starting the application
 
 Two terminals, from the repository root:
@@ -97,11 +106,11 @@ The mock is excluded from production builds.
 | Command (repo root) | What it tests | PostgreSQL | Seed needed | Changes data | Success looks like |
 |---|---|---|---|---|---|
 | `npm run typecheck` | `tsc` for `packages/shared`, `apps/api`, `apps/web` (strict) | no | no | no | three `tsc -p tsconfig.json` runs with no errors |
-| `npm test` | typecheck, then **all API tests**, then **all web tests** | yes (`TEST_DATABASE_URL`) | no (tests reseed the test DB themselves) | only the **test** database | `Tests 359 passed (359)` (API) and `Tests 121 passed (121)` (web) |
-| `npm test -w @routepulse/api` | API unit + integration tests (Vitest; files run one at a time; 30 s per-test timeout) | yes | no | test DB only | `Test Files 24 passed (24)` · `Tests 359 passed (359)` |
+| `npm test` | typecheck, then **all API tests**, then **all web tests** | yes (`TEST_DATABASE_URL`) | no (tests reseed the test DB themselves) | only the **test** database | `Tests 364 passed (364)` (API) and `Tests 128 passed (128)` (web) |
+| `npm test -w @routepulse/api` | API unit + integration tests (Vitest; files run one at a time; 30 s per-test timeout) | yes | no | test DB only | `Test Files 25 passed (25)` · `Tests 364 passed (364)` |
 | `npx vitest run tests/unit` (in `apps/api`) | API pure-engine unit tests only (simulation, ETA, risk, attribution, recovery, analytics, classifier, validation, session) | the global setup still migrates the test DB, so it must be reachable | no | test DB migrations only | `Test Files 12 passed (12)` · `Tests 154 passed (154)` |
-| `npx vitest run tests/integration` (in `apps/api`) | Real Express app on an ephemeral port + real test DB: auth, scoping, simulation, ETA, attribution, shipments/map/audit, disruptions, alerts and notifications, recovery, portals (orders, milestone taps, replay/G6, driver trip), analytics (#36), reproducibility (R1–R8), golden checkpoints | yes | no (each file resets) | test DB | `Test Files 12 passed (12)` · `Tests 205 passed (205)` |
-| `npm test -w @routepulse/web` | Web unit + component tests (API client, retry/session rules, role guard, formatting, badges, filters, mock fixture identities; control tower, shipment detail, simulation page, notifications, recovery, customer orders/order detail/notifications, driver trip/report, report queue, replay and the dashboard rendered from **real API responses** in `apps/web/src/test/fixtures/api-11-20.json`) | no | no | no | `Test Files 10 passed (10)` · `Tests 121 passed (121)` |
+| `npx vitest run tests/integration` (in `apps/api`) | Real Express app on an ephemeral port + real test DB: auth, scoping, simulation, ETA, attribution, shipments/map/audit, disruptions, alerts and notifications, recovery, portals (orders, milestone taps, replay/G6, driver trip), analytics (#36), basemap serving (`/tiles` Range), reproducibility (R1–R8), golden checkpoints | yes | no (each file resets) | test DB | `Test Files 13 passed (13)` · `Tests 210 passed (210)` |
+| `npm test -w @routepulse/web` | Web unit + component tests (API client, retry/session rules, role guard, formatting, badges, filters, mock fixture identities; control tower, shipment detail, simulation page, notifications, recovery, customer orders/order detail/notifications, driver trip/report, report queue, replay and the dashboard rendered from **real API responses** in `apps/web/src/test/fixtures/api-11-20.json`; basemap style and bounds) | no | no | no | `Test Files 11 passed (11)` · `Tests 128 passed (128)` |
 | `npm run typecheck -w @routepulse/web` | Web types only | no | no | no | no output after the `tsc` line |
 | `cd apps/api && npx prisma validate` | Prisma schema validity | no | no | no | `The schema at prisma/schema.prisma is valid` |
 | `npm run build:web` | Web typecheck + production bundle | no | no | writes `apps/web/dist` | `✓ built in …` (a "chunks larger than 500 kB" warning is currently expected) |
@@ -116,6 +125,9 @@ Not automated yet: browser end-to-end tests (the Combined Milestone 1 browser wa
 Test database safety: `apps/api/vitest.config.ts` refuses to run if `TEST_DATABASE_URL` is missing or equals `DATABASE_URL`, and the global setup refuses a database whose URL does not contain `test`.
 
 ## E. Troubleshooting
+
+- **CI: `Cannot find module '../generated/prisma/client.js'` + many implicit-any errors** — the Prisma client is generated, not committed. `npm ci` runs `prisma generate` via the API's `postinstall`; if install scripts are disabled (`--ignore-scripts`), run `npm run db:generate` before `npm test`.
+- **CI: `deadlock detected` (40P01), duplicate `RiskSnapshot_pkey`, "Test timed out in 5000ms"** — one long test timed out and kept running while the next test reset the database. The API Vitest config sets `testTimeout` 30 s and `hookTimeout` 60 s; make sure that config is what CI runs.
 
 | Symptom | Cause and fix |
 |---|---|
@@ -169,4 +181,13 @@ Use the test database or a dev database you may reset. Passwords are `SEED_DEMO_
 5. Pick a lane / transporter / 7 d combination with no arrivals: "No deliveries match these filters" with **Clear filters**.
 6. Live arrival (AC-M5.7): continue the hero run (M8 step 4, then arrival) and refresh the dashboard: the 7 d view for Pune / Ghatline counts one more arrival, on time.
 7. Customer or driver accounts cannot open `/dashboard` (role guard) and `GET /api/analytics/dashboard` returns 403 for them.
+
+## I. Verifying the offline basemap (Phase A) by hand
+
+1. After `npm run basemap:fetch`, restart the API and open the Control Tower: land, water, main roads and state borders (thin, `--rp-map-border`) appear under the routes; no country borders; the legend says "Offline basemap: © OpenStreetMap contributors (ODbL), state borders only"; the attribution control (ⓘ, bottom right) shows "© OpenStreetMap contributors · Protomaps".
+2. Pan: the map stops at western India (cannot move past bbox 71.0–80.5 E, 16.5–24.5 N). Zoom on Pune, Nashik, Surat, Ahmedabad, Indore and Nagpur: each site marker sits on its city, the plant near the Mumbai–Pune corridor, and route lines follow the main roads approximately (they are hand-traced illustrations).
+3. DevTools → Network: only `localhost` requests; `/tiles/western-india.pmtiles` requests return **206** with a `Content-Range` header. Console: no CSP violations.
+4. Turn Wi-Fi off and hard-reload: the map is fully drawn (tiles come from the API).
+5. Also check the maps in shipment detail → Replay, customer `/orders/:id`, and the driver `/trip` route map.
+6. Fallback: rename the file (or set `BASEMAP_DIR` to an empty folder) and restart the API — the map shows land only, the legend says "Basemap not installed: showing land only", nothing else changes.
 

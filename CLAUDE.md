@@ -30,7 +30,7 @@ RoutePulse is an explainable shipment recovery and logistics control tower for *
 - Frontend: React + TypeScript (Vite SPA).
 - Backend: Express v5 + TypeScript (Node.js LTS).
 - Database: PostgreSQL + Prisma.
-- Approved frontend dependencies (L9): React, Vite, TypeScript, Tailwind CSS, Radix UI, TanStack Query, React Router, Recharts, MapLibre GL JS (used directly), lucide-react; self-hosted Inter. Add **no other** framework or dependency without approval (`pmtiles` is not approved yet).
+- Approved frontend dependencies (L9): React, Vite, TypeScript, Tailwind CSS, Radix UI, TanStack Query, React Router, Recharts, MapLibre GL JS (used directly), lucide-react; self-hosted Inter. `pmtiles` (offline basemap protocol; approved 2026-11-12, O-11). Add **no other** framework or dependency without approval.
 
 ## Repository layout (planned — architecture §4)
 `apps/web` (SPA) · `apps/api` (Express + Prisma) · `packages/shared` (plain TypeScript API types, enum mirrors, constants, fixtures; no runtime dependencies; never imports `@prisma/client`).
