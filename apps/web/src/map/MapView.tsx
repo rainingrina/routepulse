@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { AttributionControl, GeoJSONSource, LngLatBounds, Map as MlMap, Marker, NavigationControl, setWorkerUrl, type StyleSpecification } from 'maplibre-gl';
+import { GeoJSONSource, LngLatBounds, Map as MlMap, Marker, NavigationControl, setWorkerUrl, type StyleSpecification } from 'maplibre-gl';
 import { useQuery } from '@tanstack/react-query';
 import { qk } from '../api/queryClient';
-import { BASEMAP_BOUNDS, BASEMAP_SOURCE, basemapInstalled, basemapLayers, basemapSource, registerBasemapProtocol } from './basemap';
+import { BASEMAP_BOUNDS, basemapInstalled, installBasemap } from './basemap';
+import { useMediaQuery } from '../app/useMediaQuery';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import type { MapLayersResponse, PositionItem } from '../api/contract';
 import { IconButton } from '../components/primitives/Button';
@@ -118,7 +119,7 @@ export function MapView({
   const [map, setMap] = useState<MlMap | null>(null);
   const [failed, setFailed] = useState(false);
   const basemap = useQuery({ queryKey: qk.basemap, queryFn: () => basemapInstalled(), staleTime: Infinity, retry: false });
-  const basemapState = basemap.data === true ? 'installed' : basemap.data === false ? 'missing' : 'checking';
+  const basemapState = basemap.data ? (basemap.data.tiles ? 'installed' : 'missing') : 'checking';
 
   // ----- create the map once -----
   useEffect(() => {
@@ -157,17 +158,20 @@ export function MapView({
     };
   }, []);
 
-  // ----- offline basemap: same-origin PMTiles, inserted below every overlay -----
+  // ----- offline basemap (+ city labels): same-origin PMTiles and glyphs, inserted below every overlay -----
+  // ODbL: "© OpenStreetMap contributors" stays visible whenever OSM-derived tiles are shown. It is our
+  // own element (bottom-left, under the legend) so no panel, dock or button can cover it at any width.
+  const [attributionVisible, setAttributionVisible] = useState(false);
+  const isWide = useMediaQuery('(min-width: 1536px)');
   useEffect(() => {
-    if (!map || basemap.data !== true || map.getSource(BASEMAP_SOURCE)) return;
-    registerBasemapProtocol();
-    map.addSource(BASEMAP_SOURCE, basemapSource(window.location.origin));
-    const below = map.getLayer('routes-alt') ? 'routes-alt' : undefined;
-    for (const layer of basemapLayers({ land: cssVar('--rp-map-land'), water: cssVar('--rp-map-water'), border: cssVar('--rp-map-border'), road: cssVar('--rp-surface') })) {
-      map.addLayer(layer, below);
-    }
-    // ODbL: "© OpenStreetMap contributors" stays visible whenever OSM-derived tiles are shown.
-    map.addControl(new AttributionControl({ compact: true }), 'bottom-right');
+    if (!map || !basemap.data) return;
+    const added = installBasemap(
+      map,
+      window.location.origin,
+      { land: cssVar('--rp-map-land'), water: cssVar('--rp-map-water'), border: cssVar('--rp-map-border'), road: cssVar('--rp-surface'), label: cssVar('--rp-text-muted') },
+      basemap.data,
+    );
+    if (added.includes('bm-earth')) setAttributionVisible(true);
   }, [map, basemap.data]);
 
   const selectedTruck = trucks.find((t) => t.item.shipmentId === selectedId) ?? null;
@@ -241,7 +245,7 @@ export function MapView({
         source: ROUTES_SRC,
         filter: ['==', ['get', 'routeId'], ''],
         layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': cssVar('--rp-primary'), 'line-width': 4 },
+        paint: { 'line-color': cssVar('--rp-map-route-selected'), 'line-width': 5 },
       });
     }
     const disr = map.getSource(DISR_SRC) as GeoJSONSource | undefined;
@@ -362,6 +366,12 @@ export function MapView({
             stopped={t.item.stopped}
             selected={selected}
             dimmed={!!selectedId && !selected && hoveredId !== t.item.shipmentId}
+            showLabel={
+              trucks.length <= 3 ||
+              selected ||
+              hoveredId === t.item.shipmentId ||
+              (!selectedId && (t.item.riskLevel === 'AT_RISK' || t.item.riskLevel === 'LATE'))
+            }
             ariaLabel={truckAriaLabel(t.item.code, t.item.riskLevel, t.etaText)}
             onSelect={() => onSelect?.(t.item.shipmentId)}
             onHover={(h) => onHover?.(h ? t.item.shipmentId : null)}
@@ -371,10 +381,21 @@ export function MapView({
         );
       })}
       <div className="pointer-events-none absolute top-[88px] right-[10px] z-10">
-        <IconButton icon={Maximize2} label="Fit all shipments" size="sm" onClick={fitAll} className="pointer-events-auto border border-border bg-surface shadow-xs" />
+        <IconButton icon={Maximize2} label="Fit all shipments" size="sm" tone="outline" onClick={fitAll} className="pointer-events-auto shadow-xs" />
       </div>
-      <MapLegend showDisruptions={showDisruptions} illustrativeRoutes={layers.routes.some((r) => r.geometry.x_source === 'HAND_TRACED_DEMO')} initiallyOpen={legendOpen} basemap={basemapState} />
+      <MapLegend showDisruptions={showDisruptions} illustrativeRoutes={layers.routes.some((r) => r.geometry.x_source === 'HAND_TRACED_DEMO')} initiallyOpen={legendOpen && isWide} basemap={basemapState} />
       {children}
+      {attributionVisible ? (
+        <p className="absolute bottom-1.5 left-2 z-20 max-w-[calc(100%-16px)] truncate rounded-md bg-surface/90 px-1.5 py-0.5 text-[10px] leading-4 text-text-secondary">
+          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:underline">
+            © OpenStreetMap contributors
+          </a>{' '}
+          ·{' '}
+          <a href="https://protomaps.com" target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:underline">
+            Protomaps
+          </a>
+        </p>
+      ) : null}
     </div>
   );
 }

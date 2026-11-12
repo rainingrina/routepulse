@@ -8,8 +8,10 @@ import { ErrorState, InlineError } from '../../components/display/feedback';
 import { Inbox } from '../../components/icons';
 import { Button } from '../../components/primitives/Button';
 import { Dialog, TabsContent, TabsList, TabsRoot, TabsTrigger } from '../../components/primitives/radix';
+import { selectClass } from '../../components/primitives/fieldStyles';
 import { partyLabel, reasonLabel } from '../../i18n/en';
 import { formatDayTime, formatDuration } from '../../i18n/format';
+import { useToast } from '../../components/primitives/toast';
 
 const NOTE_MIN = 5;
 const NOTE_MAX = 280;
@@ -84,6 +86,7 @@ function ReportQueue({ status }: { status: ReportStatus }) {
 }
 
 export function ReportCard({ r }: { r: DriverReportDto }) {
+  const { toast } = useToast();
   const review = useReviewDriverReport();
   const [changing, setChanging] = useState(false);
   const pending = r.status === 'PENDING_REVIEW';
@@ -102,7 +105,7 @@ export function ReportCard({ r }: { r: DriverReportDto }) {
         </div>
 
         {r.text ? (
-          <blockquote className="rounded-md bg-surface-subtle px-3 py-2 text-body text-text">
+          <blockquote className="rounded-lg bg-surface-subtle px-3 py-2 text-body text-text">
             “
             {highlightParts(r.text, r.matchedKeywords).map((p, i) =>
               p.match ? (
@@ -150,7 +153,12 @@ export function ReportCard({ r }: { r: DriverReportDto }) {
               variant="primary"
               loading={review.isPending && !changing}
               disabled={review.isPending}
-              onClick={() => review.mutate({ reportId: r.id, body: { reason: r.reason, party: r.party } })}
+              onClick={() =>
+                review.mutate(
+                  { reportId: r.id, body: { reason: r.reason, party: r.party } },
+                  { onSuccess: () => toast({ title: `Report on ${r.shipmentCode} confirmed`, description: `${reasonLabel[r.reason]} · ${partyLabel[r.party]}` }) },
+                )
+              }
             >
               Confirm
             </Button>
@@ -176,13 +184,13 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 }
 
 function ChangeDialog({ r, review, onClose }: { r: DriverReportDto; review: ReturnType<typeof useReviewDriverReport>; onClose: () => void }) {
+  const { toast } = useToast();
   const [reason, setReason] = useState<ReasonCode>(r.reason);
   const [party, setParty] = useState<Party>(r.party);
   const [note, setNote] = useState('');
   const n = note.trim();
   const unattributedClash = party === 'UNATTRIBUTED' && reason !== 'OTHER';
   const noteOk = n.length >= NOTE_MIN && n.length <= NOTE_MAX;
-  const selectClass = 'h-11 w-full rounded-md border border-border-strong bg-surface px-3 text-body text-text';
   return (
     <Dialog
       open
@@ -198,7 +206,17 @@ function ChangeDialog({ r, review, onClose }: { r: DriverReportDto; review: Retu
             variant="primary"
             disabled={!noteOk || unattributedClash}
             loading={review.isPending}
-            onClick={() => review.mutate({ reportId: r.id, body: { reason, party, note: n } }, { onSuccess: onClose })}
+            onClick={() =>
+              review.mutate(
+                { reportId: r.id, body: { reason, party, note: n } },
+                {
+                  onSuccess: () => {
+                    toast({ title: `Review saved for ${r.shipmentCode}`, description: `${reasonLabel[reason]} · ${partyLabel[party]}` });
+                    onClose();
+                  },
+                },
+              )
+            }
           >
             Save review
           </Button>
@@ -208,7 +226,7 @@ function ChangeDialog({ r, review, onClose }: { r: DriverReportDto; review: Retu
       <div className="flex flex-col gap-3">
         <label className="flex flex-col gap-1 text-body text-text">
           Reason
-          <select className={selectClass} value={reason} onChange={(e) => setReason(e.target.value as ReasonCode)}>
+          <select className={`${selectClass} w-full`} value={reason} onChange={(e) => setReason(e.target.value as ReasonCode)}>
             {REASON_CODES.map((c) => (
               <option key={c} value={c}>
                 {reasonLabel[c]}
@@ -218,7 +236,7 @@ function ChangeDialog({ r, review, onClose }: { r: DriverReportDto; review: Retu
         </label>
         <label className="flex flex-col gap-1 text-body text-text">
           Attributed to
-          <select className={selectClass} value={party} onChange={(e) => setParty(e.target.value as Party)}>
+          <select className={`${selectClass} w-full`} value={party} onChange={(e) => setParty(e.target.value as Party)}>
             {PARTIES.map((p) => (
               <option key={p} value={p}>
                 {partyLabel[p]}
@@ -249,7 +267,7 @@ function ChangeDialog({ r, review, onClose }: { r: DriverReportDto; review: Retu
             rows={3}
             aria-describedby={`review-note-count-${r.id}`}
             onChange={(e) => setNote(e.target.value)}
-            className="rounded-md border border-border-strong bg-surface p-2 text-body text-text"
+            className="rounded-lg border border-border-strong bg-surface p-2 text-body text-text"
           />
           <span id={`review-note-count-${r.id}`} className="self-end text-small text-text-muted tabular">
             {note.length}/{NOTE_MAX}

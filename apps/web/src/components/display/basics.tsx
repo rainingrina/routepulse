@@ -39,7 +39,7 @@ export function CardHeader({
   return (
     <div className={cn('flex items-start justify-between gap-3 px-4 pt-4', className)}>
       <div className="min-w-0">
-        {eyebrow ? <p className="overline text-text-muted">{eyebrow}</p> : null}
+        {eyebrow ? <p className="eyebrow text-text-muted">{eyebrow}</p> : null}
         <H className="text-h3 text-text">{title}</H>
       </div>
       {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
@@ -104,7 +104,7 @@ export function ConfidenceChip({ confidence, className }: { confidence: Confiden
   return (
     <span
       className={cn(
-        'inline-flex h-5 items-center rounded-sm border border-border-strong px-1.5 text-small text-text-secondary',
+        'inline-flex min-h-5 items-center rounded-full border border-border-strong px-2 text-small whitespace-nowrap text-text-secondary',
         className,
       )}
     >

@@ -60,10 +60,10 @@ npm run seed                        # deterministic fictional data; clock left a
 
 ```bash
 brew install pmtiles          # PMTiles CLI (or a release binary from github.com/protomaps/go-pmtiles/releases)
-npm run basemap:fetch         # extracts western India from the pinned Protomaps OSM build 20261109
+npm run basemap:fetch         # extracts western India (zoom 0–12) from the pinned Protomaps OSM build 20261109 + label glyphs
 ```
 
-Writes `apps/api/static/basemap/western-india.pmtiles` (outside Git) and `SOURCE.txt`, and prints the file's metadata, size and SHA-256. Needs internet once; afterwards the map works with Wi-Fi off. Overrides: `BASEMAP_BUILD=YYYYMMDD` (if the pinned build has expired: Protomaps keeps daily builds 1 week, Monday builds 1 month), `BASEMAP_MAXZOOM` (default 11; each level roughly doubles the size), `BASEMAP_DIR` (absolute; the API reads the same variable). Restart the API afterwards. Without the file the app runs normally and the map shows land only ("Basemap not installed" in the legend). Data © OpenStreetMap contributors (ODbL).
+Writes `apps/api/static/basemap/western-india.pmtiles` (outside Git; 95,697,248 bytes ≈ 91 MiB, SHA-256 `4c8206b3ecb2d1673ce440710d3f204e6f751509e901db924b8de9d25377cfe3` for build 20261109 at zoom 12), `SOURCE.txt`, and `glyphs/` (Noto Sans Regular 0–255 for the city labels, SIL OFL 1.1 — `glyphs/OFL.txt`; SHA-256 `62c6d49b15fa836eb6aa45e259c7ca6762f44b011b09e47776efbe4a6db1b397`), and prints metadata, size and checksums. `npm run basemap:fetch -- --glyphs-only` fetches only the glyphs. Needs internet once; afterwards the map works with Wi-Fi off. Overrides: `BASEMAP_BUILD=YYYYMMDD` (if the pinned build has expired: Protomaps keeps daily builds 1 week, Monday builds 1 month), `BASEMAP_MAXZOOM` (default 12 ≈ 96 MB; 11 ≈ 40 MB, 13 ≈ 187 MB; check with `pmtiles extract … --dry-run`), `BASEMAP_DIR` (absolute; the API reads the same variable). Restart the API afterwards. Without the file the app runs normally and the map shows land only ("Basemap not installed" in the legend). Data © OpenStreetMap contributors (ODbL).
 
 ## C. Starting the application
 
@@ -106,11 +106,11 @@ The mock is excluded from production builds.
 | Command (repo root) | What it tests | PostgreSQL | Seed needed | Changes data | Success looks like |
 |---|---|---|---|---|---|
 | `npm run typecheck` | `tsc` for `packages/shared`, `apps/api`, `apps/web` (strict) | no | no | no | three `tsc -p tsconfig.json` runs with no errors |
-| `npm test` | typecheck, then **all API tests**, then **all web tests** | yes (`TEST_DATABASE_URL`) | no (tests reseed the test DB themselves) | only the **test** database | `Tests 364 passed (364)` (API) and `Tests 128 passed (128)` (web) |
-| `npm test -w @routepulse/api` | API unit + integration tests (Vitest; files run one at a time; 30 s per-test timeout) | yes | no | test DB only | `Test Files 25 passed (25)` · `Tests 364 passed (364)` |
+| `npm test` | typecheck, then **all API tests**, then **all web tests** | yes (`TEST_DATABASE_URL`) | no (tests reseed the test DB themselves) | only the **test** database | `Tests 365 passed (365)` (API) and `Tests 135 passed (135)` (web) |
+| `npm test -w @routepulse/api` | API unit + integration tests (Vitest; files run one at a time; 30 s per-test timeout) | yes | no | test DB only | `Test Files 25 passed (25)` · `Tests 365 passed (365)` |
 | `npx vitest run tests/unit` (in `apps/api`) | API pure-engine unit tests only (simulation, ETA, risk, attribution, recovery, analytics, classifier, validation, session) | the global setup still migrates the test DB, so it must be reachable | no | test DB migrations only | `Test Files 12 passed (12)` · `Tests 154 passed (154)` |
-| `npx vitest run tests/integration` (in `apps/api`) | Real Express app on an ephemeral port + real test DB: auth, scoping, simulation, ETA, attribution, shipments/map/audit, disruptions, alerts and notifications, recovery, portals (orders, milestone taps, replay/G6, driver trip), analytics (#36), basemap serving (`/tiles` Range), reproducibility (R1–R8), golden checkpoints | yes | no (each file resets) | test DB | `Test Files 13 passed (13)` · `Tests 210 passed (210)` |
-| `npm test -w @routepulse/web` | Web unit + component tests (API client, retry/session rules, role guard, formatting, badges, filters, mock fixture identities; control tower, shipment detail, simulation page, notifications, recovery, customer orders/order detail/notifications, driver trip/report, report queue, replay and the dashboard rendered from **real API responses** in `apps/web/src/test/fixtures/api-11-20.json`; basemap style and bounds) | no | no | no | `Test Files 11 passed (11)` · `Tests 128 passed (128)` |
+| `npx vitest run tests/integration` (in `apps/api`) | Real Express app on an ephemeral port + real test DB: auth, scoping, simulation, ETA, attribution, shipments/map/audit, disruptions, alerts and notifications, recovery, portals (orders, milestone taps, replay/G6, driver trip), analytics (#36), basemap serving (`/tiles` Range), reproducibility (R1–R8), golden checkpoints | yes | no (each file resets) | test DB | `Test Files 13 passed (13)` · `Tests 211 passed (211)` |
+| `npm test -w @routepulse/web` | Web unit + component tests (API client, retry/session rules, role guard, formatting, badges, filters, mock fixture identities; control tower, shipment detail, simulation page, notifications, recovery, customer orders/order detail/notifications, driver trip/report, report queue, replay and the dashboard rendered from **real API responses** in `apps/web/src/test/fixtures/api-11-20.json`; basemap style and bounds) | no | no | no | `Test Files 11 passed (11)` · `Tests 135 passed (135)` |
 | `npm run typecheck -w @routepulse/web` | Web types only | no | no | no | no output after the `tsc` line |
 | `cd apps/api && npx prisma validate` | Prisma schema validity | no | no | no | `The schema at prisma/schema.prisma is valid` |
 | `npm run build:web` | Web typecheck + production bundle | no | no | writes `apps/web/dist` | `✓ built in …` (a "chunks larger than 500 kB" warning is currently expected) |
@@ -184,10 +184,20 @@ Use the test database or a dev database you may reset. Passwords are `SEED_DEMO_
 
 ## I. Verifying the offline basemap (Phase A) by hand
 
-1. After `npm run basemap:fetch`, restart the API and open the Control Tower: land, water, main roads and state borders (thin, `--rp-map-border`) appear under the routes; no country borders; the legend says "Offline basemap: © OpenStreetMap contributors (ODbL), state borders only"; the attribution control (ⓘ, bottom right) shows "© OpenStreetMap contributors · Protomaps".
+1. After `npm run basemap:fetch`, restart the API and open the Control Tower: land, water, main roads and state borders (thin, `--rp-map-border`) appear under the routes; no country borders; muted city names (Ahmedabad, Surat, Pune, Nagpur, Indore; Nashik from zoom 5) sit to the right of the site markers and never cover routes or markers; the legend says "Offline basemap: © OpenStreetMap contributors (ODbL), state borders only"; the attribution (top left, ⓘ) shows "© OpenStreetMap contributors · Protomaps".
 2. Pan: the map stops at western India (cannot move past bbox 71.0–80.5 E, 16.5–24.5 N). Zoom on Pune, Nashik, Surat, Ahmedabad, Indore and Nagpur: each site marker sits on its city, the plant near the Mumbai–Pune corridor, and route lines follow the main roads approximately (they are hand-traced illustrations).
 3. DevTools → Network: only `localhost` requests; `/tiles/western-india.pmtiles` requests return **206** with a `Content-Range` header. Console: no CSP violations.
-4. Turn Wi-Fi off and hard-reload: the map is fully drawn (tiles come from the API).
+4. Turn Wi-Fi off and hard-reload: the map is fully drawn (tiles and glyphs come from the API). (Developer run 2026-11-12: machine offline, cache cleared, Control Tower reloaded — 119 requests, all to localhost, tiles 206, glyphs 200; only the pre-existing favicon 404.)
 5. Also check the maps in shipment detail → Replay, customer `/orders/:id`, and the driver `/trip` route map.
 6. Fallback: rename the file (or set `BASEMAP_DIR` to an empty folder) and restart the API — the map shows land only, the legend says "Basemap not installed: showing land only", nothing else changes.
 
+## J. Verifying the UI redesign v2 by hand
+
+Font: Inter Variable comes from the npm package `@fontsource-variable/inter` (installed by `npm install`, bundled by Vite); there is nothing to download separately and no runtime font request.
+
+1. Log in as each role (coordinator, a customer, a driver): every frame has the graphite bar, the context strip ("Fictional data · Plant X …") and the account menu with Log out.
+2. Coordinator bar widths: at 1440 px the clock shows speed buttons; at 1280 px no speed buttons; at 1024 px nav icons only (hover for the label); below 1024 px the ☰ sheet holds the sections and the full clock. No horizontal scrolling at any width (1440 / 1280 / 1024 / 768 / 390 / 360).
+3. Control Tower: list / map / panel side by side from 1024 px (alerts and the selected shipment in a drawer below 1280 px); Map / Shipments switch below 1024 px; the simulation dock is a pill below 1280 px and expands to the same controls; the "© OpenStreetMap contributors · Protomaps" line is visible at the bottom-left of the map at every width.
+4. Shipment detail: breadcrumbs, facts header, ETA tiles (Planned arrival + Delay so far + Plan change + Expected delay = Predicted) — the numbers equal the previous table. Choose a recovery option → confirm → a toast appears only after the server accepts it.
+5. Driver reports: Confirm → toast; Change reason / party → dialog with rounded corners and a required note.
+6. Reduced motion (OS setting): dialogs, sheets and toasts appear without animation.

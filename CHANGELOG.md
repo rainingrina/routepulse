@@ -6,6 +6,28 @@ Entries below describe the backend (branch `backend`) and frontend (branch `fron
 
 ## [Unreleased]
 
+### Changed (UI redesign v2 — whole application, 2026-11-12)
+- **Visual direction:** graphite · warm beige · sage, from the team-approved palette (graphite `#040404`, stone `#928B85`, warm beige `#F5EEE1`, muted sage `#BFC2AD`, sage green `#6D9C7B`); a Ronas IT Dribbble shot was the mood reference only (no assets copied). `styles/tokens.css` rewritten (neutrals, graphite actions, beige selection, sage accent, graphite navigation tokens, status, re-validated party palette, sage single-series chart colour, map colours, warm shadows); UI plan §2–§3 updated to v0.3 with measured contrast.
+- **Frame:** graphite 56 px bar for every role with wordmark, icon nav pills (beige when active), simulation clock, notifications and an initials account menu; context strip under it. Coordinator: icon-only nav at 1024–1279 px, speed control from 1440 px, navigation sheet (with the full clock) below 1024 px. Customer: company identity, icon-only nav below 768 px. Login: graphite brand panel.
+- **Components:** rounded buttons/inputs/selects (`fieldStyles.ts`), `IconButton` and `SegmentedControl` tones, beige-pill filters, `Breadcrumbs` (shipment detail, replay, customer order), dialogs with a pop-in, `ToastProvider`/`useToast` (Radix Toast from the existing `radix-ui` package) raised **only** from real mutation success (recovery chosen, report confirmed, review saved), restyled KPI cards, alert cards, notification list (fixed unread column, unread count), customer alert card, driver next-step card.
+- **Control Tower:** framed list / map / side-panel grid (320 px / fluid / 360 px; 360 / 400 at 1536 px), Map/Shipments switch below 1024 px, alerts/shipment drawer below 1280 px, richer shipment rows (customer, lane · transporter · truck, ETA vs promise, slack, confidence), collapsible simulation dock (pill below 1280 px; same controls), legend collapsed below 1536 px, truck code chips only where they do not clutter, sage selected route.
+- **Map attribution:** a custom element at the bottom-left of every map replaces MapLibre's control (the Phase A note "top-left" is superseded); verified visible at 360–1440 px and never covered by the legend, dock or panels.
+- **Shipment detail:** header card with facts grid; ETA shown as an equation of tiles (Planned arrival + Delay so far + Plan change + Expected delay = Predicted) with a proportional bar and a screen-reader table; "arrival means the receiving gate" note. Calculations unchanged.
+- **Typography:** Inter Variable bundled from `@fontsource-variable/inter@5.3.0` (OFL; implements the L9 self-hosted Inter; no runtime font request).
+- **Unchanged:** API contracts, schema, backend logic, role rules, CSP, offline map, every existing control and state.
+
+### Fixed (UI redesign v2)
+- Section eyebrows drew a line above the text: the custom `overline` utility shared its name with Tailwind's built-in `text-decoration: overline`. Renamed to `eyebrow`.
+- `rounded-2xl` generated no CSS (the radius scale is reset and had no `2xl` token), so dialogs and the driver next-step card rendered square. Added `--radius-2xl: 20px`.
+- Success status text on its tint was 4.4:1 (below AA); `success` darkened to `#35724C` (4.9:1).
+- Customer bar at 360–767 px: the company name collapsed to zero width because `hidden` passed through `cn` lost to the wordmark's `inline-flex`.
+- Coordinator bar at 1024–1439 px: the clock overlapped the nav.
+
+### Tests (UI redesign v2)
+- `components/primitives/redesign.test.tsx` (7): breadcrumbs, toast provider, approved palette present, WCAG AA for text and status token pairs, no `@utility overline`, no HEX in `globals.css`, every colour / radius / shadow / text-size class used in components has a theme token. The overline, radius and contrast guards were each shown to fail with the bug reintroduced.
+- Two alert-card assertions in `realApi.test.tsx` updated to the badge layout (`SHP-1042 Open`).
+- Results: `npm test` — typecheck clean, API 25 files / 365 tests, web 12 files / 142 tests; `prisma validate` valid; `npm run build:web` passes (MapLibre chunk-size warning as before).
+
 ### Added (Frontend Phases 1–2)
 - **Frontend Phases 1–2 (foundation + control tower), branch `frontend`:**
   - `apps/web` (`@routepulse/web`) added to the npm workspace: React 19, Vite 8, strict TypeScript 5.9, Tailwind CSS 4, Radix UI, TanStack Query, React Router, MapLibre GL JS, lucide-react, Recharts (installed, not yet used); Vitest 4. All from the L9 approved list. Root configuration unchanged.
@@ -20,11 +42,14 @@ Entries below describe the backend (branch `backend`) and frontend (branch `fron
   - `docs/FRONTEND_BACKEND_HANDOFF.md`.
 
 ### Added (Phase A — offline geographic basemap)
+- **Actual basemap (2026-11-12):** `npm run basemap:fetch` with PMTiles CLI 1.31.2 (Homebrew) — Protomaps build `20261109` (basemap v4.15.2, OSM data 2026-11-09 04:00 UTC), bbox 71.0,16.5 – 80.5,24.5, **zoom 0–12** (dry runs: z11 40 MB, z12 96 MB, z13 187 MB → z12 is the largest within ~150 MB), file **95,697,248 bytes**, SHA-256 `4c8206b3ecb2d1673ce440710d3f204e6f751509e901db924b8de9d25377cfe3`. Default `BASEMAP_MAXZOOM` changed from 11 to 12.
+- **City-name labels (approved enhancement):** Pune, Nashik, Surat, Ahmedabad, Indore, Nagpur from local point data (`map/cities.ts`), MapLibre symbol layer above the basemap and below every overlay (`installBasemap`), muted text with a land-colour halo, collision on, ranked, zoom-dependent (5 cities from z4, Nashik from z5). Glyphs: Noto Sans Regular range 0–255 (SIL OFL 1.1, `glyphs/OFL.txt`) from Protomaps basemaps-assets at pinned commit `75683e9ca4b77b4b6b294628aac611f3c0dc509b`, fetched by the same script (`-- --glyphs-only` for glyphs alone), served same-origin at `/glyphs`; SHA-256 `62c6d49b15fa836eb6aa45e259c7ca6762f44b011b09e47776efbe4a6db1b397`. No labels when the glyph file is missing.
+- Attribution control moved to the map's top-left (the bottom corners hold the legend and the simulation dock).
 - **Decision O-11 approved (2026-11-12):** `pmtiles@4.5.0` (BSD-3-Clause) added to the web app; CLAUDE.md's approved-dependency line updated accordingly.
 - **Backend:** `/tiles` serves the regional basemap file same-origin with HTTP Range (206 / 416), public, before `/api`; missing file → 404 with a setup hint; optional `BASEMAP_DIR` (absolute path). CSP unchanged.
 - **Frontend:** `map/basemap.ts` (protocol, source, four token-coloured layers: land, water, main roads, state borders only — no country or disputed boundaries), inserted below every overlay in `MapView`; `maxBounds` locks the map to western India (71.0,16.5 – 80.5,24.5); OSM/Protomaps attribution; legend states whether the basemap is installed; land-only fallback.
 - **Setup:** `npm run basemap:fetch` (`scripts/fetch-basemap.sh`, PMTiles CLI) extracts the pinned Protomaps build `20261109` into `apps/api/static/basemap/` (gitignored), writes `SOURCE.txt` and prints size and SHA-256.
-- **Tests:** API 5 (Range, HEAD, 416, CSP, 404, hidden/traversal, config), web 7 (same-origin only, no glyphs/symbols, state borders only, tokens, attribution, bounds = script bbox, all sites/routes inside, availability check).
+- **Tests:** API 6 (Range, HEAD, 416, CSP, 404, hidden/traversal, glyph serving, config), web 14 (same-origin only, basemap layers without symbols, state borders only, tokens, attribution, bounds = script bbox, all sites/routes inside, availability of tiles and glyphs, city data and coordinates, label layer style, layer ordering below overlays with a fake map).
 
 ### Fixed (CI)
 - `apps/api` now runs `prisma generate` on `postinstall`: the generated client (`apps/api/src/generated/`, gitignored) was missing on a fresh CI checkout, so `npm run typecheck` failed with "Cannot find module '../generated/prisma/client.js'" and hundreds of follow-on implicit-any errors. Generation needs no database.

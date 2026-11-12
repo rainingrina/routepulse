@@ -51,7 +51,7 @@ export function EtaTimelineChart({ replay, selectedTime }: { replay: ReplayRespo
   const dayRef = replay.snapshots[0]?.simTime ?? replay.promisedBy;
   const first = replay.firstAtRiskAt ? rows.find((r) => r.t === Date.parse(replay.firstAtRiskAt as string)) ?? null : null;
   const primary = cssToken('--rp-primary');
-  const navy = cssToken('--rp-navy-900');
+  const navy = cssToken('--rp-ink-900');
   const danger = cssToken('--rp-danger');
   const muted = cssToken('--rp-text-muted');
   const grid = cssToken('--rp-border');

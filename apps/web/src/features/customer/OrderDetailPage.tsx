@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import type { ShipmentDetailCustomer, ShipmentListItemCustomer } from '../../api/contract';
 import { useOrder } from '../../api/hooks/portal';
 import { useNotifications, useShipmentDetail } from '../../api/hooks/world';
@@ -7,7 +7,8 @@ import { Card, CardHeader, EmptyState, KeyValue, Skeleton } from '../../componen
 import { ErrorState } from '../../components/display/feedback';
 import { EtaDisplay } from '../../components/display/EtaDisplay';
 import { StatusBadge, statusForShipment } from '../../components/display/StatusBadge';
-import { ArrowLeft, ICON_STROKE, Inbox } from '../../components/icons';
+import { Inbox } from '../../components/icons';
+import { Breadcrumbs } from '../../components/primitives/radix';
 import { riskLabel, t } from '../../i18n/en';
 import { formatDayTime } from '../../i18n/format';
 import { MiniMap } from '../../map/MiniMap';
@@ -40,10 +41,7 @@ export default function OrderDetailPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link to="/orders" className="inline-flex items-center gap-1 self-start text-body text-primary hover:underline">
-        <ArrowLeft aria-hidden className="size-4" strokeWidth={ICON_STROKE} />
-        Your orders
-      </Link>
+      <Breadcrumbs items={[{ label: 'Your orders', to: '/orders' }, { label: o.code }]} />
       <header className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-h1 text-text code-label">{o.code}</h1>
@@ -133,7 +131,7 @@ function CustomerEtaCard({ d, statusLabel }: { d: ShipmentDetailCustomer; status
   }
   const e = d.eta;
   return (
-    <div className="flex flex-col gap-2 rounded-md bg-surface-subtle p-3">
+    <div className="flex flex-col gap-2 rounded-lg bg-surface-subtle p-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-small text-text-muted">Estimated arrival at your gate</span>
         {statusLabel ? <StatusBadge status={statusLabel} size="sm" /> : null}

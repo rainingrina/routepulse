@@ -50,7 +50,7 @@ export function RecoveryCard({
         </span>
       ) : null}
       <div className="flex items-start gap-2">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-surface-sunken text-text-secondary">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-sunken text-text-secondary">
           <Icon aria-hidden className="size-4" strokeWidth={ICON_STROKE} />
         </span>
         <div className="min-w-0 flex-1">

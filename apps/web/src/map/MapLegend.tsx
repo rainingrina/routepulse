@@ -21,7 +21,7 @@ export function MapLegend({
 }) {
   const [open, setOpen] = useState(initiallyOpen);
   return (
-    <div className="absolute bottom-3 left-3 z-10 max-w-[240px] rounded-lg border border-border bg-surface/95 text-small shadow-sm">
+    <div className="absolute bottom-8 left-2 z-10 max-w-[240px] rounded-xl border border-border bg-surface/95 text-small shadow-sm backdrop-blur-sm">
       <button
         type="button"
         aria-expanded={open}

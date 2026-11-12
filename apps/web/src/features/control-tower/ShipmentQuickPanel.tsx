@@ -98,14 +98,14 @@ function QuickContent({
         </p>
         <Link
           to={`/shipments/${encodeURIComponent(s.id)}`}
-          className="mt-1 inline-flex items-center gap-1 self-start text-body font-medium text-primary hover:underline"
+          className="mt-1 inline-flex items-center gap-1 self-start text-body font-medium link"
         >
           Open full detail
           <ChevronRight aria-hidden className="size-4" strokeWidth={ICON_STROKE} />
         </Link>
       </header>
 
-      <section aria-label="Estimated arrival" className="rounded-lg border border-border bg-surface-subtle p-3">
+      <section aria-label="Estimated arrival" className="rounded-xl border border-border bg-surface-subtle p-3">
         {s.arrivedAt ? (
           <p className="text-body text-text tabular">
             Arrived at the receiving gate {formatTime(s.arrivedAt)} · promised by {formatTimeRelative(s.promisedBy, simTime)} ·{' '}
@@ -136,7 +136,7 @@ function QuickContent({
       </section>
 
       <section aria-labelledby="qp-milestones">
-        <h3 id="qp-milestones" className="overline mb-2 text-text-muted">
+        <h3 id="qp-milestones" className="eyebrow mb-2 text-text-muted">
           Milestones · {milestoneLabel[s.currentMilestone]}
         </h3>
         <MilestoneStepper milestones={s.milestones} />
@@ -144,7 +144,7 @@ function QuickContent({
 
       {eta ? (
         <section aria-labelledby="qp-factors">
-          <h3 id="qp-factors" className="overline mb-2 text-text-muted">
+          <h3 id="qp-factors" className="eyebrow mb-2 text-text-muted">
             Why this estimate
           </h3>
           <FactorList factors={eta.factors} compact />

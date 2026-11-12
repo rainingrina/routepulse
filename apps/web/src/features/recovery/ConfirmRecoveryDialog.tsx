@@ -56,7 +56,7 @@ export function ConfirmRecoveryDialog({
         </>
       }
     >
-      <dl className="grid grid-cols-2 gap-3 rounded-md border border-border bg-surface-subtle p-3 text-body">
+      <dl className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-surface-subtle p-3 text-body">
         <div>
           <dt className="text-small text-text-muted">Action</dt>
           <dd className="font-medium text-text">{recoveryKindLabel[option.kind]}</dd>

@@ -93,7 +93,7 @@ function OrderCard({ order: o, shipments }: { order: OrderSummary; shipments: Sh
   return (
     <Link
       to={`/orders/${encodeURIComponent(o.id)}`}
-      className="flex h-full flex-col gap-3 rounded-lg border border-border bg-surface p-4 shadow-xs hover:border-border-strong focus-visible:outline-2 focus-visible:outline-primary"
+      className="flex h-full flex-col gap-3 rounded-xl border border-border bg-surface p-4 shadow-xs hover:border-border-strong focus-visible:outline-2 focus-visible:outline-primary"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">

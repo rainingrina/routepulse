@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
 import { requireAuth, sessionMiddleware } from './auth/middleware.js';
@@ -90,11 +91,28 @@ export function createApp({ config, prisma, logger, now = Date.now, loginRateLim
   app.use('/tiles', (_req, res) => {
     res.status(404).type('text/plain').send('Basemap not installed. Run `npm run basemap:fetch` (see docs/DEVELOPMENT_AND_TESTING.md).');
   });
+  // City-label glyphs (one Latin range of Noto Sans Regular, OFL), fetched with the basemap: same origin.
+  app.use(
+    '/glyphs',
+    express.static(join(config.basemapDir, 'glyphs'), {
+      index: false,
+      dotfiles: 'ignore',
+      maxAge: '1h',
+      setHeaders: (res, path) => {
+        if (path.endsWith('.pbf')) res.setHeader('Content-Type', 'application/x-protobuf');
+      },
+    }),
+  );
+  app.use('/glyphs', (_req, res) => {
+    res.status(404).type('text/plain').send('Map glyphs not installed. Run `npm run basemap:fetch -- --glyphs-only`.');
+  });
   // Static-file errors keep their HTTP status (e.g. 416 for an unsatisfiable Range, 403 for a bad path).
-  app.use('/tiles', (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const staticError = (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const status = typeof err === 'object' && err !== null && typeof (err as { status?: unknown }).status === 'number' ? (err as { status: number }).status : 500;
     res.status(status).end();
-  });
+  };
+  app.use('/tiles', staticError);
+  app.use('/glyphs', staticError);
   app.use('/api', sessionMiddleware({ config, prisma, revoked, now }));
 
   // Public endpoints.

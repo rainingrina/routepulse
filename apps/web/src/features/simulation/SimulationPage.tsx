@@ -12,6 +12,7 @@ import { TextField } from '../../components/primitives/TextField';
 import { CloudRain, ICON_STROKE } from '../../components/icons';
 import { riskLabel, t } from '../../i18n/en';
 import { formatDayTime } from '../../i18n/format';
+import { selectClass } from '../../components/primitives/fieldStyles';
 
 const KIND_LABEL: Record<DisruptionKind, string> = {
   WEATHER_SLOWDOWN: 'Heavy rain',
@@ -103,7 +104,7 @@ function DisruptionForm({ disabled, onDone }: { disabled: boolean; onDone: (r: C
       {kind === 'WEATHER_SLOWDOWN' || kind === 'ROAD_CLOSURE' ? (
         <fieldset className="flex flex-col gap-1.5">
           <legend className="text-small text-text-secondary">Road segments (shared segments affect every route that uses them)</legend>
-          <div className="grid max-h-56 gap-1 overflow-y-auto rounded-md border border-border p-2 xl:grid-cols-2">
+          <div className="grid max-h-56 gap-1 overflow-y-auto rounded-lg border border-border p-2 xl:grid-cols-2">
             {reference.data.segments.map((sg) => (
               <label key={sg.segmentCode} className="flex min-h-9 items-center gap-2 text-body text-text">
                 <input
@@ -128,7 +129,7 @@ function DisruptionForm({ disabled, onDone }: { disabled: boolean; onDone: (r: C
         <>
           <label className="flex flex-col gap-1.5 text-small text-text-secondary">
             Shipment on the road
-            <select className="h-10 rounded-md border border-border-strong bg-surface px-3 text-body text-text" value={shipmentId} onChange={(e) => setShipmentId(e.target.value)}>
+            <select className={selectClass} value={shipmentId} onChange={(e) => setShipmentId(e.target.value)}>
               <option value="">Choose…</option>
               {moving.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -162,7 +163,7 @@ function ImpactCard({ r }: { r: CreateDisruptionResponse }) {
           <ul className="flex flex-col gap-1 text-body">
             {r.impact.levelChanges.map((c) => (
               <li key={c.shipmentId}>
-                <Link to={`/shipments/${encodeURIComponent(c.shipmentId)}`} className="code-label text-primary hover:underline">
+                <Link to={`/shipments/${encodeURIComponent(c.shipmentId)}`} className="code-label link">
                   {c.code}
                 </Link>{' '}
                 {c.from ? riskLabel[c.from] : '—'} → {c.to ? riskLabel[c.to] : '—'}
@@ -172,7 +173,7 @@ function ImpactCard({ r }: { r: CreateDisruptionResponse }) {
         ) : (
           <p className="text-small text-text-muted">No risk level changed.</p>
         )}
-        <Link to="/control-tower" className="self-start text-body text-primary hover:underline">
+        <Link to="/control-tower" className="self-start text-body link">
           See it on the control tower
         </Link>
       </div>
@@ -196,7 +197,7 @@ function ActiveDisruptions({ onEnded, disabled }: { onEnded: (r: CreateDisruptio
         ) : (
           <ul className="flex flex-col gap-2">
             {list.data.items.map((d) => (
-              <li key={d.id} className="flex items-start justify-between gap-2 rounded-md border border-border p-2">
+              <li key={d.id} className="flex items-start justify-between gap-2 rounded-lg border border-border p-2">
                 <div className="min-w-0">
                   <p className="text-body font-medium text-text">
                     <CloudRain aria-hidden className="mr-1 inline size-4 text-accent" strokeWidth={ICON_STROKE} />

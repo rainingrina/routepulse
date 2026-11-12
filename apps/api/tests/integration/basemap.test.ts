@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -16,6 +16,8 @@ const empty = mkdtempSync(join(tmpdir(), 'rp-basemap-empty-'));
 const body = Buffer.concat([Buffer.from('PMTiles'), Buffer.from([3]), Buffer.alloc(4088, 7)]); // 4096 bytes
 writeFileSync(join(dir, 'western-india.pmtiles'), body);
 writeFileSync(join(dir, '.hidden'), 'x');
+mkdirSync(join(dir, 'glyphs', 'Noto Sans Regular'), { recursive: true });
+writeFileSync(join(dir, 'glyphs', 'Noto Sans Regular', '0-255.pbf'), Buffer.alloc(64, 1));
 
 let srv: TestServer;
 let missing: TestServer;
@@ -71,6 +73,15 @@ describe('/tiles basemap serving', () => {
     expect((await fetch(`${srv.baseUrl}/tiles/.hidden`)).status).toBe(404);
     expect((await fetch(`${srv.baseUrl}/tiles/%2e%2e/%2e%2e/package.json`)).status).not.toBe(200);
     expect((await fetch(`${srv.baseUrl}/tiles/`)).status).toBe(404);
+  });
+
+  it('serves city-label glyphs same-origin (font stack with a space); missing glyphs → 404', async () => {
+    const res = await fetch(`${srv.baseUrl}/glyphs/Noto%20Sans%20Regular/0-255.pbf`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toBe('application/x-protobuf');
+    expect((await res.arrayBuffer()).byteLength).toBe(64);
+    expect((await fetch(`${missing.baseUrl}/glyphs/Noto%20Sans%20Regular/0-255.pbf`)).status).toBe(404);
+    expect((await fetch(`${srv.baseUrl}/glyphs/Noto%20Sans%20Regular/256-511.pbf`)).status).toBe(404);
   });
 
   it('BASEMAP_DIR must be absolute when set', () => {

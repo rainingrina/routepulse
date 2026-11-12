@@ -51,7 +51,7 @@ export default function TripPage() {
           <div className="mx-auto max-w-[480px]">
             <Link
               to={`/trip/report?shipment=${encodeURIComponent(current.id)}`}
-              className="flex min-h-14 w-full items-center justify-center gap-2 rounded-md border border-danger bg-danger-tint text-body-lg font-semibold text-text focus-visible:outline-2 focus-visible:outline-primary"
+              className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl border border-danger/50 bg-surface text-body-lg font-semibold text-danger shadow-sm focus-visible:outline-2 focus-visible:outline-primary"
             >
               <TriangleAlert aria-hidden className="size-5 text-danger" strokeWidth={2} />
               Report a problem
@@ -93,7 +93,7 @@ function TripCard({ s }: { s: DriverTripShipment }) {
 
       <NextStepCard s={s} />
 
-      <dl className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-surface p-4">
+      <dl className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-surface p-4">
         <div>
           <dt className="text-small text-text-muted">Estimated arrival</dt>
           <dd className="text-body-lg font-semibold text-text tabular">{s.etaAt ? formatTimeRelative(s.etaAt, sync?.simTime) : '—'}</dd>
@@ -108,7 +108,7 @@ function TripCard({ s }: { s: DriverTripShipment }) {
         </div>
       </dl>
 
-      <div className="rounded-lg border border-border bg-surface">
+      <div className="rounded-xl border border-border bg-surface">
         <button
           type="button"
           aria-expanded={mapOpen}
@@ -127,7 +127,7 @@ function TripCard({ s }: { s: DriverTripShipment }) {
       </div>
 
       {s.openReports.length > 0 ? (
-        <div className="rounded-lg border border-border bg-surface p-4">
+        <div className="rounded-xl border border-border bg-surface p-4">
           <h2 className="text-h3 text-text">Your reports</h2>
           <ul className="mt-2 flex flex-col gap-1">
             {s.openReports.map((r) => (
@@ -155,8 +155,8 @@ function NextStepCard({ s }: { s: DriverTripShipment }) {
     next === 'ARRIVED' && s.canRecordNext ? `At ${s.customerName}'s gate — confirm arrival` : next ? milestoneLabel[next] : 'Trip complete';
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border-2 border-primary/40 bg-surface p-4">
-      <p className="overline text-text-muted">Next step</p>
+    <div className="flex flex-col gap-3 rounded-2xl border border-border-strong bg-surface p-4 shadow-sm">
+      <p className="eyebrow text-text-muted">Next step</p>
       <p className="text-h2 text-text">{title}</p>
       {done ? (
         <Banner tone="success" live>

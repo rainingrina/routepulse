@@ -10,10 +10,14 @@ export default function NotificationsPage() {
   const shipments = useShipments({ status: 'all', sort: 'promise' });
   const orderOf = new Map((shipments.data?.items ?? []).map((s) => [s.id, s.orderId]));
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-h1 text-text">Notifications</h1>
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+      <div>
+        <h1 className="text-h1 text-text">Notifications</h1>
+        <p className="text-body text-text-secondary">Updates from Plant X about your orders. An update about an order opens that order.</p>
+      </div>
       <Card className="overflow-hidden">
         <NotificationList
+          title="All updates"
           className="max-h-none"
           onNavigate={() => undefined}
           linkFor={(n) => {

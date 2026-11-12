@@ -46,7 +46,7 @@ export default function ReportProblemPage() {
 
 function BackToTrip() {
   return (
-    <Link to="/trip" className="inline-flex min-h-12 items-center gap-1 text-body-lg text-primary hover:underline">
+    <Link to="/trip" className="inline-flex min-h-12 items-center gap-1 text-body-lg link">
       <ArrowLeft aria-hidden className="size-5" strokeWidth={ICON_STROKE} />
       Back to trip
     </Link>
@@ -132,7 +132,7 @@ function ReportForm({ shipmentId, shipmentCode }: { shipmentId: string; shipment
               aria-pressed={chip === r}
               onClick={() => setChip(chip === r ? null : r)}
               className={cn(
-                'min-h-16 rounded-md border px-3 text-left text-body-lg font-medium',
+                'min-h-16 rounded-xl border px-3 text-left text-body-lg font-medium',
                 chip === r ? 'border-primary bg-primary-subtle text-primary' : 'border-border-strong bg-surface text-text',
               )}
             >
@@ -152,7 +152,7 @@ function ReportForm({ shipmentId, shipmentCode }: { shipmentId: string; shipment
           maxLength={MAX_TEXT}
           rows={3}
           onChange={(e) => setText(e.target.value)}
-          className="rounded-md border border-border-strong bg-surface p-3 text-body-lg text-text focus-visible:outline-2 focus-visible:outline-primary"
+          className="rounded-xl border border-border-strong bg-surface p-3 text-body-lg text-text focus-visible:outline-2 focus-visible:outline-primary"
           aria-describedby="report-text-count"
         />
         <span id="report-text-count" className="self-end text-small text-text-muted tabular">
@@ -168,7 +168,7 @@ function ReportForm({ shipmentId, shipmentCode }: { shipmentId: string; shipment
                   Reason: <strong>{driverChipLabel[confirmed]}</strong>
                 </p>
               ) : (
-                <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-subtle p-3">
+                <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface-subtle p-3">
                   <p className="text-body text-text">
                     Suggested: <strong>{driverChipLabel[suggested]}</strong>
                     {suggestion && suggestion.matchedKeywords.length > 0 ? ` — matched: ${suggestion.matchedKeywords.join(', ')}` : ''}. Is this right?
@@ -201,7 +201,7 @@ function ReportForm({ shipmentId, shipmentCode }: { shipmentId: string; shipment
               aria-pressed={estimate === m}
               onClick={() => setEstimate(estimate === m ? null : m)}
               className={cn(
-                'min-h-12 rounded-md border text-body font-medium',
+                'min-h-12 rounded-xl border text-body font-medium',
                 estimate === m ? 'border-primary bg-primary-subtle text-primary' : 'border-border-strong bg-surface text-text',
               )}
             >

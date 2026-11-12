@@ -2,11 +2,12 @@ import { Link, useParams } from 'react-router';
 import type { AttributionResponse, EtaExplanationCoordinator, ShipmentDetailCoordinator, TimelineEvent } from '../../api/contract';
 import { useAttribution, useEta, useShipmentDetail, useTimeline } from '../../api/hooks/world';
 import { useSync } from '../../api/sync';
-import { Card, CardHeader, ConfidenceChip, EmptyState, KeyValue, PartyChip, Skeleton } from '../../components/display/basics';
+import { Badge, Card, CardHeader, ConfidenceChip, EmptyState, KeyValue, PartyChip, Skeleton } from '../../components/display/basics';
+import { Breadcrumbs } from '../../components/primitives/radix';
 import { ErrorState } from '../../components/display/feedback';
 import { EtaDisplay } from '../../components/display/EtaDisplay';
 import { StatusBadge, statusForShipment } from '../../components/display/StatusBadge';
-import { ArrowLeft, Clock, History, ICON_STROKE } from '../../components/icons';
+import { Clock, History, ICON_STROKE } from '../../components/icons';
 import { milestoneLabel, partyLabel, t } from '../../i18n/en';
 import { formatDayTime, formatDuration, formatTime, formatTimeRelative } from '../../i18n/format';
 import { RecoveryQuickSection } from '../recovery/RecoveryQuickSection';
@@ -45,31 +46,41 @@ export default function ShipmentDetailPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 overflow-x-hidden p-4 lg:p-6">
-      <Link to={`/control-tower?selected=${encodeURIComponent(s.id)}`} className="inline-flex items-center gap-1 self-start text-body text-primary hover:underline">
-        <ArrowLeft aria-hidden className="size-4" strokeWidth={ICON_STROKE} />
-        {t.nav.controlTower}
-      </Link>
+      <Breadcrumbs items={[{ label: t.nav.controlTower, to: `/control-tower?selected=${encodeURIComponent(s.id)}` }, { label: s.code }]} />
 
-      <header className="flex flex-col gap-1">
+      <header className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4 shadow-xs lg:p-5">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-h1 text-text code-label">{s.code}</h1>
           {status ? <StatusBadge status={status} /> : null}
-          <span className="text-small text-text-muted">{milestoneLabel[s.currentMilestone]}</span>
+          <Badge>{milestoneLabel[s.currentMilestone]}</Badge>
+          {s.renegotiated ? <Badge tone="accent">New window agreed</Badge> : null}
           <span className="flex-1" />
-          <Link to={`/shipments/${encodeURIComponent(s.id)}/replay`} className="inline-flex items-center gap-1 text-body text-primary hover:underline">
+          <Link
+            to={`/shipments/${encodeURIComponent(s.id)}/replay`}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-3 text-body font-medium text-text hover:bg-surface-subtle"
+          >
             <History aria-hidden className="size-4" strokeWidth={ICON_STROKE} />
             Replay
           </Link>
         </div>
-        <p className="text-body text-text-secondary">
-          {s.customer.name}, {s.customer.city} · {s.lane.name} · order {s.orderCode}
-        </p>
-        <p className="text-small text-text-muted">
-          {s.transporter.name}
-          {s.transporter.isSmall ? ' (small fleet)' : ''}
-          {s.truckCode ? ` · ${s.truckCode}` : ''}
-          {s.driver ? ` · Driver ${s.driver.name}` : ''} · route {s.route.code} ({s.route.lengthKm} km)
-        </p>
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3 xl:grid-cols-6">
+          <KeyValue label="Customer">
+            {s.customer.name}, {s.customer.city}
+          </KeyValue>
+          <KeyValue label="Order">{s.orderCode}</KeyValue>
+          <KeyValue label="Lane">{s.lane.name}</KeyValue>
+          <KeyValue label="Transporter">
+            {s.transporter.name}
+            {s.transporter.isSmall ? <span className="text-text-muted"> · small fleet</span> : null}
+          </KeyValue>
+          <KeyValue label="Truck and driver">
+            {s.truckCode ?? '—'}
+            {s.driver ? ` · ${s.driver.name}` : ''}
+          </KeyValue>
+          <KeyValue label="Route">
+            {s.route.code} · {s.route.lengthKm} km
+          </KeyValue>
+        </dl>
       </header>
 
       <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
@@ -147,7 +158,7 @@ export default function ShipmentDetailPage() {
 
 function ArrivedOutcome({ s }: { s: ShipmentDetailCoordinator }) {
   return (
-    <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
       <KeyValue label="Arrived (receiving gate)">{formatDayTime(s.arrivedAt as string)}</KeyValue>
       <KeyValue label="Promised by">{formatDayTime(s.promisedBy)}</KeyValue>
       <KeyValue label="Result">{s.onTime ? 'On time' : `Late by ${formatDuration(s.delayMinutes ?? 0)}`}</KeyValue>
@@ -158,48 +169,96 @@ function ArrivedOutcome({ s }: { s: ShipmentDetailCoordinator }) {
 
 /** The four-term identity (L3) exactly as returned: planned + so far + plan change + expected = predicted. */
 export function EtaBreakdown({ eta, simTime }: { eta: EtaExplanationCoordinator; simTime: string | undefined }) {
-  const rows: [string, string][] = [
-    ['Planned arrival', formatDayTime(eta.plannedArrivalAt)],
-    ['+ Delay so far', formatDuration(eta.totals.incurredMinutes)],
-    ['+ Plan change', formatDuration(eta.totals.planChangeMinutes)],
-    ['+ Expected delay', formatDuration(eta.totals.expectedMinutes)],
+  const terms: { key: string; label: string; minutes: number; swatch: string }[] = [
+    { key: 'incurred', label: 'Delay so far', minutes: eta.totals.incurredMinutes, swatch: 'bg-ink-700' },
+    { key: 'plan', label: 'Plan change', minutes: eta.totals.planChangeMinutes, swatch: 'bg-sage-muted' },
+    { key: 'expected', label: 'Expected delay', minutes: eta.totals.expectedMinutes, swatch: 'bg-accent-fill' },
   ];
+  const positive = terms.filter((t) => t.minutes > 0);
+  const total = positive.reduce((a, t) => a + t.minutes, 0);
+  const signed = (m: number) => `${m < 0 ? '−' : '+'}${formatDuration(m)}`;
   return (
-    <div className="flex flex-col gap-4">
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
-        <dt className="text-small text-text-muted">Estimated arrival</dt>
-        <dt className="text-small text-text-muted">Promised by</dt>
-        <dt className="hidden text-small text-text-muted sm:block">Confidence</dt>
-        <dd className="text-h2 text-text">
-          <EtaDisplay at={eta.predictedArrivalAt} low={eta.etaLowAt} high={eta.etaHighAt} reference={simTime} />
-        </dd>
-        <dd className="text-h2 text-text tabular">{formatTimeRelative(eta.promisedBy, simTime)}</dd>
-        <dd className="col-span-2 sm:col-span-1">
+    <div className="flex flex-col gap-5">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <KeyValue label="Estimated arrival" className="col-span-2">
+          <span className="text-h1 text-text">
+            <EtaDisplay at={eta.predictedArrivalAt} low={eta.etaLowAt} high={eta.etaHighAt} reference={simTime} />
+          </span>
+        </KeyValue>
+        <KeyValue label="Promised by">
+          <span className="text-h2 text-text tabular">{formatTimeRelative(eta.promisedBy, simTime)}</span>
+        </KeyValue>
+        <KeyValue label="Confidence">
           <ConfidenceChip confidence={eta.confidence} />
-        </dd>
-      </dl>
-      <p className="text-body text-text">{eta.summary}</p>
-      <p className="text-small text-text-muted">{eta.confidenceReason}</p>
-      <table className="w-full max-w-md text-body tabular" aria-label="ETA identity">
-        <tbody>
-          {rows.map(([k, v]) => (
-            <tr key={k} className="border-b border-border">
-              <th scope="row" className="py-1 text-left font-normal text-text-secondary">{k}</th>
-              <td className="py-1 text-right text-text">{v}</td>
-            </tr>
+        </KeyValue>
+      </div>
+      <div>
+        <p className="text-body text-text">{eta.summary}</p>
+        <p className="mt-0.5 text-small text-text-muted">{eta.confidenceReason}</p>
+      </div>
+
+      {/* The four-term identity (L3), exactly as returned: planned + so far + plan change + expected = predicted. */}
+      <div className="rounded-xl border border-border bg-surface-subtle p-3">
+        <ol className="grid grid-cols-2 gap-2 md:grid-cols-5" aria-label="How the estimate adds up">
+          <li className="rounded-lg bg-surface px-3 py-2 shadow-xs">
+            <p className="text-small text-text-muted">Planned arrival</p>
+            <p className="text-body font-semibold text-text tabular">{formatDayTime(eta.plannedArrivalAt)}</p>
+          </li>
+          {terms.map((t) => (
+            <li key={t.key} className="rounded-lg bg-surface px-3 py-2 shadow-xs">
+              <p className="flex items-center gap-1.5 text-small text-text-muted">
+                <span aria-hidden className={`size-2 rounded-full ${t.swatch}`} />
+                {t.label}
+              </p>
+              <p className="text-body font-semibold text-text tabular">{signed(t.minutes)}</p>
+            </li>
           ))}
-          <tr>
-            <th scope="row" className="py-1 text-left font-semibold text-text">= Predicted arrival</th>
-            <td className="py-1 text-right font-semibold text-text">{formatDayTime(eta.predictedArrivalAt)}</td>
-          </tr>
-        </tbody>
-      </table>
+          <li className="col-span-2 rounded-lg bg-ink-900 px-3 py-2 text-on-primary md:col-span-1">
+            <p className="text-small text-sage-muted">= Predicted</p>
+            <p className="text-body font-semibold tabular">{formatDayTime(eta.predictedArrivalAt)}</p>
+          </li>
+        </ol>
+        {total > 0 ? (
+          <div className="mt-3" aria-hidden>
+            <div className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full bg-surface-sunken">
+              {positive.map((t) => (
+                <span key={t.key} className={t.swatch} style={{ width: `${(t.minutes / total) * 100}%` }} />
+              ))}
+            </div>
+            <p className="mt-1 text-small text-text-muted">Share of {formatDuration(total)} of delay added to the plan</p>
+          </div>
+        ) : null}
+        <table className="sr-only" aria-label="ETA identity">
+          <tbody>
+            <tr>
+              <th scope="row">Planned arrival</th>
+              <td>{formatDayTime(eta.plannedArrivalAt)}</td>
+            </tr>
+            <tr>
+              <th scope="row">+ Delay so far</th>
+              <td>{formatDuration(eta.totals.incurredMinutes)}</td>
+            </tr>
+            <tr>
+              <th scope="row">+ Plan change</th>
+              <td>{formatDuration(eta.totals.planChangeMinutes)}</td>
+            </tr>
+            <tr>
+              <th scope="row">+ Expected delay</th>
+              <td>{formatDuration(eta.totals.expectedMinutes)}</td>
+            </tr>
+            <tr>
+              <th scope="row">= Predicted arrival</th>
+              <td>{formatDayTime(eta.predictedArrivalAt)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <p className="text-small text-text-muted">
-        Road arrival {formatTimeRelative(eta.projectedRoadArrivalAt, simTime)} · receiving {formatTime(eta.receivingWindow.opensAt)}–{formatTime(eta.receivingWindow.closesAt)}
+        Arrival means the receiving gate (not unloading). Road arrival {formatTimeRelative(eta.projectedRoadArrivalAt, simTime)} · receiving {formatTime(eta.receivingWindow.opensAt)}–{formatTime(eta.receivingWindow.closesAt)}
         {eta.identityHolds ? '' : ' · identity check failed'}
       </p>
       <div>
-        <h3 className="overline mb-2 text-text-muted">Why this estimate</h3>
+        <h3 className="mb-2 text-h3 text-text">Why this estimate</h3>
         <FactorList factors={eta.factors} />
       </div>
     </div>

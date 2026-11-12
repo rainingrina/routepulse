@@ -90,6 +90,7 @@ Status per code: `VALIDATION_ERROR` 400 · `UNAUTHENTICATED` 401 · `FORBIDDEN`/
 | GET | `/api/driver/trip` (#21) | Driver | Implemented + tested (M9) |
 | GET | `/api/analytics/dashboard` (#36) | Coordinator | Implemented + tested (M10, read-only) |
 | GET/HEAD | `/tiles/western-india.pmtiles` (not an API endpoint: static file) | Public (OSM data) | Implemented + tested (Phase A): HTTP Range 206/416, `application/vnd.pmtiles`, 404 when not installed |
+| GET/HEAD | `/glyphs/{fontstack}/{range}.pbf` (static) | Public (OFL font glyphs) | Implemented + tested (Phase A labels): `application/x-protobuf`, 404 when not installed |
 
 ### Analytics (M10) — what the SPA does
 - **#36** `?period=7d|30d|60d` (default 30d) `&laneId=&transporterId=`; unknown fields → 400, unknown ids → 404, non-coordinators → 403. Every section comes from one filtered set (arrivals in the window ending at the last settled sim time), so render all charts from one response. `null` percentages / medians mean "nothing to measure" — show "—", never 0. `causesByParty` is always five parties in fixed order. `weeklyTrend` includes empty weeks (Monday 00:00 IST). Drill-down: #14 with `status=all&arrivedFrom=filter.from&arrivedTo=filter.to` plus the same lane/transporter.
@@ -213,7 +214,7 @@ Log in with these accounts through `/api/auth/login` (Milestone 3). Right after 
 
 ## 7. Known incomplete functionality
 
-Implemented: #1–#38 and `/api/health` (all planned endpoints). Next: the separate UI modernization phase, after approval.
+Implemented: #1–#38 and `/api/health` (all planned endpoints). The UI redesign v2 (2026-11-12) changed the web app only — no endpoint, contract or behaviour change on the API side.
 
 ## 8. Contract change log
 

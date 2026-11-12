@@ -10,17 +10,17 @@ export function RecoveryQuickSection({ shipmentId, startOpen = false }: { shipme
   if (!RECOVERY_AVAILABLE) {
     return (
       <section aria-labelledby="qp-recovery" className="flex flex-col gap-2">
-        <h3 id="qp-recovery" className="overline text-text-muted">
+        <h3 id="qp-recovery" className="eyebrow text-text-muted">
           Recovery
         </h3>
-        <p className="rounded-md border border-border bg-surface-subtle px-3 py-2 text-small text-text-secondary">{RECOVERY_UNAVAILABLE_TEXT}</p>
+        <p className="rounded-lg border border-border bg-surface-subtle px-3 py-2 text-small text-text-secondary">{RECOVERY_UNAVAILABLE_TEXT}</p>
       </section>
     );
   }
   return (
     <section aria-labelledby="qp-recovery" className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h3 id="qp-recovery" className="overline text-text-muted">
+        <h3 id="qp-recovery" className="eyebrow text-text-muted">
           Recovery
         </h3>
         <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
