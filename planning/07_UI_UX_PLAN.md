@@ -607,6 +607,8 @@ All items that were open in revision 0.1 are resolved (architecture §0.1).
 | 5 | UI library set | **L9** — React, Vite, TypeScript, Tailwind CSS, Radix UI, TanStack Query, React Router, Recharts, MapLibre GL JS, lucide-react. Nothing else without approval. |
 | 6 | Self-hosted Inter | **L9** — approved |
 | 7 | NEW_WINDOW and receiving hours | **L4** — shipment-specific override; dialog shows the fixed window (§9.2) |
+| 9 | Overlapping truck markers (2026-11-13) | Screen-space clusters at the most urgent member's real position (count + worst status), list to pick a truck or zoom in; selected / hovered truck never clustered; no coordinate moved. Disruption label above trucks, click-through |
+| 10 | Shipment Decision Brief (2026-11-13) | One card on §7 between the header and the ETA explanation: status · why · incident · recovery decision · customer communication · ETA before → after the decision (recorded snapshots only). Existing endpoints only; unavailable data labelled |
 | 8 | Application-wide visual redesign (2026-11-12) | Team-requested v2: graphite · warm beige · sage tokens (§2.1–2.3), graphite frame (§3), component system (§2.8), toasts on real mutation success only, breadcrumbs on detail pages. No change to requirements, calculations, API contracts or role rules. New dependency `@fontsource-variable/inter@5.3.0` (OFL) implements the already-approved self-hosted Inter (row 6). |
 
 Gated features stay disabled (L10): CO₂e shows "method under verification"; no second language until verified.

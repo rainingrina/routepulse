@@ -1,6 +1,8 @@
+import { useState } from 'react';
+import { Popover as P } from 'radix-ui';
 import type { RiskLevel } from '../../api/contract';
 import { cn } from '../../components/cn';
-import { Building2, Factory, Pause, Truck, ICON_STROKE } from '../../components/icons';
+import { Building2, Factory, Pause, Truck, ZoomIn, ICON_STROKE } from '../../components/icons';
 import { riskLabel } from '../../i18n/en';
 
 /** UI plan §8.2 — markers use the status text colours as fills, white 2 px ring, icon inside. */
@@ -62,7 +64,7 @@ export function TruckMarker({
           </span>
         ) : null}
       </button>
-      {showLabel ? (
+      {showLabel && !dimmed ? (
         <span
           aria-hidden
           className={cn(
@@ -73,6 +75,102 @@ export function TruckMarker({
           {code}
         </span>
       ) : null}
+    </div>
+  );
+}
+
+export interface ClusterMember {
+  id: string;
+  code: string;
+  level: RiskLevel | null;
+  ariaLabel: string;
+}
+
+/**
+ * Several trucks whose markers would overlap at this zoom (UI plan §8.2). Shown at the most urgent
+ * member's real position with its status colour and the count; opens a list to pick one truck, or
+ * zooms in when the trucks are apart. Positions are never moved. The list is a Radix Popover: it
+ * renders outside the map (never clipped by the frame or covered by other markers), flips away from
+ * edges, moves focus into the list and returns it on Escape or outside click.
+ */
+export function TruckCluster({
+  members,
+  level,
+  dimmed,
+  onSelect,
+  onZoom,
+}: {
+  members: ClusterMember[];
+  level: RiskLevel | null;
+  dimmed: boolean;
+  onSelect: (id: string) => void;
+  onZoom: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const label = `${members.length} trucks close together: ${members.map((m) => `${m.code}${m.level ? ` ${riskLabel[m.level].toLowerCase()}` : ''}`).join(', ')}`;
+  return (
+    <div className={cn('flex flex-col items-center', dimmed && !open && 'opacity-40')}>
+      <P.Root open={open} onOpenChange={setOpen}>
+        <P.Trigger
+          aria-label={label}
+          title={label}
+          onClick={(e) => e.stopPropagation()}
+          className={cn(
+            'relative flex size-8 items-center justify-center rounded-full border-2 border-surface text-on-primary shadow-sm transition-transform duration-[var(--rp-motion-fast)] hover:scale-110',
+            levelFill[level ?? 'NONE'],
+          )}
+        >
+          <Truck aria-hidden className="size-3.5" strokeWidth={2} />
+          <span aria-hidden className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-surface bg-ink-900 px-1 text-[10px] leading-none font-semibold tabular">
+            {members.length}
+          </span>
+        </P.Trigger>
+        <P.Portal>
+          <P.Content
+            side="top"
+            sideOffset={8}
+            collisionPadding={12}
+            aria-label="Trucks at this spot"
+            className="z-50 w-56 rounded-xl border border-border bg-surface p-1 shadow-md data-[state=open]:animate-[rp-fade_var(--rp-motion-fast)_ease-out]"
+          >
+            <ul aria-label="Trucks at this spot">
+              {members.map((m) => (
+                <li key={m.id}>
+                  <button
+                    type="button"
+                    aria-label={m.ariaLabel}
+                    onClick={() => {
+                      setOpen(false);
+                      onSelect(m.id);
+                    }}
+                    className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2 text-small text-text hover:bg-surface-sunken"
+                  >
+                    <span aria-hidden className={cn('size-2.5 shrink-0 rounded-full', levelFill[m.level ?? 'NONE'])} />
+                    <span className="font-medium code-label">{m.code}</span>
+                    <span className="ml-auto text-text-muted">{m.level ? riskLabel[m.level] : ''}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onZoom();
+              }}
+              className="mt-1 flex min-h-9 w-full items-center gap-2 rounded-lg border-t border-border px-2 text-small text-text-secondary hover:bg-surface-sunken"
+            >
+              <ZoomIn aria-hidden className="size-3.5" strokeWidth={ICON_STROKE} />
+              Zoom in on these trucks
+            </button>
+          </P.Content>
+        </P.Portal>
+      </P.Root>
+      {dimmed && !open ? null : (
+        <span aria-hidden className="mt-0.5 rounded-full bg-ink-900 px-1.5 text-[11px] leading-4 font-medium whitespace-nowrap text-on-primary shadow-xs">
+          {members.length} trucks
+        </span>
+      )}
     </div>
   );
 }

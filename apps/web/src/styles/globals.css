@@ -222,3 +222,10 @@
 .maplibregl-marker {
   cursor: default;
 }
+
+/* Unlayered on purpose (beats the utilities layer): a focus ring must appear at once. Tailwind's
+   transition-colors also animates outline-color, so the ring faded in from the text colour (white on
+   a graphite button) over 120 ms. Every other colour transition is kept. */
+:focus-visible {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, box-shadow, opacity, transform;
+}

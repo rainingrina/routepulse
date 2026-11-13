@@ -117,7 +117,7 @@ Imported from `@routepulse/shared` (published by Dev A): all enum lists/unions, 
 | §8.1 basemap: "major city names in text-muted" (tiled variant) | Built for the six lane cities (symbol layer, local glyphs at `/glyphs`, `--rp-text-muted` with a land halo) | Approved enhancement; other places unlabelled |
 | §8.1 basemap layers | Adds main roads (white, `--rp-surface`) to land, water and state borders | Lets coordinators judge route position; no POIs |
 | §8.3 marker interpolation over 1 s | Markers jump to each new position | Task 10.4 not started |
-| §6.6 toast "SHP-1042 is at risk — View options" | One-time row highlight + `aria-live` announcement. A toast component now exists (v2, Radix Toast from `radix-ui`) but is used only for confirmed mutations | The at-risk toast was not part of the redesign scope (no new behaviour added) |
+| §6.6 toast "SHP-1042 is at risk — View options" | Built (2026-11-13) from #14 risk transitions; several shipments in one 5 s window become one toast ("3 shipments are at risk", action "Show at-risk shipments") | §6.6 rate limit (max one announcement per 5 s) |
 | §6.4 dock "Advance to…" time picker | Not in the dock yet ("+1 h" is) | Simulation page is Phase 5 |
 | §13 drill-down "list via #14" | Opens in a dialog over the dashboard (same window and filters), rows link to the shipment page | Keeps the filter context |
 | §13 "value labels on bars" for the 100 % stacked party chart | Minutes on hover and in the Table view; overall shares in the card's definition line | Labels on thin stacked segments overlap |
@@ -130,6 +130,8 @@ Imported from `@routepulse/shared` (published by Dev A): all enum lists/unions, 
 
 | Date | Change |
 |---|---|
+| 2026-11-13 | Shipment Decision Brief on the detail page (reuses #15 #18 #19 #24 #26 #29 #34; no API change). Requests added per detail view: #26 ×2 (active + RESOLVED — the default is active only), #24 ×2 (PENDING_REVIEW + CONFIRMED — the default is pending only), #19 only after a recovery was chosen. Backend data not available, shown as such: customer-notification delivery / read status, a "Rejected" report status, the decision maker for a CHOSEN option without an alert. |
+| 2026-11-13 | Final polish: map clusters, ETA waterfall, at-risk toast, RoleGuard hot-reload fix, accessibility fixes; no API change. |
 | 2026-11-12 | UI redesign v2 across the whole web app (tokens, graphite frame, component system, toasts on real success, breadcrumbs, map attribution moved to a custom bottom-left element). No API call, contract or role change. UI plan §2–§3 v0.3. |
 | 2026-11-12 | Phase A completed: basemap file installed (zoom 0–12, 91 MiB), city-name labels, attribution top-left; verified in the browser incl. Wi-Fi off. |
 | 2026-11-12 | Phase A: offline basemap (`pmtiles` protocol, same-origin `/tiles`), map locked to western India, land-only fallback. |

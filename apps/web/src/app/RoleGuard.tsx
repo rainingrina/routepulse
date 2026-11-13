@@ -1,20 +1,12 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Navigate } from 'react-router';
 import { useMe } from '../api/hooks/auth';
 import { SyncProvider } from '../api/sync';
-import type { Role, UserDto } from '../api/contract';
+import type { Role } from '../api/contract';
+import { CurrentUserContext } from './currentUser';
 import { ErrorState } from '../components/display/feedback';
 import { decideAccess, HOME_PATH } from './access';
 import { FullPageLoading } from './FullPageLoading';
-
-const CurrentUserContext = createContext<UserDto | null>(null);
-
-/** The signed-in user inside a guarded route tree. */
-export function useCurrentUser(): UserDto {
-  const user = useContext(CurrentUserContext);
-  if (!user) throw new Error('useCurrentUser must be used inside RoleGuard');
-  return user;
-}
 
 /** Role guard for one route tree (architecture §5.1). Starts the 1 s sync poll once signed in. */
 export function RoleGuard({ role, children }: { role: Role; children: ReactNode }) {

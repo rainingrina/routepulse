@@ -205,3 +205,10 @@ Font: Inter Variable comes from the npm package `@fontsource-variable/inter` (in
 4. Shipment detail: breadcrumbs, facts header, ETA tiles (Planned arrival + Delay so far + Plan change + Expected delay = Predicted) — the numbers equal the previous table. Choose a recovery option → confirm → a toast appears only after the server accepts it.
 5. Driver reports: Confirm → toast; Change reason / party → dialog with rounded corners and a required note.
 6. Reduced motion (OS setting): dialogs, sheets and toasts appear without animation.
+
+## K. Verifying the final polish and the Decision Brief by hand
+
+1. Reset the demo, open the Control Tower, then advance to 10:30 and inject the documented heavy rain on KHP-LNV-GHAT: one toast "3 shipments are at risk" appears (once — it does not repeat while the clock is paused).
+2. Map: trucks near the plant show as clusters ("6 trucks"); select one → a list opens above the map; Escape returns focus to the cluster; pick a truck → it is selected and shown on its own. The "Heavy rain on ghat section" label stays readable.
+3. Shipment SHP-1042 after the replacement truck is chosen (Thu 11:25): the Decision brief shows "Selected", Meera · Thu 11:25, ₹6,100, 14 h 10 m saved vs notify only, and Fri 08:00 → Thu 17:50 (−14 h 10 m). Before the choice (Thu 11:20) it shows "Proposed · awaiting customer". An arrived shipment shows the final ledger; a quiet one shows the empty states.
+4. The ETA waterfall under the brief: bars from planned to predicted arrival, dashed promised-by line, receiving-window band.

@@ -2,7 +2,7 @@
  * Thin styled wrappers over Radix primitives (L9). Behaviour (focus trap, Esc, roving focus,
  * ARIA) comes from Radix; this file only applies RoutePulse tokens.
  */
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { Dialog as D, Tabs as T, ToggleGroup as G, Tooltip as TT } from 'radix-ui';
 import { cn } from '../cn';
@@ -133,11 +133,25 @@ export function Dialog({
   footer?: ReactNode;
   width?: 'sm' | 'md' | 'lg';
 }) {
+  // Our dialogs are opened from state, not a Radix Trigger, so Radix has nothing to return focus to
+  // and focus fell to <body> on close (UI plan §16: dialogs restore focus). Remember the element that
+  // had focus when the dialog opened and return to it if it still exists.
+  const returnTo = useRef<HTMLElement | null>(null);
   return (
     <D.Root open={open} onOpenChange={onOpenChange}>
       <D.Portal>
         <D.Overlay className="fixed inset-0 z-50 bg-ink-900/45 data-[state=open]:animate-[rp-fade_var(--rp-motion-base)_ease-out]" />
         <D.Content
+          onOpenAutoFocus={() => {
+            returnTo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          }}
+          onCloseAutoFocus={(e) => {
+            const el = returnTo.current;
+            if (el && el.isConnected) {
+              e.preventDefault();
+              el.focus();
+            }
+          }}
           className={cn(
             'fixed top-1/2 left-1/2 z-50 max-h-[90vh] w-[calc(100vw-32px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto',
             'rounded-2xl border border-border bg-surface p-5 shadow-overlay sm:p-6 data-[state=open]:animate-[rp-pop_var(--rp-motion-base)_var(--rp-ease)]',

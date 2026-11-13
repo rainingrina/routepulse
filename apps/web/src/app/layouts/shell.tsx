@@ -8,7 +8,7 @@ import { Banner, InlineError } from '../../components/display/feedback';
 import { cn } from '../../components/cn';
 import { ChevronDown, LogOut, Menu, User, X, ICON_STROKE, type LucideIcon } from '../../components/icons';
 import { roleLabel, t } from '../../i18n/en';
-import { useCurrentUser } from '../RoleGuard';
+import { useCurrentUser } from '../currentUser';
 import { PageLoading } from '../FullPageLoading';
 
 /**

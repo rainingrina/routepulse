@@ -10,7 +10,8 @@ import type { MapLayersResponse, PositionItem } from '../api/contract';
 import { IconButton } from '../components/primitives/Button';
 import { Maximize2 } from '../components/icons';
 import { boundsOf, midpoint, sliceLine, type LngLat } from './geometry';
-import { DisruptionPill, PlantMarker, SiteMarker, TruckMarker, truckAriaLabel } from './markers/markers';
+import { DisruptionPill, PlantMarker, SiteMarker, TruckCluster, TruckMarker, truckAriaLabel } from './markers/markers';
+import { groupTrucks, worstLevel, type TruckGroup } from './truckClusters';
 import { MapLegend } from './MapLegend';
 
 // Worker served as a same-origin asset so the API's CSP (worker/script 'self') allows it — no blob: workers.
@@ -63,7 +64,21 @@ export interface MapViewProps {
 }
 
 /** Keyed HTML markers rendered by React through portals (architecture §16.1: labels are HTML, not symbol layers). */
-function useHtmlMarkers(map: MlMap | null, points: { key: string; lng: number; lat: number; z?: number }[]) {
+interface HtmlPoint {
+  key: string;
+  lng: number;
+  lat: number;
+  z?: number;
+  anchor?: 'top' | 'bottom';
+  offset?: [number, number];
+  /** Labels only: clicks pass through to the markers underneath. */
+  passThrough?: boolean;
+}
+
+/** Marker screen distance below which trucks are grouped: a 28–32 px marker plus the label under it (~20 px), so neighbouring markers and labels never touch. */
+const CLUSTER_RADIUS_PX = 56;
+
+function useHtmlMarkers(map: MlMap | null, points: HtmlPoint[]) {
   const markers = useRef(new Map<string, { marker: Marker; el: HTMLDivElement }>());
   const [elements, setElements] = useState<Record<string, HTMLDivElement>>({});
   useEffect(() => {
@@ -75,10 +90,12 @@ function useHtmlMarkers(map: MlMap | null, points: { key: string; lng: number; l
       const existing = markers.current.get(p.key);
       if (existing) {
         existing.marker.setLngLat([p.lng, p.lat]);
+        if (p.z !== undefined) existing.el.style.zIndex = String(p.z);
       } else {
         const el = document.createElement('div');
         if (p.z !== undefined) el.style.zIndex = String(p.z);
-        const marker = new Marker({ element: el, anchor: 'top' }).setLngLat([p.lng, p.lat]).addTo(map);
+        if (p.passThrough) el.style.pointerEvents = 'none';
+        const marker = new Marker({ element: el, anchor: p.anchor ?? 'top', ...(p.offset ? { offset: p.offset } : {}) }).setLngLat([p.lng, p.lat]).addTo(map);
         markers.current.set(p.key, { marker, el });
         changed = true;
       }
@@ -316,16 +333,58 @@ export function MapView({
     () => [
       { key: 'plant', lng: layers.plant.lng, lat: layers.plant.lat, z: 1 },
       ...layers.sites.map((s) => ({ key: `site:${s.customerId}`, lng: s.lng, lat: s.lat, z: 1 })),
+      // The disruption label sits just above its point (truck markers hang below theirs) and is drawn
+      // above every truck so it stays readable; it is click-through, so trucks under it stay selectable.
       ...disruptionLines.map((d) => {
         const [lng, lat] = midpoint(d.coords);
-        return { key: `disr:${d.id}`, lng, lat, z: 2 };
+        return { key: `disr:${d.id}`, lng, lat, z: 7, anchor: 'bottom' as const, offset: [0, -4] as [number, number], passThrough: true };
       }),
     ],
     [layers, disruptionLines],
   );
+
+  // Screen-space grouping, recomputed after every pan / zoom / resize and on each position tick.
+  const [viewTick, setViewTick] = useState(0);
+  useEffect(() => {
+    if (!map) return;
+    const bump = () => setViewTick((n) => n + 1);
+    map.on('moveend', bump);
+    map.on('resize', bump);
+    return () => {
+      map.off('moveend', bump);
+      map.off('resize', bump);
+    };
+  }, [map]);
+  const groups: TruckGroup[] = useMemo(() => {
+    if (!map) return trucks.map((t) => ({ anchorId: t.item.shipmentId, memberIds: [t.item.shipmentId] }));
+    const pinned = new Set([selectedId, hoveredId].filter((x): x is string => !!x));
+    const screen = trucks.map((t) => {
+      const p = map.project([t.item.lng, t.item.lat]);
+      return { id: t.item.shipmentId, x: p.x, y: p.y, level: t.item.riskLevel };
+    });
+    return groupTrucks(screen, CLUSTER_RADIUS_PX, pinned);
+    // viewTick: re-project after the camera moves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, trucks, selectedId, hoveredId, viewTick]);
+  const groupByAnchor = useMemo(() => new Map(groups.map((g) => [g.anchorId, g])), [groups]);
+  const clusteredAway = useMemo(() => new Set(groups.flatMap((g) => g.memberIds.slice(1))), [groups]);
+  const zoomTo = useCallback(
+    (ids: string[]) => {
+      if (!map) return;
+      const b = boundsOf(trucks.filter((t) => ids.includes(t.item.shipmentId)).map((t) => [t.item.lng, t.item.lat] as LngLat));
+      if (b) map.fitBounds(new LngLatBounds(b[0], b[1]), { padding: 96, maxZoom: 12, duration: prefersReducedMotion() ? 0 : 400 });
+    },
+    [map, trucks],
+  );
+
   const truckPoints = useMemo(
-    () => trucks.map((t) => ({ key: `truck:${t.item.shipmentId}`, lng: t.item.lng, lat: t.item.lat, z: t.item.shipmentId === selectedId ? 5 : 3 })),
-    [trucks, selectedId],
+    () =>
+      trucks.map((t) => {
+        const id = t.item.shipmentId;
+        const isCluster = (groupByAnchor.get(id)?.memberIds.length ?? 1) > 1;
+        return { key: `truck:${id}`, lng: t.item.lng, lat: t.item.lat, z: id === selectedId ? 6 : isCluster ? 5 : 3 };
+      }),
+    [trucks, selectedId, groupByAnchor],
   );
   const staticEls = useHtmlMarkers(map, staticPoints);
   const truckEls = useHtmlMarkers(map, truckPoints);
@@ -357,7 +416,23 @@ export function MapView({
       })}
       {trucks.map((t) => {
         const el = truckEls[`truck:${t.item.shipmentId}`];
-        if (!el) return null;
+        if (!el || clusteredAway.has(t.item.shipmentId)) return null;
+        const group = groupByAnchor.get(t.item.shipmentId);
+        if (group && group.memberIds.length > 1) {
+          const members = group.memberIds.map((id) => trucks.find((x) => x.item.shipmentId === id)).filter((m): m is MapTruck => !!m);
+          const anchorId = t.item.shipmentId;
+          return createPortal(
+            <TruckCluster
+              members={members.map((m) => ({ id: m.item.shipmentId, code: m.item.code, level: m.item.riskLevel, ariaLabel: truckAriaLabel(m.item.code, m.item.riskLevel, m.etaText) }))}
+              level={worstLevel(members.map((m) => m.item.riskLevel))}
+              dimmed={!!selectedId}
+              onSelect={(id) => onSelect?.(id)}
+              onZoom={() => zoomTo(group.memberIds)}
+            />,
+            el,
+            `cluster:${anchorId}`,
+          );
+        }
         const selected = t.item.shipmentId === selectedId;
         return createPortal(
           <TruckMarker

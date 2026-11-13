@@ -47,6 +47,12 @@ export function MapLegend({
             );
           })}
           <li className="flex items-center gap-2">
+            <span aria-hidden className="flex size-4 items-center justify-center rounded-full bg-ink-700 text-[9px] leading-none font-semibold text-on-primary">
+              3
+            </span>
+            Trucks close together — select to list them
+          </li>
+          <li className="flex items-center gap-2">
             <span aria-hidden className="h-[3px] w-4 rounded bg-[var(--rp-map-route)]" />
             Primary route
           </li>

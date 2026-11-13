@@ -12,6 +12,8 @@ import { milestoneLabel, partyLabel, t } from '../../i18n/en';
 import { formatDayTime, formatDuration, formatTime, formatTimeRelative } from '../../i18n/format';
 import { RecoveryQuickSection } from '../recovery/RecoveryQuickSection';
 import { FactorList } from './FactorList';
+import { EtaWaterfall } from './EtaWaterfall';
+import { DecisionBrief } from './DecisionBrief';
 import { MilestoneStepper } from './Milestones';
 
 /**
@@ -82,6 +84,8 @@ export default function ShipmentDetailPage() {
           </KeyValue>
         </dl>
       </header>
+
+      <DecisionBrief shipment={s} eta={etaData} etaPending={live && eta.isPending} attribution={attribution.data ?? null} simTime={sync?.simTime} />
 
       <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
         <div className="flex min-w-0 flex-col gap-4">
@@ -169,17 +173,15 @@ function ArrivedOutcome({ s }: { s: ShipmentDetailCoordinator }) {
 
 /** The four-term identity (L3) exactly as returned: planned + so far + plan change + expected = predicted. */
 export function EtaBreakdown({ eta, simTime }: { eta: EtaExplanationCoordinator; simTime: string | undefined }) {
-  const terms: { key: string; label: string; minutes: number; swatch: string }[] = [
-    { key: 'incurred', label: 'Delay so far', minutes: eta.totals.incurredMinutes, swatch: 'bg-ink-700' },
-    { key: 'plan', label: 'Plan change', minutes: eta.totals.planChangeMinutes, swatch: 'bg-sage-muted' },
-    { key: 'expected', label: 'Expected delay', minutes: eta.totals.expectedMinutes, swatch: 'bg-accent-fill' },
+  const terms: { key: string; label: string; minutes: number }[] = [
+    { key: 'incurred', label: 'Delay so far', minutes: eta.totals.incurredMinutes },
+    { key: 'plan', label: 'Plan change', minutes: eta.totals.planChangeMinutes },
+    { key: 'expected', label: 'Expected delay', minutes: eta.totals.expectedMinutes },
   ];
-  const positive = terms.filter((t) => t.minutes > 0);
-  const total = positive.reduce((a, t) => a + t.minutes, 0);
   const signed = (m: number) => `${m < 0 ? '−' : '+'}${formatDuration(m)}`;
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <KeyValue label="Estimated arrival" className="col-span-2">
           <span className="text-h1 text-text">
             <EtaDisplay at={eta.predictedArrivalAt} low={eta.etaLowAt} high={eta.etaHighAt} reference={simTime} />
@@ -191,7 +193,7 @@ export function EtaBreakdown({ eta, simTime }: { eta: EtaExplanationCoordinator;
         <KeyValue label="Confidence">
           <ConfidenceChip confidence={eta.confidence} />
         </KeyValue>
-      </div>
+      </dl>
       <div>
         <p className="text-body text-text">{eta.summary}</p>
         <p className="mt-0.5 text-small text-text-muted">{eta.confidenceReason}</p>
@@ -206,10 +208,7 @@ export function EtaBreakdown({ eta, simTime }: { eta: EtaExplanationCoordinator;
           </li>
           {terms.map((t) => (
             <li key={t.key} className="rounded-lg bg-surface px-3 py-2 shadow-xs">
-              <p className="flex items-center gap-1.5 text-small text-text-muted">
-                <span aria-hidden className={`size-2 rounded-full ${t.swatch}`} />
-                {t.label}
-              </p>
+              <p className="text-small text-text-muted">{t.label}</p>
               <p className="text-body font-semibold text-text tabular">{signed(t.minutes)}</p>
             </li>
           ))}
@@ -218,16 +217,6 @@ export function EtaBreakdown({ eta, simTime }: { eta: EtaExplanationCoordinator;
             <p className="text-body font-semibold tabular">{formatDayTime(eta.predictedArrivalAt)}</p>
           </li>
         </ol>
-        {total > 0 ? (
-          <div className="mt-3" aria-hidden>
-            <div className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full bg-surface-sunken">
-              {positive.map((t) => (
-                <span key={t.key} className={t.swatch} style={{ width: `${(t.minutes / total) * 100}%` }} />
-              ))}
-            </div>
-            <p className="mt-1 text-small text-text-muted">Share of {formatDuration(total)} of delay added to the plan</p>
-          </div>
-        ) : null}
         <table className="sr-only" aria-label="ETA identity">
           <tbody>
             <tr>
@@ -253,6 +242,7 @@ export function EtaBreakdown({ eta, simTime }: { eta: EtaExplanationCoordinator;
           </tbody>
         </table>
       </div>
+      <EtaWaterfall eta={eta} />
       <p className="text-small text-text-muted">
         Arrival means the receiving gate (not unloading). Road arrival {formatTimeRelative(eta.projectedRoadArrivalAt, simTime)} · receiving {formatTime(eta.receivingWindow.opensAt)}–{formatTime(eta.receivingWindow.closesAt)}
         {eta.identityHolds ? '' : ' · identity check failed'}

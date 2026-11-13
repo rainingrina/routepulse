@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { Dialog as D } from 'radix-ui';
-import type { RiskLevel, ShipmentListItemCoordinator } from '../../api/contract';
+import type { ShipmentListItemCoordinator } from '../../api/contract';
 import { useMapLayers, usePositions, useShipments } from '../../api/hooks/world';
 import { useSync } from '../../api/sync';
-import { useCurrentUser } from '../../app/RoleGuard';
+import { useCurrentUser } from '../../app/currentUser';
 import { BP, useMediaQuery } from '../../app/useMediaQuery';
 import { Skeleton } from '../../components/display/basics';
 import { Banner, ErrorState } from '../../components/display/feedback';
@@ -17,8 +17,9 @@ import { SimulationDock } from '../simulation/SimulationDock';
 import { ActivityFeed } from './ActivityFeed';
 import { AlertsPanel } from './AlertsPanel';
 import { KpiStrip } from './KpiStrip';
-import { filterShipments, newlyAtRisk, parseLevelFilter, type LevelFilter } from './listFilters';
+import { filterShipments, parseLevelFilter, type LevelFilter } from './listFilters';
 import { ShipmentList } from './ShipmentList';
+import { useAtRiskNotifications } from './useAtRiskNotifications';
 import { ShipmentQuickPanel } from './ShipmentQuickPanel';
 
 const LIST_QUERY = { status: 'live', sort: 'risk' } as const;
@@ -46,20 +47,6 @@ export default function ControlTowerPage() {
   const all = useMemo(() => (shipments.data?.items ?? []) as ShipmentListItemCoordinator[], [shipments.data]);
   const visible = useMemo(() => filterShipments(all, level, query), [all, level, query]);
 
-  // UI plan §6.6: one-time highlight + polite announcement when a shipment turns AT_RISK.
-  const prevLevels = useRef<Map<string, RiskLevel | null> | null>(null);
-  const [highlight, setHighlight] = useState<Set<string>>(new Set());
-  const [announcement, setAnnouncement] = useState('');
-  useEffect(() => {
-    if (!shipments.data) return;
-    const turned = newlyAtRisk(prevLevels.current, all);
-    prevLevels.current = new Map(all.map((s) => [s.id, s.riskLevel]));
-    if (turned.length === 0) return;
-    setHighlight(new Set(turned.map((s) => s.id)));
-    setAnnouncement(`${turned.map((s) => s.code).join(', ')} ${turned.length > 1 ? 'are' : 'is'} at risk of missing the promised time.`);
-    const timer = setTimeout(() => setHighlight(new Set()), 600);
-    return () => clearTimeout(timer);
-  }, [all, shipments.data]);
 
   const setParam = (key: string, value: string | null) =>
     setParams(
@@ -76,6 +63,15 @@ export default function ControlTowerPage() {
     if (id && !isXl) setDrawerOpen(true);
   };
   const setLevel = (l: LevelFilter) => setParam('level', l === 'ALL' ? null : l);
+
+  // UI plan §6.6: one-time row pulse + one toast when shipments turn AT_RISK (server risk level).
+  const highlight = useAtRiskNotifications(all, !!shipments.data, {
+    viewOptions: (id) => {
+      setOpenRecoveryNonce((n) => n + 1);
+      select(id);
+    },
+    showAtRisk: () => setLevel('AT_RISK'),
+  });
 
   const etaById = useMemo(() => new Map(all.map((s) => [s.id, s.etaAt])), [all]);
   const trucks: MapTruck[] = useMemo(
@@ -141,9 +137,6 @@ export default function ControlTowerPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div aria-live="polite" className="sr-only">
-        {announcement}
-      </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 pt-3 xl:px-5">
         <div className="min-w-0">
           <h1 className="text-h2 text-text">Control tower</h1>

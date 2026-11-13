@@ -21,10 +21,16 @@ export function EtaDisplay({
   if (!at) return <span className={cn('text-text-muted', className)}>—</span>;
   const half = low && high ? rangeHalfWidthMinutes(at, low, high) : null;
   return (
-    <span className={cn('tabular', className)} aria-label={`Estimated arrival ${formatFull(at)}${half ? `, plus or minus ${half} minutes` : ''}`}>
+    // aria-label on a plain span is ignored by screen readers (axe: aria-prohibited-attr), and the
+    // visible text is aria-hidden — so the spoken form is a visually hidden copy instead.
+    <span className={cn('tabular', className)}>
       <span aria-hidden>
         {formatTimeRelative(at, reference)}
         {half ? <span className="text-text-muted"> ± {half}</span> : null}
+      </span>
+      <span className="sr-only">
+        Estimated arrival {formatFull(at)}
+        {half ? `, plus or minus ${half} minutes` : ''}
       </span>
     </span>
   );

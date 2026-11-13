@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router';
+import { Outlet, useLocation } from 'react-router';
 import { useDriverReports } from '../../api/hooks/world';
 import { useSync } from '../../api/sync';
 import { CountBadge } from '../../components/display/basics';
@@ -6,7 +6,7 @@ import { Bell, FlaskConical, LayoutDashboard, ListChecks, Package, Radar } from 
 import { SimClockControl } from '../../features/simulation/SimClockControl';
 import { t } from '../../i18n/en';
 import { BP, useMediaQuery } from '../useMediaQuery';
-import { useCurrentUser } from '../RoleGuard';
+import { useCurrentUser } from '../currentUser';
 import { NotificationBell } from './NotificationBell';
 import { ContextStrip, LayoutOutlet, MobileNav, MockModeBanner, SkipLink, SyncBanners, TopNavLink, UserMenu, Wordmark, type NavItem } from './shell';
 
@@ -21,6 +21,8 @@ export function CoordinatorLayout() {
   const pendingCount = pending.data?.items.length ?? 0;
   const isLg = useMediaQuery(BP.lg);
   const isXl = useMediaQuery(BP.xl);
+  // The Control Tower drops the context strip to give the map the full height (team request, 2026-11-13).
+  const onControlTower = useLocation().pathname.startsWith('/control-tower');
   const isWide = useMediaQuery(BP.wide);
   const badge = <CountBadge count={pendingCount} label={`${pendingCount} pending review`} />;
   const items: NavItem[] = [
@@ -54,9 +56,11 @@ export function CoordinatorLayout() {
           <UserMenu onDark />
         </div>
       </header>
-      <ContextStrip>
-        {t.fictionalNotice} · {t.ruleBased}s · {t.timesInIst}
-      </ContextStrip>
+      {onControlTower ? null : (
+        <ContextStrip>
+          {t.fictionalNotice} · {t.ruleBased}s · {t.timesInIst}
+        </ContextStrip>
+      )}
       <SyncBanners />
       <main id="main" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         <LayoutOutlet />

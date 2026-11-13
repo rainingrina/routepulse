@@ -9,6 +9,7 @@ export {
   Building2,
   ChevronDown,
   ChevronUp,
+  ZoomIn,
   ChevronRight,
   CircleAlert,
   CircleCheck,

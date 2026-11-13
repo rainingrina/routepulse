@@ -39,7 +39,11 @@ describe('EtaDisplay', () => {
     );
     expect(html).toContain('Fri 08:00');
     expect(html).toContain('± 85');
-    expect(html).toContain('aria-label="Estimated arrival Friday');
+    // Spoken form is a visually hidden copy; the visible short form is hidden from screen readers.
+    // (An aria-label on a plain span is ignored by screen readers — axe aria-prohibited-attr.)
+    expect(html).toMatch(/<span class="sr-only">Estimated arrival Friday[^<]*, plus or minus 85 minutes<\/span>/);
+    expect(html).toMatch(/<span aria-hidden="true">Fri 08:00/);
+    expect(html).not.toContain('aria-label=');
   });
 
   it('renders a dash when the API has no ETA', () => {
