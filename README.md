@@ -2,11 +2,6 @@
 
 **An explainable shipment recovery and logistics control tower.**
 Know it will be late hours before it is — know why, and fix it.
-
-Built for the LYB Mumbai Hackathon 2026, Round 2, Problem Statement 3 (Order-to-Delivery Control Tower). All companies, people and data are **fictional**; "Plant X" is a fictional polymer producer.
-
-> **Project status (2026-11-12): planning complete and decisions locked (L1–L10); backend Milestones 1–3 (foundation, schema + seed, authentication and authorisation) implemented on branch `backend`; other features not yet implemented.** The commands below match the real `package.json` scripts. See `PROGRESS.md` for exact status.
-
 ---
 
 ## Problem
@@ -137,26 +132,3 @@ Most API endpoints are not implemented yet, so screens beyond login only show da
 - Prototype security limits: logout revocation is held in memory (a restart forgets it until tokens expire, ≤ 8 h), no MFA, single-process lock, local database.
 - Remaining open item: whether to add the `pmtiles` browser library for the tiled basemap or use the GeoJSON fallback (`PROGRESS.md` §0).
 
-## Generative AI declaration
-
-Generative AI (Claude Code, Anthropic) was used to help with ideation, planning documents and, later, code assistance. The team reviews all output and must be able to explain every part of the code, data and design. The product itself does not use generative AI at runtime: ETAs, risk levels, recovery suggestions, reason suggestions and customer messages come from deterministic rules and templates.
-
-## Documentation
-
-| Document | Purpose |
-|---|---|
-| `planning/IDEA_HUNT.md` | Ideation and decision record |
-| `planning/02_PRODUCT_SPEC.md` | Product specification and acceptance criteria |
-| `planning/03_USER_JOURNEYS.md` | User journeys and demo run-sheet |
-| `planning/04_TECH_ARCHITECTURE.md` | Technical architecture and decisions |
-| `planning/05_DATABASE_SCHEMA.md` | Database schema |
-| `planning/06_API_SPEC.md` | API contracts |
-| `planning/07_UI_UX_PLAN.md` | UI/UX plan and design tokens |
-| `planning/08_ETA_AND_RISK_ENGINE.md` | ETA, attribution, risk and simulation rules |
-| `PROGRESS.md` | Implementation status |
-| `CHANGELOG.md` | Change history |
-| `CLAUDE.md` | Instructions for Claude Code in this repository |
-
-## Disclaimer
-
-Plant X and all scenarios are hypothetical and were written for this hackathon. They do not describe the operations, systems, data or policies of LyondellBasell or any other organisation.
